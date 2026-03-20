@@ -22,6 +22,7 @@
       height:100vh;
       display:flex;
       overflow:hidden;
+      overflow-y: auto; 
     }
 
     .sidebar{ width:280px; background:linear-gradient(180deg,var(--secondary),var(--tertiary)); border-right:2px solid var(--border); display:flex; flex-direction:column; }
@@ -402,7 +403,7 @@
     }
 
     /* ========================================
-      MEDIA QUERIES RESPONSIVE
+      MEDIA QUERIES RESPONSIVE - CORRETTE
       ======================================== */
 
     /* Tablet (max-width: 900px) */
@@ -428,32 +429,63 @@
 
     /* Smartphone (max-width: 700px) */
     @media (max-width: 700px) {
+      /* ✅ FIX PRINCIPALE: Permetti scroll verticale su mobile */
       body { 
         flex-direction: column; 
-        overflow: auto;
-        height: auto;
+        height: auto;              /* Non forzare 100vh */
+        min-height: 100vh;         /* Ma mantieni altezza minima */
+        overflow-y: auto;          /* ✅ Permetti scroll verticale */
+        overflow-x: hidden;        /* Blocca solo scroll orizzontale */
+        -webkit-overflow-scrolling: touch; /* Scroll fluido iOS */
       }
       
+      /* Sidebar diventa header superiore */
       .sidebar { 
         width: 100%; 
         height: auto; 
         min-height: auto;
+        max-height: 180px;         /* Limita altezza per non occupare tutto */
         order: 1; 
         border-right: none;
         border-bottom: 2px solid var(--border);
+        overflow-y: auto;          /* Scroll interno alla sidebar se necessario */
+        flex-shrink: 0;            /* Non rimpicciolire */
       }
       
       .main-container { 
         order: 2; 
         width: 100%;
+        overflow: visible;         /* ✅ Mostra tutto il contenuto */
+        flex: none;                /* Non forzare flex */
       }
       
+      .top-bar {
+        position: sticky;          /* Barra ricerca fissa in alto */
+        top: 0;
+        z-index: 100;
+        background: rgba(10,10,20,0.95);
+        backdrop-filter: blur(10px);
+      }
+      
+      .player-section { 
+        padding: 16px 12px;
+        overflow: visible;         /* ✅ Permetti espansione verticale */
+        height: auto;              /* Non limitare altezza */
+      }
+      
+      .player-card {
+        overflow: visible;         /* ✅ Card non taglia contenuto */
+      }
+      
+      /* Player video adattivo */
       video.media-player { 
         height: auto; 
         min-height: 200px; 
         aspect-ratio: 16/9;
+        max-height: 40vh;          /* Non occupare tutto lo schermo */
       }
       
+      /* Testi più leggibili */
       .channel-name-display { font-size: 18px; }
       .sidebar-tab { font-size: 11px; padding: 10px 4px; }
       .tunex-logo { width: 60px; }
@@ -462,6 +494,8 @@
       .equalizer-container {
         padding: 12px 8px;
         margin-top: 12px;
+        margin-bottom: 20px;       /* ✅ Spazio sotto per i controlli */
+        overflow: visible;         /* ✅ Non tagliare contenuto */
       }
       
       .equalizer-visualizer { 
@@ -469,6 +503,9 @@
         gap: 2px;
         padding: 10px 4px;
         justify-content: flex-start; /* Scroll fluido a sinistra */
+        overflow-x: auto;          /* ✅ Scroll orizzontale per le bande */
+        overflow-y: visible;       /* ✅ Non tagliare verticale */
+        -webkit-overflow-scrolling: touch;
       }
       
       .eq-bar-wrapper { 
@@ -495,31 +532,41 @@
         letter-spacing: 1px;
       }
       
-      /* Controlli a colonna su mobile */
+      /* ✅ CONTROLLI RESET/PRESET: forza visibilità */
       .eq-controls {
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
         width: 100%;
+        padding: 10px 0;           /* ✅ Spazio sopra/sotto */
+        margin-top: 10px;          /* ✅ Distanza dalle bande */
+        position: relative;        /* ✅ Evita che venga tagliato */
+        z-index: 10;               /* ✅ Sopra altri elementi */
       }
       
       .eq-reset-btn {
-        padding: 8px 16px;
-        font-size: 11px;
+        padding: 10px 16px;
+        font-size: 12px;
         width: 100%;
-        max-width: 200px;
+        max-width: 220px;
+        margin: 0 auto;            /* ✅ Centra il bottone */
+        min-height: 44px;          /* ✅ Touch target accessibile */
       }
       
       .eq-preset-select {
         width: 100%;
-        max-width: 200px;
-        font-size: 10px;
-        padding: 8px 28px 8px 12px;
+        max-width: 220px;
+        font-size: 11px;
+        padding: 10px 28px 10px 12px;
+        margin: 0 auto;            /* ✅ Centra il dropdown */
+        min-height: 44px;
       }
       
       /* Bottoni principali più grandi per touch */
       .main-controls { 
         gap: 10px; 
         width: 100%;
+        padding: 10px 0 20px;      /* ✅ Spazio sotto per evitare taglio */
+        margin-top: 10px;
       }
       
       .btn { 
@@ -528,17 +575,21 @@
         flex: 1 1 45%; /* 2 bottoni per riga */
         justify-content: center;
         min-width: 120px;
+        min-height: 44px;          /* ✅ Touch target minimo */
       }
       
+      /* Footer non fisso su mobile per non coprire contenuti */
       .footer { 
-        position: relative; 
+        position: relative;        
         font-size: 11px; 
+        padding: 16px 12px;
+        margin-top: 20px;
       }
       
       #toast { 
         right: 10px; 
         left: 10px; 
-        bottom: 60px; 
+        bottom: 80px; 
         max-width: none; 
       }
     }
@@ -567,6 +618,9 @@
       .eq-preset-select {
         font-size: 9px;
         padding: 6px 24px 6px 10px;
+      }
+      .sidebar {
+        max-height: 160px;
       }
     }
   </style>
