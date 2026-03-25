@@ -1,1727 +1,1738 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TuneX - Unified Media Player</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    :root{
-      --primary:#6407de; --primary-dark:#980332; --primary-light:#ff3366;
-      --secondary:#1a2e2c; --tertiary:#16213e; --accent:#00ff33;
-      --text:#ffffff; --text-secondary:#b0b0b0; --border:#2d2d44;
-      --success:#00ff88; --danger:#ff3366;
-      --tunex-pink:#ff3366; --tunex-cyan:#00ccff;
-    }
-    body{
-      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-      background: linear-gradient(135deg,#50366c 0%,#2c354f 50%,#2b2b4f 100%);
-      color:var(--text);
-      height:100vh;
-      display:flex;
-      overflow:hidden;
-      overflow-y: auto; 
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#6407de"/>
+<meta name="apple-mobile-web-app-title" content="TuneX"/>
+<title>TuneX - Unified Media Player</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="manifest" href="manifest.json">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+:root{
+--primary:#6407de; --primary-dark:#980332; --primary-light:#ff3366;
+--secondary:#1a2e2c; --tertiary:#16213e; --accent:#00ff33;
+--text:#ffffff; --text-secondary:#b0b0b0; --border:#2d2d44;
+--success:#00ff88; --danger:#ff3366;
+--tunex-pink:#ff3366; --tunex-cyan:#00ccff;
+--safe-area-top: env(safe-area-inset-top);
+--safe-area-bottom: env(safe-area-inset-bottom);
+--safe-area-left: env(safe-area-inset-left);
+--safe-area-right: env(safe-area-inset-right);
+}
+body{
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+background: linear-gradient(135deg,#50366c 0%,#2c354f 50%,#2b2b4f 100%);
+color:var(--text);
+height:100vh;
+height:100dvh;
+display:flex;
+overflow:hidden;
+overflow-x: hidden; /* Previene scroll orizzontale */
+touch-action: manipulation;
+}
+/* SIDEBAR MOBILE */
+.sidebar{
+width:280px;
+background:linear-gradient(180deg,var(--secondary),var(--tertiary));
+border-right:2px solid var(--border);
+display:flex;
+flex-direction:column;
+transition: transform 0.3s ease;
+z-index: 100;
+position: relative;
+}
+.sidebar-header{
+padding:18px;
+background: linear-gradient(135deg,var(--primary),var(--primary-dark));
+text-align:center;
+padding-top: calc(18px + var(--safe-area-top));
+}
+.tunex-logo {
+width: 180px;
+height: auto;
+display: block;
+margin: 0 auto;
+object-fit: contain;
+}
+.sidebar-tabs{ display:flex; gap:0; border-bottom:1px solid var(--border); }
+.sidebar-tab{
+flex:1;
+padding:14px 8px;
+text-align:center;
+background:rgba(255,255,255,0.02);
+border:none;
+color:var(--text-secondary);
+cursor:pointer;
+font-weight:600;
+font-size:12px;
+transition:all .2s;
+touch-action: manipulation;
+}
+.sidebar-tab:hover{ background:rgba(255,255,255,0.05); }
+.sidebar-tab:active{ transform: scale(0.95); }
+.sidebar-tab.active{ background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:white; border-bottom:2px solid var(--accent); }
+.sidebar-actions{
+padding:10px;
+border-bottom:1px solid rgba(255,255,255,0.03);
+display:flex;
+gap:6px;
+flex-wrap:wrap;
+}
+.sidebar-btn{
+background:linear-gradient(90deg,#00b7ff,#7cf);
+color:#021;
+padding:10px 12px;
+border-radius:8px;
+border:none;
+cursor:pointer;
+font-weight:700;
+font-size:12px;
+flex:1;
+min-width:80px;
+transition:all .2s;
+touch-action: manipulation;
+}
+.sidebar-btn:hover{ transform:scale(1.05); }
+.sidebar-btn:active{ transform:scale(0.95); }
+.sidebar-btn.danger{ background:#ff7700; }
+.channel-container{
+padding:10px;
+overflow:auto;
+flex:1;
+-webkit-overflow-scrolling: touch;
+padding-bottom: calc(10px + var(--safe-area-bottom));
+}
+.channel{
+padding:14px 12px;
+margin-bottom:8px;
+background:rgba(255,255,255,0.04);
+border-left:3px solid transparent;
+border-radius:8px;
+cursor:pointer;
+color:var(--text-secondary);
+transition:all .2s;
+font-size:14px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+touch-action: manipulation;
+}
+.channel:hover{ transform: translateX(4px); color:var(--text); border-left-color:var(--accent); background: rgba(255,255,255,0.03); }
+.channel:active{ transform: scale(0.98); }
+.channel.active{ background: linear-gradient(135deg,var(--primary),var(--primary-light)); color:white; border-left-color:var(--success); box-shadow:0 6px 18px rgba(255,0,81,0.12); }
+.channel-name{ flex:1; }
+.channel-actions{ display:flex; gap:4px; }
+.channel-btn{
+background:none;
+border:none;
+color:inherit;
+cursor:pointer;
+font-size:16px;
+opacity:0.6;
+transition:opacity .2s;
+padding: 4px;
+min-width: 44px; /* Touch target mobile */
+min-height: 44px;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+.channel-btn:hover{ opacity:1; }
+.channel-btn:active{ transform: scale(0.9); }
+.main-container{
+flex:1;
+display:flex;
+flex-direction:column;
+position:relative;
+overflow:hidden;
+}
+.top-bar{
+padding:14px 16px;
+display:flex;
+gap:12px;
+align-items:center;
+background: rgba(10,10,20,0.85);
+border-bottom:1px solid var(--border);
+padding-top: calc(14px + var(--safe-area-top));
+}
+.search-box{
+display:flex;
+align-items:center;
+gap:8px;
+background:rgba(255,255,255,0.03);
+border-radius:24px;
+padding:10px 14px;
+flex:1;
+border:1px solid var(--border);
+}
+.search-input{
+flex:1;
+background:none;
+border:none;
+color:var(--text);
+outline:none;
+font-size:16px; /* Previene zoom su iOS */
+min-width: 0;
+}
+.search-icon-btn{
+background:none;
+border:none;
+color:var(--text-secondary);
+cursor:pointer;
+font-size:16px;
+transition:color .2s;
+padding: 4px;
+min-width: 44px;
+min-height: 44px;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+.search-icon-btn:hover{ color:var(--accent); }
+.search-icon-btn:active{ transform: scale(0.9); }
+.player-section{
+padding:16px;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+gap:16px;
+overflow:auto;
+-webkit-overflow-scrolling: touch;
+padding-bottom: calc(16px + var(--safe-area-bottom));
+}
+.player-card{
+width:100%;
+max-width:900px;
+background:linear-gradient(135deg, rgba(255,0,81,0.06), rgba(0,212,255,0.03));
+border-radius:16px;
+padding:16px;
+border:1px solid var(--border);
+}
+.channel-info{ text-align:center; }
+.channel-name-display{
+font-size:20px;
+font-weight:700;
+text-transform:uppercase;
+letter-spacing:1px;
+background:linear-gradient(135deg,var(--primary),var(--accent));
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+line-height: 1.3;
+}
+.channel-status{
+font-size:12px;
+color:var(--text-secondary);
+display:flex;
+gap:8px;
+align-items:center;
+justify-content:center;
+margin-top:8px;
+}
+.status-dot{ width:8px; height:8px; border-radius:50%; background:var(--danger); }
+.status-dot.playing{ background:var(--success); box-shadow:0 0 8px rgba(0,255,136,0.2); }
+.media-player-container {
+width:100%;
+background:#000;
+border-radius:12px;
+overflow:hidden;
+margin-top:12px;
+position:relative;
+aspect-ratio: 16/9;
+}
+video.media-player {
+width:100%;
+height:100%;
+display:block;
+background:#000;
+object-fit: contain;
+}
+audio.media-player {
+width:100%;
+height:auto;
+display:block;
+}
+.loading-info {
+display:none;
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%, -50%);
+text-align:center;
+color:var(--text-secondary);
+z-index:10;
+}
+.spinner {
+border:4px solid rgba(255,255,255,0.1);
+border-top:4px solid var(--accent);
+border-radius:50%;
+width:50px;
+height:50px;
+animation:spin 1s linear infinite;
+margin:0 auto 20px;
+}
+@keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
+.player-info {
+background:rgba(255,255,255,0.02);
+padding:12px;
+border-top:1px solid var(--border);
+font-size:12px;
+color:var(--text-secondary);
+text-align: center;
+border-radius: 0 0 12px 12px;
+}
+/* CONTROLLI PRINCIPALI MOBILE */
+.main-controls {
+margin-top: 16px;
+display: flex;
+justify-content: center;
+gap: 10px;
+flex-wrap: wrap;
+}
+.btn{
+background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+color:white;
+border:none;
+padding:12px 20px;
+border-radius:12px;
+cursor:pointer;
+display:flex;
+gap:8px;
+align-items:center;
+font-weight:600;
+transition:all .2s;
+font-size: 14px;
+touch-action: manipulation;
+min-height: 48px;
+min-width: 48px;
+}
+.btn.secondary{
+background:rgba(255,255,255,0.06);
+border:1px solid var(--border);
+color:var(--text);
+}
+.btn.voice-btn{
+background:linear-gradient(135deg,#ff6b6b,#ff3355);
+}
+.btn.voice-btn.listening{
+animation: pulse-btn 1s infinite;
+box-shadow: 0 0 20px rgba(255,51,85,0.5);
+}
+@keyframes pulse-btn { 0%, 100% { opacity:1; transform:scale(1); } 50% { opacity:0.8; transform:scale(1.05); } }
+.btn:hover { transform:scale(1.05); }
+.btn:active { transform:scale(0.95); }
+/* EQUALIZER MOBILE */
+.equalizer-container {
+width: 100%;
+background: linear-gradient(135deg, rgba(100, 7, 222, 0.15), rgba(0, 204, 255, 0.08));
+border: 1px solid var(--border);
+border-radius: 12px;
+padding: 16px;
+margin-top: 16px;
+box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+.equalizer-title {
+text-align: center;
+font-size: 11px;
+font-weight: 800;
+color: var(--text);
+margin-bottom: 12px;
+text-transform: uppercase;
+letter-spacing: 2px;
+background: linear-gradient(90deg, var(--tunex-pink), var(--tunex-cyan));
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+text-shadow: 0 0 20px rgba(255, 51, 102, 0.3);
+}
+.equalizer-visualizer {
+display: flex;
+justify-content: space-around;
+align-items: flex-end;
+gap: 4px;
+height: 140px;
+background: rgba(0, 0, 0, 0.3);
+border-radius: 10px;
+padding: 12px 6px;
+margin-bottom: 12px;
+border: 1px solid rgba(255, 51, 102, 0.2);
+backdrop-filter: blur(10px);
+overflow-x: auto;
+-webkit-overflow-scrolling: touch;
+}
+.eq-bar-wrapper {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 8px;
+flex: 0 0 auto;
+height: 100%;
+min-width: 32px;
+}
+.eq-bar-container {
+width: 100%;
+height: 110px;
+background: linear-gradient(180deg, rgba(0, 204, 255, 0.1), rgba(255, 51, 102, 0.1));
+border-radius: 6px;
+display: flex;
+align-items: flex-end;
+justify-content: center;
+padding: 3px;
+cursor: pointer;
+position: relative;
+overflow: hidden;
+touch-action: none; /* Previene scroll pagina durante adjust */
+}
+.eq-bar {
+width: 100%;
+height: 20%;
+background: linear-gradient(180deg, var(--tunex-pink), var(--tunex-cyan));
+border-radius: 3px;
+transition: height 0.05s ease-out;
+box-shadow: 0 0 10px rgba(255, 51, 102, 0.5), inset 0 0 8px rgba(255, 255, 255, 0.2);
+min-height: 3px;
+filter: drop-shadow(0 0 4px rgba(0, 204, 255, 0.4));
+}
+.eq-bar.active {
+box-shadow: 0 0 15px rgba(255, 51, 102, 0.8), inset 0 0 12px rgba(255, 255, 255, 0.3);
+filter: drop-shadow(0 0 8px rgba(0, 204, 255, 0.6));
+}
+.eq-label {
+font-size: 8px;
+color: var(--text-secondary);
+font-weight: 700;
+text-align: center;
+width: 100%;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+white-space: nowrap;
+}
+.eq-controls {
+display: flex;
+gap: 10px;
+justify-content: center;
+align-items: center;
+flex-wrap: wrap;
+}
+.eq-reset-btn {
+background: linear-gradient(135deg, var(--tunex-pink), var(--tunex-cyan));
+color: white;
+border: none;
+padding: 10px 16px;
+border-radius: 8px;
+font-size: 11px;
+font-weight: 700;
+cursor: pointer;
+transition: all 0.3s;
+box-shadow: 0 4px 15px rgba(255, 51, 102, 0.3);
+text-transform: uppercase;
+letter-spacing: 1px;
+touch-action: manipulation;
+min-height: 44px;
+}
+.eq-reset-btn:hover {
+transform: translateY(-2px);
+box-shadow: 0 6px 20px rgba(255, 51, 102, 0.5);
+}
+.eq-reset-btn:active {
+transform: translateY(0) scale(0.95);
+}
+/* Dropdown Presets Mobile */
+.eq-preset-select {
+background: rgba(255, 255, 255, 0.04);
+border: 1px solid var(--border);
+color: var(--text);
+padding: 10px 12px;
+border-radius: 8px;
+font-size: 11px;
+font-weight: 600;
+cursor: pointer;
+transition: all 0.2s ease;
+outline: none;
+min-width: 140px;
+max-width: 180px;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+appearance: none;
+background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b0b0b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+background-repeat: no-repeat;
+background-position: right 10px center;
+background-size: 12px;
+padding-right: 30px;
+touch-action: manipulation;
+min-height: 44px;
+}
+.eq-preset-select:hover {
+border-color: var(--tunex-pink);
+background-color: rgba(255, 51, 102, 0.1);
+}
+.eq-preset-select:focus {
+border-color: var(--accent);
+box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.2);
+}
+.eq-preset-select option {
+background: var(--tertiary);
+color: var(--text);
+padding: 8px;
+font-size: 13px;
+}
+.footer{
+position:fixed;
+bottom:0;
+left:0;
+right:0;
+background:rgba(10,10,20,0.95);
+border-top:1px solid var(--border);
+padding:12px;
+text-align:center;
+color:var(--text-secondary);
+font-size:11px;
+padding-bottom: calc(12px + var(--safe-area-bottom));
+z-index: 50;
+}
+#toast {
+display:none;
+position:fixed;
+bottom:calc(70px + var(--safe-area-bottom));
+right:16px;
+left: 16px;
+max-width: none;
+background:rgba(0,255,136,0.1);
+border:1px solid rgba(0,255,136,0.6);
+color:var(--text);
+padding:14px 16px;
+border-radius:10px;
+font-size:13px;
+z-index:1000;
+backdrop-filter: blur(10px);
+box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+/* MENU MOBILE TOGGLE */
+.menu-toggle {
+display: none;
+position: fixed;
+top: calc(10px + var(--safe-area-top));
+left: 10px;
+z-index: 1000;
+background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+border: none;
+color: white;
+padding: 12px;
+border-radius: 8px;
+cursor: pointer;
+font-size: 18px;
+box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+touch-action: manipulation;
+min-width: 44px;
+min-height: 44px;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+.menu-toggle:active {
+transform: scale(0.95);
+}
+.overlay {
+display: none;
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(0,0,0,0.5);
+z-index: 99;
+backdrop-filter: blur(4px);
+}
 
-    .sidebar{ width:280px; background:linear-gradient(180deg,var(--secondary),var(--tertiary)); border-right:2px solid var(--border); display:flex; flex-direction:column; }
-    .sidebar-header{ padding:18px; background: linear-gradient(135deg,var(--primary),var(--primary-dark)); text-align:center; }
+/* MEDIA QUERIES UNIFICATI PER MOBILE */
+@media (max-width: 768px) {
+.menu-toggle {
+display: flex !important;
+}
+.sidebar {
+position: fixed;
+left: 0;
+top: 0;
+bottom: 0;
+width: 280px;
+transform: translateX(-100%);
+box-shadow: 2px 0 20px rgba(0,0,0,0.5);
+z-index: 100;
+}
+.sidebar.open {
+transform: translateX(0);
+}
+.overlay.show {
+display: block;
+}
+.main-container {
+margin-left: 0;
+}
+video.media-player {
+height: auto;
+}
+.equalizer-visualizer {
+height: 120px;
+gap: 3px;
+}
+.eq-bar-container {
+height: 90px;
+min-width: 28px;
+}
+.eq-bar-wrapper {
+min-width: 28px;
+}
+.eq-label {
+font-size: 7px;
+}
+.main-controls {
+gap: 8px;
+}
+.main-controls .btn {
+padding: 10px 16px;
+font-size: 13px;
+min-height: 44px;
+}
+.channel-name-display {
+font-size: 18px;
+}
+.player-section {
+padding: 12px;
+}
+.player-card {
+padding: 12px;
+border-radius: 12px;
+}
+/* EQUALIZER RIDOTTO PER MOBILE */
+.equalizer-container {
+padding: 14px;
+margin-top: 12px;
+}
+.equalizer-title {
+font-size: 10px;
+margin-bottom: 10px;
+}
+.equalizer-visualizer {
+height: 110px;
+gap: 3px;
+padding: 10px 5px;
+}
+.eq-bar-wrapper {
+min-width: 24px;
+gap: 6px;
+}
+.eq-bar-container {
+height: 80px;
+min-width: 24px;
+}
+.eq-bar {
+min-height: 2px;
+}
+.eq-label {
+font-size: 6px;
+}
+.eq-controls {
+flex-wrap: wrap;
+gap: 8px;
+}
+.eq-reset-btn,
+.eq-preset-select {
+padding: 9px 14px;
+font-size: 11px;
+min-height: 40px;
+}
+}
 
-    .tunex-logo {
-      width: 100px;
-      height: auto;
-      display: block;
-      margin: 0 auto;
-      object-fit: contain;
-    }
+/* LANDSCAPE MOBILE - OTTIMIZZAZIONE COMPLETA */
+@media (orientation: landscape) and (max-height: 500px) {
+body {
+flex-direction: row;
+}
+.menu-toggle {
+display: flex !important;
+z-index: 1001;
+}
+.sidebar {
+width: 200px;
+position: fixed;
+left: 0;
+top: 0;
+bottom: 0;
+transform: translateX(-100%);
+z-index: 100;
+}
+.sidebar.open {
+transform: translateX(0);
+}
+.overlay.show {
+display: block;
+}
+.sidebar-header {
+padding: 8px;
+padding-top: calc(8px + var(--safe-area-top));
+}
+.tunex-logo {
+width: 100px;
+}
+.sidebar-tabs {
+flex-direction: column;
+border-bottom: none;
+gap: 2px;
+}
+.sidebar-tab {
+padding: 6px 4px;
+font-size: 10px;
+border-radius: 4px;
+}
+.sidebar-actions {
+padding: 6px;
+gap: 4px;
+}
+.sidebar-btn {
+padding: 6px 8px;
+font-size: 9px;
+min-width: 50px;
+}
+.channel {
+padding: 6px 6px;
+font-size: 11px;
+margin-bottom: 4px;
+}
+.channel-container {
+padding: 6px;
+max-height: calc(100vh - 120px);
+overflow-y: auto;
+-webkit-overflow-scrolling: touch;
+}
+.main-container {
+margin-left: 0;
+flex: 1;
+}
+.top-bar {
+padding: 8px 10px;
+padding-top: calc(8px + var(--safe-area-top));
+}
+.search-box {
+padding: 8px 12px;
+}
+.search-input {
+font-size: 13px;
+}
+.player-section {
+padding: 8px;
+gap: 8px;
+overflow-y: auto;
+}
+.player-card {
+padding: 8px;
+border-radius: 8px;
+}
+.channel-info {
+margin-bottom: 6px;
+}
+.channel-name-display {
+font-size: 13px;
+}
+.channel-status {
+font-size: 10px;
+margin-top: 4px;
+}
+.media-player-container {
+margin-top: 6px;
+aspect-ratio: 16/9;
+border-radius: 6px;
+}
+.main-controls {
+margin-top: 8px;
+gap: 4px;
+}
+.main-controls .btn {
+padding: 8px 10px;
+font-size: 10px;
+min-height: 36px;
+flex: 1;
+min-width: 60px;
+}
+.btn i {
+font-size: 12px;
+}
+.equalizer-container {
+display: none !important;
+}
+.player-info {
+font-size: 9px;
+padding: 6px;
+}
+.footer {
+font-size: 9px;
+padding: 6px;
+padding-bottom: calc(6px + var(--safe-area-bottom));
+}
+}
 
-    .sidebar-tabs{ display:flex; gap:0; border-bottom:1px solid var(--border); }
-    .sidebar-tab{ flex:1; padding:12px; text-align:center; background:rgba(255,255,255,0.02); border:none; color:var(--text-secondary); cursor:pointer; font-weight:600; font-size:12px; transition:all .2s; }
-    .sidebar-tab:hover{ background:rgba(255,255,255,0.05); }
-    .sidebar-tab.active{ background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:white; border-bottom:2px solid var(--accent); }
-
-    .sidebar-actions{ padding:10px; border-bottom:1px solid rgba(255,255,255,0.03); display:flex; gap:6px; flex-wrap:wrap; }
-    .sidebar-btn{ background:linear-gradient(90deg,#00b7ff,#7cf); color:#021; padding:6px 10px; border-radius:8px; border:none; cursor:pointer; font-weight:700; font-size:11px; flex:1; min-width:80px; transition:all .2s; }
-    .sidebar-btn:hover{ transform:scale(1.05); }
-    .sidebar-btn.danger{ background:#ff7700; }
-
-    .channel-container{ padding:10px; overflow:auto; flex:1; }
-    .channel{ padding:10px 12px; margin-bottom:8px; background:rgba(255,255,255,0.04); border-left:3px solid transparent; border-radius:6px; cursor:pointer; color:var(--text-secondary); transition:all .2s; font-size:13px; display:flex; justify-content:space-between; align-items:center; }
-    .channel:hover{ transform: translateX(4px); color:var(--text); border-left-color:var(--accent); background: rgba(255,255,255,0.03); }
-    .channel.active{ background: linear-gradient(135deg,var(--primary),var(--primary-light)); color:white; border-left-color:var(--success); box-shadow:0 6px 18px rgba(255,0,81,0.12); }
-    .channel-name{ flex:1; }
-    .channel-actions{ display:flex; gap:4px; }
-    .channel-btn{ background:none; border:none; color:inherit; cursor:pointer; font-size:12px; opacity:0.6; transition:opacity .2s; }
-    .channel-btn:hover{ opacity:1; }
-
-    .main-container{ flex:1; display:flex; flex-direction:column; position:relative; overflow:hidden; }
-    .top-bar{ padding:14px 22px; display:flex; gap:12px; align-items:center; background: rgba(10,10,20,0.85); border-bottom:1px solid var(--border); }
-    .search-box{ display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); border-radius:24px; padding:8px 14px; flex:1; border:1px solid var(--border); }
-    .search-input{ flex:1; background:none; border:none; color:var(--text); outline:none; font-size:14px; }
-    .search-icon-btn{ background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:14px; transition:color .2s; }
-    .search-icon-btn:hover{ color:var(--accent); }
-
-    .player-section{ padding:22px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px; overflow:auto; }
-    .player-card{ width:100%; max-width:900px; background:linear-gradient(135deg, rgba(255,0,81,0.06), rgba(0,212,255,0.03)); border-radius:14px; padding:20px; border:1px solid var(--border); }
-    .channel-info{ text-align:center; }
-    .channel-name-display{ font-size:26px; font-weight:700; text-transform:uppercase; letter-spacing:1px; background:linear-gradient(135deg,var(--primary),var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-    .channel-status{ font-size:12px; color:var(--text-secondary); display:flex; gap:8px; align-items:center; justify-content:center; margin-top:6px; }
-    .status-dot{ width:8px; height:8px; border-radius:50%; background:var(--danger); }
-    .status-dot.playing{ background:var(--success); box-shadow:0 0 8px rgba(0,255,136,0.2); }
-
-    .media-player-container {
-      width:100%;
-      background:#000;
-      border-radius:10px;
-      overflow:hidden;
-      margin-top:10px;
-      position:relative;
-    }
-
-    video.media-player {
-      width:100%;
-      height:420px;
-      display:block;
-      background:#000;
-    }
-
-    audio.media-player {
-      width:100%;
-      height:auto;
-      display:block;
-    }
-
-    .loading-info {
-      display:none;
-      position:absolute;
-      top:50%;
-      left:50%;
-      transform:translate(-50%, -50%);
-      text-align:center;
-      color:var(--text-secondary);
-      z-index:10;
-    }
-
-    .spinner {
-      border:4px solid rgba(255,255,255,0.1);
-      border-top:4px solid var(--accent);
-      border-radius:50%;
-      width:50px;
-      height:50px;
-      animation:spin 1s linear infinite;
-      margin:0 auto 20px;
-    }
-
-    @keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
-
-    .player-info {
-      background:rgba(255,255,255,0.02);
-      padding:12px;
-      border-top:1px solid var(--border);
-      font-size:12px;
-      color:var(--text-secondary);
-      text-align: center;
-    }
-
-    /* ========================================
-      EQUALIZER STYLES - RESPONSIVE OPTIMIZED
-      ======================================== */
-      .equalizer-container {
-      width: 100%;
-      background: linear-gradient(135deg, rgba(100, 7, 222, 0.15), rgba(0, 204, 255, 0.08));
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      margin-top: 16px;
-      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
-    }
-
-    .equalizer-title {
-      text-align: center;
-      font-size: 12px;
-      font-weight: 800;
-      color: var(--text);
-      margin-bottom: 16px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      background: linear-gradient(90deg, var(--tunex-pink), var(--tunex-cyan));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 20px rgba(255, 51, 102, 0.3);
-    }
-
-    .equalizer-visualizer {
-      display: flex;
-      justify-content: space-around;
-      align-items: flex-end;
-      gap: 6px;
-      height: 180px;
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 10px;
-      padding: 15px 8px;
-      margin-bottom: 16px;
-      border: 1px solid rgba(255, 51, 102, 0.2);
-      backdrop-filter: blur(10px);
-      overflow-x: auto;
-      overflow-y: hidden;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: thin;
-      scroll-behavior: smooth;
-    }
-
-    /* Scrollbar personalizzata per equalizer */
-    .equalizer-visualizer::-webkit-scrollbar {
-      height: 5px;
-    }
-    .equalizer-visualizer::-webkit-scrollbar-track {
-      background: rgba(255,255,255,0.05);
-      border-radius: 3px;
-    }
-    .equalizer-visualizer::-webkit-scrollbar-thumb {
-      background: var(--tunex-pink);
-      border-radius: 3px;
-    }
-    .equalizer-visualizer::-webkit-scrollbar-thumb:hover {
-      background: var(--tunex-cyan);
-    }
-
-    .eq-bar-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      flex: 0 0 auto;
-      height: 100%;
-      min-width: 40px;
-      transition: min-width 0.2s ease;
-    }
-
-    .eq-bar-container {
-      width: 100%;
-      height: 140px;
-      background: linear-gradient(180deg, rgba(0, 204, 255, 0.1), rgba(255, 51, 102, 0.1));
-      border-radius: 8px;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      padding: 4px;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      transition: height 0.2s ease;
-    }
-
-    .eq-bar {
-      width: 100%;
-      height: 20%;
-      background: linear-gradient(180deg, var(--tunex-pink), var(--tunex-cyan));
-      border-radius: 4px;
-      transition: height 0.05s ease-out;
-      box-shadow: 0 0 10px rgba(255, 51, 102, 0.5), inset 0 0 8px rgba(255, 255, 255, 0.2);
-      min-height: 4px;
-      filter: drop-shadow(0 0 4px rgba(0, 204, 255, 0.4));
-    }
-
-    .eq-bar.active {
-      box-shadow: 0 0 15px rgba(255, 51, 102, 0.8), inset 0 0 12px rgba(255, 255, 255, 0.3);
-      filter: drop-shadow(0 0 8px rgba(0, 204, 255, 0.6));
-    }
-
-    .eq-slider {
-      display: none;
-    }
-
-    .eq-label {
-      font-size: 9px;
-      color: var(--text-secondary);
-      font-weight: 700;
-      text-align: center;
-      width: 100%;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      white-space: nowrap;
-      transition: font-size 0.2s ease;
-    }
-
-    .eq-controls {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      align-items: center;
-      flex-wrap: wrap;
-      transition: flex-direction 0.2s ease;
-    }
-
-    .eq-reset-btn {
-      background: linear-gradient(135deg, var(--tunex-pink), var(--tunex-cyan));
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s;
-      box-shadow: 0 4px 15px rgba(255, 51, 102, 0.3);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      min-height: 44px; /* Touch target minimo */
-    }
-
-    .eq-reset-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(255, 51, 102, 0.5);
-    }
-
-    .eq-reset-btn:active {
-      transform: translateY(0);
-    }
-
-    /* Dropdown Presets - Stile coordinato */
-    .eq-preset-select {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      outline: none;
-      min-width: 160px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b0b0b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      background-size: 12px;
-      padding-right: 32px;
-      min-height: 44px; /* Touch target minimo */
-    }
-
-    .eq-preset-select:hover {
-      border-color: var(--tunex-pink);
-      background-color: rgba(255, 51, 102, 0.1);
-    }
-
-    .eq-preset-select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.2);
-    }
-
-    .eq-preset-select option {
-      background: var(--tertiary);
-      color: var(--text);
-      padding: 8px;
-    }
-
-    /* Controlli principali sotto il player */
-    .main-controls {
-      margin-top: 16px;
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .controls { 
-      margin-top:10px; 
-      display:flex; 
-      justify-content:center; 
-      gap:12px; 
-      flex-wrap:wrap; 
-    }
-
-    .btn { 
-      background:linear-gradient(135deg,var(--primary),var(--primary-dark)); 
-      color:white; 
-      border:none; 
-      padding:10px 18px; 
-      border-radius:10px; 
-      cursor:pointer; 
-      display:flex; 
-      gap:8px; 
-      align-items:center; 
-      font-weight:600; 
-      transition:all .2s;
-      min-height: 44px; /* Touch target minimo per mobile */
-    }
-
-    .btn.secondary { 
-      background:rgba(255,255,255,0.06); 
-      border:1px solid var(--border); 
-      color:var(--text); 
-    }
-
-    .btn.voice-btn { 
-      background:linear-gradient(135deg,#ff6b6b,#ff3355); 
-    }
-
-    .btn.voice-btn.listening { 
-      animation: pulse-btn 1s infinite; 
-      box-shadow: 0 0 20px rgba(255,51,85,0.5); 
-    }
-
-    @keyframes pulse-btn { 
-      0%, 100% { opacity:1; transform:scale(1); } 
-      50% { opacity:0.8; transform:scale(1.05); } 
-    }
-
-    .btn:hover { 
-      transform:scale(1.05); 
-    }
-
-    .footer { 
-      position:fixed; 
-      bottom:0; 
-      left:0; 
-      right:0; 
-      background:rgba(10,10,20,0.95); 
-      border-top:1px solid var(--border); 
-      padding:12px; 
-      text-align:center; 
-      color:var(--text-secondary); 
-      font-size:12px; 
-    }
-
-    #toast { 
-      display:none; 
-      position:fixed; 
-      bottom:70px; 
-      right:20px; 
-      background:rgba(0,255,136,0.08); 
-      border:1px solid rgba(0,255,136,0.6); 
-      color:var(--text); 
-      padding:12px 16px; 
-      border-radius:8px; 
-      font-size:13px; 
-      max-width:300px; 
-      z-index:500; 
-    }
-
-    /* ========================================
-      MEDIA QUERIES RESPONSIVE - CORRETTE
-      ======================================== */
-
-    /* Tablet (max-width: 900px) */
-    @media (max-width: 900px) {
-      .sidebar { width: 250px; }
-      video.media-player { height: 320px; }
-      
-      .equalizer-visualizer { 
-        height: 140px; 
-        gap: 4px;
-      }
-      .eq-bar-container { 
-        height: 110px; 
-      }
-      .eq-bar-wrapper { 
-        min-width: 32px;
-      }
-      .eq-label { 
-        font-size: 8px; 
-      }
-      .channel-name-display { font-size: 22px; }
-    }
-
-    /* Smartphone (max-width: 700px) */
-    @media (max-width: 700px) {
-      /* ✅ FIX PRINCIPALE: Permetti scroll verticale su mobile */
-      body { 
-        flex-direction: column; 
-        height: auto;              /* Non forzare 100vh */
-        min-height: 100vh;         /* Ma mantieni altezza minima */
-        overflow-y: auto;          /* ✅ Permetti scroll verticale */
-        overflow-x: hidden;        /* Blocca solo scroll orizzontale */
-        -webkit-overflow-scrolling: touch; /* Scroll fluido iOS */
-      }
-      
-      /* Sidebar diventa header superiore */
-      .sidebar { 
-        width: 100%; 
-        height: auto; 
-        min-height: auto;
-        max-height: 180px;         /* Limita altezza per non occupare tutto */
-        order: 1; 
-        border-right: none;
-        border-bottom: 2px solid var(--border);
-        overflow-y: auto;          /* Scroll interno alla sidebar se necessario */
-        flex-shrink: 0;            /* Non rimpicciolire */
-      }
-      
-      .main-container { 
-        order: 2; 
-        width: 100%;
-        overflow: visible;         /* ✅ Mostra tutto il contenuto */
-        flex: none;                /* Non forzare flex */
-      }
-      
-      .top-bar {
-        position: sticky;          /* Barra ricerca fissa in alto */
-        top: 0;
-        z-index: 100;
-        background: rgba(10,10,20,0.95);
-        backdrop-filter: blur(10px);
-      }
-      
-      .player-section { 
-        padding: 16px 12px;
-        overflow: visible;         /* ✅ Permetti espansione verticale */
-        height: auto;              /* Non limitare altezza */
-      }
-      
-      .player-card {
-        overflow: visible;         /* ✅ Card non taglia contenuto */
-      }
-      
-      /* Player video adattivo */
-      video.media-player { 
-        height: auto; 
-        min-height: 200px; 
-        aspect-ratio: 16/9;
-        max-height: 40vh;          /* Non occupare tutto lo schermo */
-      }
-      
-      /* Testi più leggibili */
-      .channel-name-display { font-size: 18px; }
-      .sidebar-tab { font-size: 11px; padding: 10px 4px; }
-      .tunex-logo { width: 60px; }
-      
-      /* Equalizzatore ottimizzato per mobile */
-      .equalizer-container {
-        padding: 12px 8px;
-        margin-top: 12px;
-        margin-bottom: 20px;       /* ✅ Spazio sotto per i controlli */
-        overflow: visible;         /* ✅ Non tagliare contenuto */
-      }
-      
-      .equalizer-visualizer { 
-        height: 100px; 
-        gap: 2px;
-        padding: 10px 4px;
-        justify-content: flex-start; /* Scroll fluido a sinistra */
-        overflow-x: auto;          /* ✅ Scroll orizzontale per le bande */
-        overflow-y: visible;       /* ✅ Non tagliare verticale */
-        -webkit-overflow-scrolling: touch;
-      }
-      
-      .eq-bar-wrapper { 
-        min-width: 24px; /* 15 bande × 24px = 360px totale */
-        gap: 8px;
-      }
-      
-      .eq-bar-container { 
-        height: 70px;
-        border-radius: 6px;
-      }
-      
-      .eq-bar {
-        min-height: 3px;
-      }
-      
-      .eq-label { 
-        font-size: 7px;
-        line-height: 1.2;
-      }
-      
-      .equalizer-title {
-        font-size: 11px;
-        letter-spacing: 1px;
-      }
-      
-      /* ✅ CONTROLLI RESET/PRESET: forza visibilità */
-      .eq-controls {
-        flex-direction: column;
-        gap: 12px;
-        width: 100%;
-        padding: 10px 0;           /* ✅ Spazio sopra/sotto */
-        margin-top: 10px;          /* ✅ Distanza dalle bande */
-        position: relative;        /* ✅ Evita che venga tagliato */
-        z-index: 10;               /* ✅ Sopra altri elementi */
-      }
-      
-      .eq-reset-btn {
-        padding: 10px 16px;
-        font-size: 12px;
-        width: 100%;
-        max-width: 220px;
-        margin: 0 auto;            /* ✅ Centra il bottone */
-        min-height: 44px;          /* ✅ Touch target accessibile */
-      }
-      
-      .eq-preset-select {
-        width: 100%;
-        max-width: 220px;
-        font-size: 11px;
-        padding: 10px 28px 10px 12px;
-        margin: 0 auto;            /* ✅ Centra il dropdown */
-        min-height: 44px;
-      }
-      
-      /* Bottoni principali più grandi per touch */
-      .main-controls { 
-        gap: 10px; 
-        width: 100%;
-        padding: 10px 0 20px;      /* ✅ Spazio sotto per evitare taglio */
-        margin-top: 10px;
-      }
-      
-      .btn { 
-        padding: 12px 16px; 
-        font-size: 13px; 
-        flex: 1 1 45%; /* 2 bottoni per riga */
-        justify-content: center;
-        min-width: 120px;
-        min-height: 44px;          /* ✅ Touch target minimo */
-      }
-      
-      /* Footer non fisso su mobile per non coprire contenuti */
-      .footer { 
-        position: relative;        
-        font-size: 11px; 
-        padding: 16px 12px;
-        margin-top: 20px;
-      }
-      
-      #toast { 
-        right: 10px; 
-        left: 10px; 
-        bottom: 80px; 
-        max-width: none; 
-      }
-    }
-
-    /* Smartphone molto piccoli (max-width: 400px) */
-    @media (max-width: 400px) {
-      .eq-bar-wrapper { 
-        min-width: 20px; /* Massima compressione: 15×20 = 300px */
-      }
-      .eq-label { 
-        font-size: 6px; 
-      }
-      .equalizer-title {
-        font-size: 10px;
-        letter-spacing: 1px;
-      }
-      .btn { 
-        padding: 10px 12px; 
-        font-size: 12px; 
-        flex: 1 1 100%; /* 1 bottone per riga su schermi tiny */
-      }
-      .channel { 
-        font-size: 12px; 
-        padding: 8px; 
-      }
-      .eq-preset-select {
-        font-size: 9px;
-        padding: 6px 24px 6px 10px;
-      }
-      .sidebar {
-        max-height: 160px;
-      }
-    }
-  </style>
+/* LANDSCAPE SU SCHERMI MOLTO BASSI */
+@media (orientation: landscape) and (max-height: 400px) {
+.sidebar {
+width: 180px;
+}
+.tunex-logo {
+width: 90px;
+}
+.sidebar-tab {
+font-size: 9px;
+padding: 5px 3px;
+}
+.channel {
+padding: 5px 5px;
+font-size: 10px;
+}
+.channel-container {
+max-height: calc(100vh - 110px);
+}
+.top-bar {
+padding: 6px 8px;
+}
+.channel-name-display {
+font-size: 12px;
+}
+.main-controls .btn {
+padding: 6px 8px;
+font-size: 9px;
+min-height: 32px;
+}
+}
+/* TABLET */
+@media (min-width: 768px) {
+.menu-toggle {
+display: none !important;
+}
+}
+/* SCROLLBAR SIDEBAR */
+.channel-container::-webkit-scrollbar {
+width: 4px;
+}
+.channel-container::-webkit-scrollbar-track {
+background: rgba(255,255,255,0.05);
+border-radius: 2px;
+}
+.channel-container::-webkit-scrollbar-thumb {
+background: rgba(255,255,255,0.2);
+border-radius: 2px;
+}
+.channel-container::-webkit-scrollbar-thumb:hover {
+background: rgba(255,255,255,0.3);
+}
+</style>
 </head>
 <body>
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <img src="images/logo.png" id="logo" class="tunex-logo">
-    </div>
+<button class="menu-toggle" id="menu-toggle" aria-label="Apri menu">
+<i class="fas fa-bars"></i>
+</button>
+<div class="overlay" id="overlay"></div>
+<div class="sidebar" id="sidebar">
+<div class="sidebar-header">
+<!-- SVG Logo Inline per evitare broken image su mobile -->
+<svg class="tunex-logo" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="bold" font-size="40">TuneX</text>
+</svg>
+</div>
+<div class="sidebar-tabs">
+<button class="sidebar-tab active" data-tab="all"><i class="fas fa-list"></i> Tutti</button>
+<button class="sidebar-tab" data-tab="favorites"><i class="fas fa-star"></i> Favoriti</button>
+<button class="sidebar-tab" data-tab="local"><i class="fas fa-folder"></i> Local</button>
+</div>
+<div class="sidebar-actions">
+<button class="sidebar-btn" id="open-files-btn"><i class="fas fa-folder-open"></i> File</button>
+<button class="sidebar-btn danger" id="clear-local-btn"><i class="fas fa-trash"></i> Pulisci</button>
+<input id="file-input" type="file" accept="audio/*,video/*" multiple style="display:none" />
+</div>
+<div class="channel-container" id="channel-list"></div>
+</div>
+<div class="main-container">
+<div class="top-bar">
+<div class="search-box">
+<i class="fas fa-search" style="color:var(--text-secondary)"></i>
+<input id="search-input" class="search-input" placeholder="Cerca un canale..." />
+<button id="reset-search" class="search-icon-btn" title="Cancella ricerca"><i class="fas fa-times"></i></button>
+</div>
+</div>
+<div class="player-section">
+<div class="player-card">
+<div class="channel-info">
+<div class="channel-name-display" id="current-channel">Seleziona un canale</div>
+<div class="channel-status">
+<div id="status-dot" class="status-dot"></div>
+<span id="status-text">In attesa</span>
+</div>
+</div>
+<div class="media-player-container">
+<video id="unified-player" class="media-player" controls playsinline webkit-playsinline></video>
+<div id="loading-info" class="loading-info">
+<div class="spinner"></div>
+<p>Caricamento video...</p>
+</div>
+</div>
+<div class="main-controls" id="main-controls">
+<button id="media-play" class="btn"><i class="fas fa-play"></i> Play</button>
+<button id="media-stop" class="btn secondary"><i class="fas fa-stop"></i> Stop</button>
+<button id="media-next" class="btn secondary"><i class="fas fa-step-forward"></i> Next</button>
+<button id="voice-search" class="btn voice-btn"><i class="fas fa-microphone"></i> Voice</button>
+</div>
+<div class="player-info" id="player-info"></div>
+<div class="equalizer-container">
+<div class="equalizer-title">🎚️ EQUALIZZATORE (15 BANDE)</div>
+<div class="equalizer-visualizer" id="eq-visualizer">
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="0">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">20Hz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="1">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">40Hz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="2">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">80Hz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="3">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">160Hz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="4">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">320Hz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="5">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">640Hz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="6">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">1.2kHz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="7">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">2.5kHz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="8">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">5kHz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="9">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">10kHz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="10">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">15kHz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="11">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">20kHz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="12">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">25kHz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="13">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">30kHz</label>
+</div>
+<div class="eq-bar-wrapper">
+<div class="eq-bar-container" data-band="14">
+<div class="eq-bar" style="height: 20%;"></div>
+</div>
+<label class="eq-label">40kHz</label>
+</div>
+</div>
+<div class="eq-controls">
+<button class="eq-reset-btn" id="eq-reset"><i class="fas fa-undo"></i> RESET</button>
+<select id="eq-preset-select" class="eq-preset-select">
+<option value="">🎚️ PRESET...</option>
+<option value="flat">⚪ Flat</option>
+<option value="bass">🔊 Bass Boost</option>
+<option value="treble">🎵 Treble</option>
+<option value="vocal">🎤 Vocal</option>
+<option value="rock">🎸 Rock</option>
+<option value="pop">🎧 Pop</option>
+<option value="jazz">🎷 Jazz</option>
+<option value="classical">🎻 Classical</option>
+<option value="electronic">🎛️ Electronic</option>
+<option value="dance">💃 Dance</option>
+<option value="podcast">🎙️ Podcast</option>
+<option value="live">🎪 Live</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="footer">© 2025 TuneX • Premium Audio Player</div>
+<div id="toast"></div>
+<script>
+var channelsData = [
+{ name: '70-80.it TV ti ricordi?', url: 'https://585b674743bbb.streamlock.net/9050/9050/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Deejay Tv', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/live/S85984808/sMO0tz9Sr2Rk/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RADIO LINETTI', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/webradio/deejaywfmlinus/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RADIO DEEJAY 80', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/webradio/deejay80/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RADIO DEEJAY', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/radiodeejay/radiodeejay/play1.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RADIO DEEJAY TIME', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/webradio/deejaytime/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RADIO CAPITAL', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/radiocapital/radiocapital/play1.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RADIO CAPITAL CLASSIC ROCK', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/webradio/capitalclassicrock/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'NAXI RADIO HOUSE', url: 'https://naxidigital-house128ssl.streaming.rs:8002/;stream.nsv', genre: 'Unknown', type: 'streaming' },
+{ name: 'NAXI 70', url: 'https://naxidigital-70s128ssl.streaming.rs:8382/;stream.nsv', genre: 'Unknown', type: 'streaming' },
+{ name: 'NAXI 80', url: 'https://naxidigital-80s128ssl.streaming.rs:8042/;stream.nsv', genre: 'Unknown', type: 'streaming' },
+{ name: 'ONLY FUNKY', url: 'https://streaming.nrjaudio.fm/ouhm27apu6pb?origine=radio.net&aw_0_1st.station=Nostalgie-Funk', genre: 'Unknown', type: 'streaming' },
+{ name: 'IBIZA RADIO LIVE', url: 'https://uksoutha.streaming.broadcast.radio/ibiza-live-radio', genre: 'Unknown', type: 'streaming' },
+{ name: 'ONLY SOUND POP 80', url: 'https://strw3.openstream.co/1796', genre: 'Unknown', type: 'streaming' },
+{ name: 'RADIO PARADISE ALTERNATIVE', url: 'https://stream.radioparadise.com/aac-128', genre: 'Unknown', type: 'streaming' },
+{ name: 'HD CLASSIC ROCK USA', url: 'https://hdradioclassicrock-rfritschka.radioca.st/;', genre: 'Unknown', type: 'streaming' },
+{ name: 'Virgin - AC/DC', url: 'http://icy.unitedradio.it/um1026.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Virgin - PINK FLOYD', url: 'http://icy.unitedradio.it/VirginRogerWaters.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Virgin - ROCK', url: 'http://icy.unitedradio.it/VirginRock70.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Virgin ROCK 70', url: 'http://icy.unitedradio.it/VirginRock70.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Virgin ROCK 80', url: 'http://icy.unitedradio.it/VirginRock80.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Virgin RADIO', url: 'http://icecast.unitedradio.it/Virgin.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio 105', url: 'https://live02-seg.msr.cdn.mediaset.net/live/ch-ec/ec-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio 105 Miami', url: 'https://icy.unitedradio.it/105Miami.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio 105 Dance 90', url: 'https://icy.unitedradio.it/105Dance90.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio 105 Story', url: 'https://icy.unitedradio.it/105Story.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'ZOO 105', url: 'https://icy.unitedradio.it/105Zoo.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio 105 Classic', url: 'https://icy.unitedradio.it/105Classics.aac', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio 101', url: 'https://live02-seg.msr.cdn.mediaset.net/live/ch-er/er-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio 101 90', url: 'https://icy.unitedradio.it/101Legend.aac', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio 101 70', url: 'https://icy.unitedradio.it/R10170.aac', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio 101 80', url: 'https://icy.unitedradio.it/R10180.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio 101 Easy', url: 'https://icy.unitedradio.it/R101YourLove.aac', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio 101 New Hit', url: 'https://icy.unitedradio.it/101SpecialArtist.aac', genre: 'Unknown', type: 'streaming' },
+{ name: 'RMC Radio Monte Carlo', url: 'https://live02-seg.msr.cdn.mediaset.net/live/ch-bb/bb-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RMC2 PLANET Rock', url: 'https://n35a-eu.rcs.revma.com/w66qp4pp81uvv', genre: 'Unknown', type: 'streaming' },
+{ name: 'RADIO MONTE CARLO NIGHT STORY', url: 'https://icy.unitedradio.it/rmcweb012', genre: 'Unknown', type: 'streaming' },
+{ name: 'RADIO MONTE CARLO LOVE SONG', url: 'https://icy.unitedradio.it/rmcweb006', genre: 'Unknown', type: 'streaming' },
+{ name: 'RADIO MONTE CARLO ITALIA', url: 'https://icy.unitedradio.it/rmcweb005', genre: 'Unknown', type: 'streaming' },
+{ name: 'RMC2 TIFFANY', url: 'https://n14a-eu.rcs.revma.com/ksvn8tpp81uvv?rj-ttl=5&rj-tok=AAABjzBE0AYA2paplZaa1ZJ_NA', genre: 'Unknown', type: 'streaming' },
+{ name: 'RMC2 DISCO INFERNO', url: 'https://n08a-eu.rcs.revma.com/7akzxppp81uvv', genre: 'Unknown', type: 'streaming' },
+{ name: 'RTL 102.5 Best', url: 'https://streamcdnn2-dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S76960628/OEPHRUIctA0M/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RTL 102.5 Bro & Sis', url: 'https://streamcdnn1-dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S75007890/MUGHuxc9dQ3b/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RTL 102.5 Caliente', url: 'https://streamcdnn1-dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S8448465/zTYa1Z5Op9ue/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RTL 102.5 Disco', url: 'https://streamcdnn2-dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S51100361/0Fb4R3k82b5Z/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RTL 102.5 Traffic', url: 'https://streamcdnn2-dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S38122967/2lyQRIAAGgRR/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RTL 102.5 Tv', url: 'https://streamcdnn2-dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S97044836/tbbP8T1ZRPBL/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: '1Station TV', url: 'https://stream9.xdevel.com/video0s975854-1225/stream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Euro Indie Music Chart (E.I.M.C.)', url: 'https://57068da1deb21.streamlock.net/euroindiemusic/euroindiemusic/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'V2 Beat', url: 'https://de1se01.v2beat.live/chunks.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Vevo 2K', url: 'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg00056-vevotv-vevo2kau-samsungau/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Vevo 70s', url: 'https://lightning-now70s-samsungnz.amagi.tv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Vevo 80s', url: 'https://lightning-now80s-samsungnz.amagi.tv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Vevo 90s', url: 'https://lightning-now90s-samsungnz.amagi.tv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Vevo Pop', url: 'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg00056-vevotv-vevopopau-samsungau/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Vevo Retro Rock', url: 'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg00056-vevotv-vevoretrorockau-samsungau/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RadioPlutoTV Napoli', url: 'https://585b674743bbb.streamlock.net/9106/9106/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Retro Music', url: 'http://stream.mediawork.cz/retrotv//retrotvHQ1/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Skyline Radio e Soul Tv', url: 'https://64b16f23efbee.streamlock.net/skylinetv/skylinetv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Skyline official', url: 'https://rblive.it:8010/radio.mp3?refresh=1741027285515', genre: 'Unknown', type: 'streaming' },
+{ name: 'Skyline Soul', url: 'https://rblive.it:8040/radio.mp3?refresh=1741027614439', genre: 'Unknown', type: 'streaming' },
+{ name: 'Skyline Groove', url: 'https://rblive.it:8050/radio.mp3?refresh=1741027833110', genre: 'Unknown', type: 'streaming' },
+{ name: 'Skyline Jazz', url: 'https://rblive.it:8030/radio.mp3?refresh=1741028048397', genre: 'Unknown', type: 'streaming' },
+{ name: 'Spirit Tv', url: 'https://cdnlive.myspirit.tv/LS-ATL-43240-2/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Tv 60/70/80', url: 'https://5a1178b42cc03.streamlock.net/607080stream/607080stream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio m2o Tv', url: 'https://streamcdnb2-4c4b867c89244861ac216426883d1ad0.msvdn.net/live/S62628868/uhdWBlkC1AoO/chunklist_b1728000.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Ricordi Tv', url: 'https://5f22d76e220e1.streamlock.net/radioricorditv/radioricorditv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Ritmo 80 Tv (Forever Young)', url: 'https://5f204aff97bee.streamlock.net/Ritmo80TV/livestream/chunklist_w1976860884.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Romantica Radio Tv', url: 'https://stream10.xdevel.com/video0s977363-1901/stream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Silver', url: 'https://stream3.aswifi.it/radiosilver/live/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'PiterPan TV', url: 'https://58d921499d3d3.streamlock.net/RadioPiterpanTV/livestream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Movida Tv - house', url: 'https://w1.mediastreaming.it/movidatv/movidatv/chunklist_w621208970.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio 80 Forever Young', url: 'https://585b674743bbb.streamlock.net/9076/9076/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Italia Tv', url: 'https://radioitaliatv.akamaized.net/hls/live/2093117/RadioitaliaTV/stream03/streamPlaylist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio JukeBox Tv', url: 'https://5926fc9c7c5b2.streamlock.net/9108/9108/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'NOW 70s', url: 'https://lightning-now70s-rakuten.amagi.tv/hls/amagi_hls_data_rakutenAA-lightning-now70s-rakuten/CDN/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'NOW 80s', url: 'https://lightning-now80s-rakuten.amagi.tv/hls/amagi_hls_data_rakutenAA-lightning-now80s-rakuten/CDN/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'NOW Rock', url: 'https://lightning-now90s-rakuten.amagi.tv/hls/amagi_hls_data_rakutenAA-lightning-now90s-rakuten/CDN/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Kiss Kiss Italia Tv', url: 'https://59253971be783.streamlock.net/KKTV01/livestream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'R.S.C. Tv (Radio Studio Centrale)', url: 'https://cp1.server89.com:19360/studiocentrale/studiocentrale.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Kiss Kiss Tv', url: 'https://kk.fluid.stream/KKMulti/smil:KissKissTV.smil/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Love FM', url: 'https://tvd-love.fluid.stream/LoveFM/livestream/chunklist_w45593526.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Freccia Tv', url: 'https://dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S3160845/0tuSetc8UFkF/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Ibiza Tv', url: 'https://5929b138b139d.streamlock.net/RadioIbizaTV/livestream/chunklist_w1961450240.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RMC 101 Tv', url: 'https://5db313b643fd8.streamlock.net/RMC101TV/RMC101TV/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Miami Vice Radio Tv', url: 'https://5926fc9c7c5b2.streamlock.net/9326/9326/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'LaC On-Air', url: 'https://streamcdnm8-f5842579ff984c1c98d63b8d789673eb.msvdn.net/live/324215/zPnHWY2/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Mitology TV', url: 'https://64b16f23efbee.streamlock.net/mitologytv/mitologytv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Music Trance Urban', url: 'https://cdn-ue1-prod.tsv2.amagi.tv/linear/amg01076-lightningintern-traceurban-xiaomi/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Music Trance Brazil', url: 'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01131-tracetv-tracebrazuca-xiaomi/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Jazz TV', url: 'https://stream.nasatv.com.mk/jazztv/hls/jazztv_live.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Qwest TV Jazz', url: 'https://cdn-ue1-prod.tsv2.amagi.tv/linear/qwestAAAA-qwestjazz-uk-samsungtv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'RTL Gold', url: 'https://stream.rtl.lu/data/live/tele/rtlgold/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'M2O', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/radiom2odance/radiom2odance/master_ma.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'JAZZ RADIO FUNK', url: 'http://jazz-wr06.ice.infomaniak.ch/jazz-wr06-128.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'JAZZ RADIO LOUNGE', url: 'http://jazzlounge.ice.infomaniak.ch/jazzlounge-high.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'JAZZ RADIO SOUL', url: 'http://jazz-wr10.ice.infomaniak.ch/jazz-wr10-128.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'JAZZ RADIO - Jazz & Classique', url: 'http://jazz-wr17.ice.infomaniak.ch/jazz-wr17-128.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'JAZZ RADIO LADIES', url: 'http://jazzladiescrooners.ice.infomaniak.ch/jazzladiescrooners-high.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'JAZZ RADIO BLACK MUSIC', url: 'http://jazzblackmusic.ice.infomaniak.ch/jazzblackmusic-high.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'JAZZ RADIO GROOVE', url: 'http://jazz-wr08.ice.infomaniak.ch/jazz-wr08-128.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'JAZZ RADIO (NRJ)', url: 'https://streaming.nrjaudio.fm/ouo6uw7nfibk?origine=radio.net&aw_0_1st.station=Nostalgie-Jazz', genre: 'Unknown', type: 'streaming' },
+{ name: 'JAZZ RADIO Jazz & Cinema', url: 'http://jzr-wr20.ice.infomaniak.ch/jzr-wr20.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'RADIO LIVE NY', url: 'https://streaming.radiostreamlive.com/radiolovelive_devices', genre: 'Unknown', type: 'streaming' },
+{ name: 'PINGUIN VINTAGE 80', url: 'https://14223.live.streamtheworld.com/SP_R4017895_SC', genre: 'Unknown', type: 'streaming' },
+{ name: 'SHARP STREAM DANCE', url: 'http://listen-nation.sharp-stream.com/nationhitsdab.mp3?ref=RF', genre: 'Unknown', type: 'streaming' },
+{ name: 'HOTMIX LOUNGE', url: 'https://streaming.hotmixradio.fr/hotmix-lounge-en-mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'EDM HOUSE LAS VEGAS', url: 'https://s2.radio.co/s30844a0f4/listen', genre: 'Unknown', type: 'streaming' },
+{ name: 'Maretimo Lounge', url: 'https://s35.derstream.net/lounge.mp3?_=1', genre: 'Unknown', type: 'streaming' },
+{ name: 'LOUNGE FM - AUSTRIA', url: 'https://s35.derstream.net/100austria.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'LITE RADIO - 70 80', url: 'https://ais-sa2.cdnstream1.com/2382_128.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'UMSH - HOUSE', url: 'https://icy.unitedradio.it/um036.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Point Blank FM - HOUSE', url: 'https://pointblankradio.co.uk/stream?latency=high', genre: 'Unknown', type: 'streaming' },
+{ name: 'Electro Radio - Techno', url: 'http://stream.electroradio.fm/stream.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Exclusive Legends', url: 'https://streaming.exclusive.radio/er/donnasummer/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio News24', url: 'https://stream6.xdevel.com/audio6s975889-649/stream/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Italia Radio', url: 'https://italianradio.streamingmedia.it/play', genre: 'Unknown', type: 'streaming' },
+{ name: 'Village Radio Hilton', url: 'http://das-edge15-live365-dal02.cdnstream.com/a73319', genre: 'Unknown', type: 'streaming' },
+{ name: 'POWERHIT NY ROCK', url: 'http://live.powerhitz.com/70s?aw_0_req.gdpr=true', genre: 'Unknown', type: 'streaming' },
+{ name: 'FUNKY RADIO NY', url: 'https://funkyradio.streamingmedia.it/audio.aac', genre: 'Unknown', type: 'streaming' },
+{ name: 'DISCO FUNKY', url: 'https://discofunk.streamingmedia.it/usa', genre: 'Unknown', type: 'streaming' },
+{ name: 'Funky Corner', url: 'https://ais-sa2.cdnstream1.com/2447_96.aac', genre: 'Unknown', type: 'streaming' },
+{ name: 'POP LOUNGE CAFE', url: 'https://stream.laut.fm/poploungecafe', genre: 'Unknown', type: 'streaming' },
+{ name: 'Nostalgie - New York - 70 80', url: 'http://c32.radioboss.fm:8139/stream', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Indie Disco Miami', url: 'https://broadcast.miami/proxy/indiedisco?mp=/stream/', genre: 'Unknown', type: 'streaming' },
+{ name: 'Salsoul - Disco Miami', url: 'https://broadcast.miami/proxy/salsoul?mp=/stream/', genre: 'Unknown', type: 'streaming' },
+{ name: 'RMC Disco Funky', url: 'http://edge.radiomontecarlo.net/rmcweb025', genre: 'Unknown', type: 'streaming' },
+{ name: 'COOLFM Jazz', url: 'https://mediagw.e-tiger.net/stream/zc13', genre: 'Unknown', type: 'streaming' },
+{ name: 'Jazz Radio Black Music', url: 'http://jazzblackmusic.ice.infomaniak.ch/jazzblackmusic-high.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'The Soul Of London', url: 'http://londonsoulradio.out.airtime.pro:8000/londonsoulradio_a', genre: 'Unknown', type: 'streaming' },
+{ name: 'Music Art Club - Lounge', url: 'https://eu9.fastcast4u.com/proxy/musicart?mp=/1', genre: 'Unknown', type: 'streaming' },
+{ name: 'Dance Wave!', url: 'http://dancewave.online/dance.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'La Patate Douce Radio - Electro House Disco Funk Africa', url: 'http://listen.radioking.com/radio/285742/stream/331753', genre: 'Unknown', type: 'streaming' },
+{ name: 'REYFM - House', url: 'https://listen.reyfm.de/houseparty_192kbps.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Traxx FM', url: 'http://traxx001.ice.infomaniak.ch/traxx001-low.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'OXYGEN MUSIC - MIX', url: 'https://oxygenmusic.hu:2443/hls/oxygenmusic.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Beethoven', url: 'https://unlimited3-cl.dps.live/beethovenfm/gotardis/audio/now/livestream1.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Bob Marley', url: 'https://listen.radioking.com/radio/500896/stream/558190', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Symphony', url: 'https://streaming.radiostreamlive.com/radiosymphony_devices', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Romeo And Juliet Lounge', url: 'https://onair7.xdevel.com/proxy/xautocloud_vovi_2030?mp=/1/', genre: 'Unknown', type: 'streaming' },
+{ name: 'Diana Krall', url: 'https://streaming.exclusive.radio/uber/easydianakrall/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Fleetwood Mac - non stop', url: 'https://streaming.exclusive.radio/er-app/fleetwoodmachits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Eric Clapton - non stop', url: 'https://streaming.exclusive.radio/er-app/ericclaptonhits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Dire Straits - non stop', url: 'https://streaming.exclusive.radio/er-app/direstraitshits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Chic - non stop', url: 'https://streaming.exclusive.radio/er-app/chichits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Carpenters - non stop', url: 'https://streaming.exclusive.radio/er-app/carpentershits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Barry White - non stop', url: 'https://streaming.exclusive.radio/er-app/barrywhitehits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Marvin Gaye - non stop', url: 'https://streaming.exclusive.radio/er-app/marvingayehits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'David Bowie - non stop', url: 'https://streaming.exclusive.radio/er-app/davidbowiehits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Frank Sinatra - non stop', url: 'https://streaming.exclusive.radio/er-app/franksinatrahits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'James Taylor - non stop', url: 'https://streaming.exclusive.radio/er-app/jamestaylorhits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Nat King Cole - non stop', url: 'https://streaming.exclusive.radio/er-app/natkingcolehits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Phil Collins - non stop', url: 'https://streaming.exclusive.radio/er-app/philcollinshits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Pink Floyd - non stop', url: 'https://streaming.exclusive.radio/er-app/pinkfloydhits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Steely Dan - non stop', url: 'https://streaming.exclusive.radio/er-app/steelydanhits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'George Michael - non stop', url: 'https://streaming.exclusive.radio/er-app/georgemichaelhits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Elton John - non stop', url: 'https://streaming.exclusive.radio/er-app/eltonjohnhits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Eagles - non stop', url: 'https://streaming.exclusive.radio/er-app/eagleshits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Genesis - non stop', url: 'https://streaming.exclusive.radio/er-app/genesishits/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Avicii non stop', url: 'https://streaming.exclusive.radio/er-app/adamlambert/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: '10cc non stop', url: 'https://streaming.exclusive.radio/er-app/10cc/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Alison Moyet non stop', url: 'https://streaming.exclusive.radio/er-app/alisonmoyet/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Gregory Porter Non stop', url: 'https://streaming.exclusive.radio/er-app/gregoryporter/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Depeche Mode Non stop', url: 'https://streaming.exclusive.radio/er-app/depechemode/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Donna Summer Non stop', url: 'https://streaming.exclusive.radio/er-app/donnasummer/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Al Green Non stop', url: 'https://streaming.exclusive.radio/er-app/algreen/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Earth Wind & Fire Non stop', url: 'https://streaming.exclusive.radio/er-app/earthwindandfire/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Black Sabbath Non stop', url: 'https://streaming.exclusive.radio/er-app/blacksabbath/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Deep Purple Non stop', url: 'https://streaming.exclusive.radio/er-app/deeppurple/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Joe Satriani Non stop', url: 'https://streaming.exclusive.radio/er-app/joesatriani/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Simple Minds Non stop', url: 'https://streaming.exclusive.radio/er-app/simpleminds/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Stone Temple Pilots Non stop', url: 'https://streaming.exclusive.radio/er-app/stonetemplepilots/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'U2 Non stop', url: 'https://streaming.exclusive.radio/er-app/u2/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'ZZ TOP Non stop', url: 'https://streaming.exclusive.radio/er-app/zztop/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'John Lennon Non stop', url: 'https://streaming.exclusive.radio/er-app/lennon/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Joe Bonamassa Non stop', url: 'https://streaming.exclusive.radio/er-app/joebonamassa/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'George Benson Non stop', url: 'https://streaming.exclusive.radio/er-app/georgebenson/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Herbie Hancock Non stop', url: 'https://streaming.exclusive.radio/er-app/herbiehancock/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'R.E.M. Non stop', url: 'https://streaming.exclusive.radio/er-app/rem/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'The Cure Non stop', url: 'https://streaming.exclusive.radio/er-app/thecure/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Smiths', url: 'https://streaming.exclusive.radio/er-app/thesmiths/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Olivia Newton John Non stop', url: 'https://streaming.exclusive.radio/er-app/onj/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Spandau Ballet Non stop', url: 'https://streaming.exclusive.radio/er-app/spandauballet/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Tears For Fears Non stop', url: 'https://streaming.exclusive.radio/er-app/tearsforfears/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Cars Non stop', url: 'https://streaming.exclusive.radio/er-app/thecars/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'The Police Non stop', url: 'https://streaming.exclusive.radio/er-app/police/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Chicago Non stop', url: 'https://streaming.exclusive.radio/er-app/chicago/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Chris Rea Non stop', url: 'https://streaming.exclusive.radio/er-app/chrisrea/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Huey Lewis & The News Non stop', url: 'https://streaming.exclusive.radio/er-app/hueylewis/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Santana Non stop', url: 'https://streaming.exclusive.radio/er-app/santana/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Supertramp Non stop', url: 'https://streaming.exclusive.radio/er-app/supertramp/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Sade Non stop', url: 'https://streaming.exclusive.radio/er-app/sade/icecast.audio', genre: 'Unknown', type: 'streaming' },
+{ name: 'Rai 1', url: 'https://dash2.antik.sk/live/test_rai_uno_tizen/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Canale 5', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-c5/c5-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Italia 1', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-i1/i1-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Rete 4', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-r4/r4-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: '27 Twentyseven', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-ts/ts-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Cine 34', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-b6/b6-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Focus', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-fu/fu-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'GRANDE FRATELLO', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-kq/kq-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Iris', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-ki/ki-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Italia 2', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-i2/i2-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'La 5', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-ka/ka-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Mediaset 20', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-lb/lb-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Mediaset Extra', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-kq/kq-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Top Crime', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-lt/lt-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'TGR Sicilia', url: 'https://odmsto.com/returned/668707.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Tgcom24', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-kf/kf-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'SportItalia', url: 'https://sportsitalia-samsungitaly.amagi.tv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'LA ZANZARA', url: 'https://podcast-radio24.ilsole24ore.com/radio24_audio/2025/250528-lazanzara.mp3?awCollectionId=lazanzara&awEpisodeId=250528-lazanzara', genre: 'Unknown', type: 'streaming' },
+{ name: 'RadiO Delfino I love 80', url: 'https://stream.radiodelfino.com:8060/radio.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'Rádio Antena 1 94.7 FM São Paulo', url: 'https://antenaone.crossradio.com.br/stream/1/', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Bruno TV', url: 'https://router.xdevel.com/video0s975758-473/stream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Marte Tv', url: 'https://router.xdevel.com/video0s975753-750/stream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Party Groove', url: 'http://stream15.top-ix.org:80/partygroove', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Mela', url: 'http://91.121.38.216:8016/stream/1/', genre: 'Unknown', type: 'streaming' },
+{ name: '51 Radio TV 80', url: 'http://wms.shared.streamshow.it:80/canale51/canale51/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Radio Company TV', url: 'https://5929b138b139d.streamlock.net/CompanyTV/livestream_720p/HasBahCa.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Vintage Radio Tv 70 80', url: 'https://5f22d76e220e1.streamlock.net/vintageradiotv/vintageradiotv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: '54 Funk Soul Dance', url: 'http://stream.laut.fm/54-funk-soul-dance', genre: 'Unknown', type: 'streaming' },
+{ name: 'Trace Urban', url: 'https://cdn-ue1-prod.tsv2.amagi.tv/linear/amg01076-lightningintern-traceurban-xiaomi/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Trace Brazuca', url: 'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01131-tracetv-tracebrazuca-xiaomi/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'Qwest TV Jazz', url: 'https://cdn-ue1-prod.tsv2.amagi.tv/linear/qwestAAAA-qwestjazz-uk-samsungtv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
+{ name: 'JAZZ RADIO LOUNGE', url: 'http://jazzlounge.ice.infomaniak.ch/jazzlounge-high.mp3', genre: 'Unknown', type: 'streaming' },
+{ name: 'EDM HOUSE LAS VEGAS', url: 'https://s2.radio.co/s30844a0f4/listen', genre: 'Unknown', type: 'streaming' },
+{ name: 'YouTube - Test', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', type: 'youtube-link' },
+];
+var STORAGE_FAVORITES = 'acusstream_favorites';
+var eqValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+var unifiedPlayer = document.getElementById('unified-player');
+var loadingInfo = document.getElementById('loading-info');
+var channelListEl = document.getElementById('channel-list');
+var fileInput = document.getElementById('file-input');
+var openFilesBtn = document.getElementById('open-files-btn');
+var clearLocalBtn = document.getElementById('clear-local-btn');
+var mediaPlayButton = document.getElementById('media-play');
+var mediaStopButton = document.getElementById('media-stop');
+var mediaNextButton = document.getElementById('media-next');
+var voiceSearchBtn = document.getElementById('voice-search');
+var searchInput = document.getElementById('search-input');
+var resetSearchBtn = document.getElementById('reset-search');
+var currentChannelDisplay = document.getElementById('current-channel');
+var statusDot = document.getElementById('status-dot');
+var statusText = document.getElementById('status-text');
+var playerInfo = document.getElementById('player-info');
+var toast = document.getElementById('toast');
+var sidebarTabs = document.querySelectorAll('.sidebar-tab');
+var eqResetBtn = document.getElementById('eq-reset');
+var eqPresetSelect = document.getElementById('eq-preset-select');
+var eqBars = document.querySelectorAll('.eq-bar');
+var eqBarContainers = document.querySelectorAll('.eq-bar-container');
+var logoImg = document.getElementById('tunex-logo-img');
+var menuToggle = document.getElementById('menu-toggle');
+var sidebar = document.getElementById('sidebar');
+var overlay = document.getElementById('overlay');
+var currentHls = null;
+var isListening = false;
+var localFiles = [];
+var localBlobURLs = new Set();
+var localCounter = 0;
+var currentTab = 'all';
 
-    <div class="sidebar-tabs">
-      <button class="sidebar-tab active" data-tab="all"><i class="fas fa-list"></i> Tutti</button>
-      <button class="sidebar-tab" data-tab="favorites"><i class="fas fa-star"></i> Favoriti</button>
-      <button class="sidebar-tab" data-tab="local"><i class="fas fa-folder"></i> Local</button>
-    </div>
-
-    <div class="sidebar-actions">
-      <button class="sidebar-btn" id="open-files-btn"><i class="fas fa-folder-open"></i> File</button>
-      <button class="sidebar-btn danger" id="clear-local-btn"><i class="fas fa-trash"></i> Pulisci</button>
-      <input id="file-input" type="file" accept="audio/*,video/*" multiple style="display:none" />
-    </div>
-
-    <div class="channel-container" id="channel-list"></div>
-  </div>
-
-  <div class="main-container">
-    <div class="top-bar">
-      <div class="search-box">
-        <i class="fas fa-search" style="color:var(--text-secondary)"></i>
-        <input id="search-input" class="search-input" placeholder="Cerca un canale..." />
-        <button id="reset-search" class="search-icon-btn" title="Cancella ricerca"><i class="fas fa-times"></i></button>
-      </div>
-    </div>
-
-    <div class="player-section">
-      <div class="player-card">
-        <div class="channel-info">
-          <div class="channel-name-display" id="current-channel">Seleziona un canale</div>
-          <div class="channel-status">
-            <div id="status-dot" class="status-dot"></div>
-            <span id="status-text">In attesa</span>
-          </div>
-        </div>
-
-        <div class="media-player-container">
-          <video id="unified-player" class="media-player" controls></video>
-          <div id="loading-info" class="loading-info">
-            <div class="spinner"></div>
-            <p>Caricamento video...</p>
-          </div>
-        </div>
-
-        <!-- CONTROLLI SPOSTATI SOTTO IL PLAYER -->
-        <div class="main-controls" id="main-controls">
-          <button id="media-play" class="btn"><i class="fas fa-play"></i> Play</button>
-          <button id="media-stop" class="btn secondary"><i class="fas fa-stop"></i> Stop</button>
-          <button id="media-next" class="btn secondary"><i class="fas fa-step-forward"></i> Next</button>
-          <button id="voice-search" class="btn voice-btn"><i class="fas fa-microphone"></i> Voice</button>
-        </div>
-
-        <div class="player-info" id="player-info"></div>
-
-        <!-- 15-BAND EQUALIZER -->
-        <div class="equalizer-container">
-          <div class="equalizer-title">🎚️ EQUALIZZATORE (15 BANDE)</div>
-          
-          <div class="equalizer-visualizer" id="eq-visualizer">
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="0">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">20 Hz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="1">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">40 Hz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="2">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">80 Hz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="3">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">160 Hz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="4">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">320 Hz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="5">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">640 Hz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="6">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">1.2 kHz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="7">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">2.5 kHz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="8">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">5 kHz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="9">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">10 kHz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="10">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">15 kHz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="11">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">20 kHz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="12">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">25 kHz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="13">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">30 kHz</label>
-            </div>
-            <div class="eq-bar-wrapper">
-              <div class="eq-bar-container" data-band="14">
-                <div class="eq-bar" style="height: 20%;"></div>
-              </div>
-              <label class="eq-label">40 kHz</label>
-            </div>
-          </div>
-
-          <div class="eq-controls">
-            <button class="eq-reset-btn" id="eq-reset"><i class="fas fa-undo"></i> RESET</button>
-            <select id="eq-preset-select" class="eq-preset-select">
-              <option value="">🎚️ PRESET...</option>
-              <option value="flat">⚪ Flat</option>
-              <option value="bass">🔊 Bass Boost</option>
-              <option value="treble">🎵 Treble</option>
-              <option value="vocal">🎤 Vocal</option>
-              <option value="rock">🎸 Rock</option>
-              <option value="pop">🎧 Pop</option>
-              <option value="jazz">🎷 Jazz</option>
-              <option value="classical">🎻 Classical</option>
-              <option value="electronic">🎛️ Electronic</option>
-              <option value="dance">💃 Dance</option>
-              <option value="podcast">🎙️ Podcast</option>
-              <option value="live">🎪 Live</option>
-              <option value="hiphop">🎤 Hip Hop</option>
-              <option value="metal">🎸 Metal</option>
-              <option value="ambient">🌊 Ambient</option>
-              <option value="country">🤠 Country</option>
-              <option value="rnb">🎵 R&B Soul</option>
-              <option value="gaming">🎮 Gaming</option>
-              <option value="cinema">🎬 Cinema</option>
-              <option value="night">🌙 Night Mode</option>
-              <option value="loudness">🔊 Loudness</option>
-              <option value="acoustic">🎻 Acoustic</option>
-              <option value="edm">🎹 EDM</option>
-              <option value="reggae">🏖️ Reggae</option>
-              <option value="blues">🎷 Blues</option>
-              <option value="folk">🌲 Folk</option>
-              <option value="meditation">🧘 Meditation</option>
-              <option value="radio">📻 Radio Vintage</option>
-              <option value="headphone">🎧 Headphone</option>
-              <option value="speaker">🔊 Speaker</option>
-              <option value="car">🚗 Car Audio</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="footer">© 2025 TuneX • Premium Audio Player</div>
-  <div id="toast"></div>
-
-  <script>
-    var channelsData = [
-    { name: '70-80.it TV ti ricordi?', url: 'https://585b674743bbb.streamlock.net/9050/9050/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Deejay Tv', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/live/S85984808/sMO0tz9Sr2Rk/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RADIO LINETTI', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/webradio/deejaywfmlinus/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RADIO DEEJAY 80', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/webradio/deejay80/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RADIO DEEJAY', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/radiodeejay/radiodeejay/play1.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RADIO DEEJAY TIME', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/webradio/deejaytime/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RADIO CAPITAL', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/radiocapital/radiocapital/play1.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RADIO CAPITAL CLASSIC ROCK', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/webradio/capitalclassicrock/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'NAXI RADIO HOUSE', url: 'https://naxidigital-house128ssl.streaming.rs:8002/;stream.nsv', genre: 'Unknown', type: 'streaming' },
-  { name: 'NAXI 70', url: 'https://naxidigital-70s128ssl.streaming.rs:8382/;stream.nsv', genre: 'Unknown', type: 'streaming' },
-  { name: 'NAXI 80', url: 'https://naxidigital-80s128ssl.streaming.rs:8042/;stream.nsv', genre: 'Unknown', type: 'streaming' },
-  { name: 'ONLY FUNKY', url: 'https://streaming.nrjaudio.fm/ouhm27apu6pb?origine=radio.net&aw_0_1st.station=Nostalgie-Funk', genre: 'Unknown', type: 'streaming' },
-  { name: 'IBIZA RADIO LIVE', url: 'https://uksoutha.streaming.broadcast.radio/ibiza-live-radio', genre: 'Unknown', type: 'streaming' },
-  { name: 'ONLY SOUND POP 80', url: 'https://strw3.openstream.co/1796', genre: 'Unknown', type: 'streaming' },
-  { name: 'RADIO PARADISE ALTERNATIVE', url: 'https://stream.radioparadise.com/aac-128', genre: 'Unknown', type: 'streaming' },
-  { name: 'HD CLASSIC ROCK USA', url: 'https://hdradioclassicrock-rfritschka.radioca.st/;', genre: 'Unknown', type: 'streaming' },
-  { name: 'Virgin - AC/DC', url: 'http://icy.unitedradio.it/um1026.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Virgin - PINK FLOYD', url: 'http://icy.unitedradio.it/VirginRogerWaters.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Virgin - ROCK', url: 'http://icy.unitedradio.it/VirginRock70.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Virgin ROCK 70', url: 'http://icy.unitedradio.it/VirginRock70.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Virgin ROCK 80', url: 'http://icy.unitedradio.it/VirginRock80.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Virgin RADIO', url: 'http://icecast.unitedradio.it/Virgin.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio 105', url: 'https://live02-seg.msr.cdn.mediaset.net/live/ch-ec/ec-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio 105 Miami', url: 'https://icy.unitedradio.it/105Miami.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio 105 Dance 90', url: 'https://icy.unitedradio.it/105Dance90.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio 105 Story', url: 'https://icy.unitedradio.it/105Story.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'ZOO 105', url: 'https://icy.unitedradio.it/105Zoo.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio 105 Classic', url: 'https://icy.unitedradio.it/105Classics.aac', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio 101', url: 'https://live02-seg.msr.cdn.mediaset.net/live/ch-er/er-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio 101 90', url: 'https://icy.unitedradio.it/101Legend.aac', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio 101 70', url: 'https://icy.unitedradio.it/R10170.aac', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio 101 80', url: 'https://icy.unitedradio.it/R10180.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio 101 Easy', url: 'https://icy.unitedradio.it/R101YourLove.aac', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio 101 New Hit', url: 'https://icy.unitedradio.it/101SpecialArtist.aac', genre: 'Unknown', type: 'streaming' },
-  { name: 'RMC Radio Monte Carlo', url: 'https://live02-seg.msr.cdn.mediaset.net/live/ch-bb/bb-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RMC2 PLANET Rock', url: 'https://n35a-eu.rcs.revma.com/w66qp4pp81uvv', genre: 'Unknown', type: 'streaming' },
-  { name: 'RADIO MONTE CARLO NIGHT STORY', url: 'https://icy.unitedradio.it/rmcweb012', genre: 'Unknown', type: 'streaming' },
-  { name: 'RADIO MONTE CARLO LOVE SONG', url: 'https://icy.unitedradio.it/rmcweb006', genre: 'Unknown', type: 'streaming' },
-  { name: 'RADIO MONTE CARLO ITALIA', url: 'https://icy.unitedradio.it/rmcweb005', genre: 'Unknown', type: 'streaming' },
-  { name: 'RMC2 TIFFANY', url: 'https://n14a-eu.rcs.revma.com/ksvn8tpp81uvv?rj-ttl=5&rj-tok=AAABjzBE0AYA2paplZaa1ZJ_NA', genre: 'Unknown', type: 'streaming' },
-  { name: 'RMC2 DISCO INFERNO', url: 'https://n08a-eu.rcs.revma.com/7akzxppp81uvv', genre: 'Unknown', type: 'streaming' },
-  { name: 'RTL 102.5 Best', url: 'https://streamcdnn2-dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S76960628/OEPHRUIctA0M/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RTL 102.5 Bro & Sis', url: 'https://streamcdnn1-dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S75007890/MUGHuxc9dQ3b/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RTL 102.5 Caliente', url: 'https://streamcdnn1-dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S8448465/zTYa1Z5Op9ue/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RTL 102.5 Disco', url: 'https://streamcdnn2-dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S51100361/0Fb4R3k82b5Z/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RTL 102.5 Traffic', url: 'https://streamcdnn2-dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S38122967/2lyQRIAAGgRR/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RTL 102.5 Tv', url: 'https://streamcdnn2-dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S97044836/tbbP8T1ZRPBL/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: '1Station TV', url: 'https://stream9.xdevel.com/video0s975854-1225/stream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Euro Indie Music Chart (E.I.M.C.)', url: 'https://57068da1deb21.streamlock.net/euroindiemusic/euroindiemusic/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'V2 Beat', url: 'https://de1se01.v2beat.live/chunks.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Vevo 2K', url: 'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg00056-vevotv-vevo2kau-samsungau/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Vevo 70s', url: 'https://lightning-now70s-samsungnz.amagi.tv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Vevo 80s', url: 'https://lightning-now80s-samsungnz.amagi.tv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Vevo 90s', url: 'https://lightning-now90s-samsungnz.amagi.tv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Vevo Pop', url: 'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg00056-vevotv-vevopopau-samsungau/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Vevo Retro Rock', url: 'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg00056-vevotv-vevoretrorockau-samsungau/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RadioPlutoTV Napoli', url: 'https://585b674743bbb.streamlock.net/9106/9106/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Retro Music', url: 'http://stream.mediawork.cz/retrotv//retrotvHQ1/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Skyline Radio e Soul Tv', url: 'https://64b16f23efbee.streamlock.net/skylinetv/skylinetv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Skyline official', url: 'https://rblive.it:8010/radio.mp3?refresh=1741027285515', genre: 'Unknown', type: 'streaming' },
-  { name: 'Skyline Soul', url: 'https://rblive.it:8040/radio.mp3?refresh=1741027614439', genre: 'Unknown', type: 'streaming' },
-  { name: 'Skyline Groove', url: 'https://rblive.it:8050/radio.mp3?refresh=1741027833110', genre: 'Unknown', type: 'streaming' },
-  { name: 'Skyline Jazz', url: 'https://rblive.it:8030/radio.mp3?refresh=1741028048397', genre: 'Unknown', type: 'streaming' },
-  { name: 'Spirit Tv', url: 'https://cdnlive.myspirit.tv/LS-ATL-43240-2/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Tv 60/70/80', url: 'https://5a1178b42cc03.streamlock.net/607080stream/607080stream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio m2o Tv', url: 'https://streamcdnb2-4c4b867c89244861ac216426883d1ad0.msvdn.net/live/S62628868/uhdWBlkC1AoO/chunklist_b1728000.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Ricordi Tv', url: 'https://5f22d76e220e1.streamlock.net/radioricorditv/radioricorditv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Ritmo 80 Tv (Forever Young)', url: 'https://5f204aff97bee.streamlock.net/Ritmo80TV/livestream/chunklist_w1976860884.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Romantica Radio Tv', url: 'https://stream10.xdevel.com/video0s977363-1901/stream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Silver', url: 'https://stream3.aswifi.it/radiosilver/live/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'PiterPan TV', url: 'https://58d921499d3d3.streamlock.net/RadioPiterpanTV/livestream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Movida Tv - house', url: 'https://w1.mediastreaming.it/movidatv/movidatv/chunklist_w621208970.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio 80 Forever Young', url: 'https://585b674743bbb.streamlock.net/9076/9076/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Italia Tv', url: 'https://radioitaliatv.akamaized.net/hls/live/2093117/RadioitaliaTV/stream03/streamPlaylist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio JukeBox Tv', url: 'https://5926fc9c7c5b2.streamlock.net/9108/9108/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'NOW 70s', url: 'https://lightning-now70s-rakuten.amagi.tv/hls/amagi_hls_data_rakutenAA-lightning-now70s-rakuten/CDN/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'NOW 80s', url: 'https://lightning-now80s-rakuten.amagi.tv/hls/amagi_hls_data_rakutenAA-lightning-now80s-rakuten/CDN/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'NOW Rock', url: 'https://lightning-now90s-rakuten.amagi.tv/hls/amagi_hls_data_rakutenAA-lightning-now90s-rakuten/CDN/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Kiss Kiss Italia Tv', url: 'https://59253971be783.streamlock.net/KKTV01/livestream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'R.S.C. Tv (Radio Studio Centrale)', url: 'https://cp1.server89.com:19360/studiocentrale/studiocentrale.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Kiss Kiss Tv', url: 'https://kk.fluid.stream/KKMulti/smil:KissKissTV.smil/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Love FM', url: 'https://tvd-love.fluid.stream/LoveFM/livestream/chunklist_w45593526.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Freccia Tv', url: 'https://dd782ed59e2a4e86aabf6fc508674b59.msvdn.net/live/S3160845/0tuSetc8UFkF/playlist_video.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Ibiza Tv', url: 'https://5929b138b139d.streamlock.net/RadioIbizaTV/livestream/chunklist_w1961450240.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RMC 101 Tv', url: 'https://5db313b643fd8.streamlock.net/RMC101TV/RMC101TV/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Miami Vice Radio Tv', url: 'https://5926fc9c7c5b2.streamlock.net/9326/9326/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'LaC On-Air', url: 'https://streamcdnm8-f5842579ff984c1c98d63b8d789673eb.msvdn.net/live/324215/zPnHWY2/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Mitology TV', url: 'https://64b16f23efbee.streamlock.net/mitologytv/mitologytv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Music Trance Urban', url: 'https://cdn-ue1-prod.tsv2.amagi.tv/linear/amg01076-lightningintern-traceurban-xiaomi/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Music Trance Brazil', url: 'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01131-tracetv-tracebrazuca-xiaomi/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Jazz TV', url: 'https://stream.nasatv.com.mk/jazztv/hls/jazztv_live.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Qwest TV Jazz', url: 'https://cdn-ue1-prod.tsv2.amagi.tv/linear/qwestAAAA-qwestjazz-uk-samsungtv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'RTL Gold', url: 'https://stream.rtl.lu/data/live/tele/rtlgold/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'M2O', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/radiom2odance/radiom2odance/master_ma.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'JAZZ RADIO FUNK', url: 'http://jazz-wr06.ice.infomaniak.ch/jazz-wr06-128.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'JAZZ RADIO LOUNGE', url: 'http://jazzlounge.ice.infomaniak.ch/jazzlounge-high.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'JAZZ RADIO SOUL', url: 'http://jazz-wr10.ice.infomaniak.ch/jazz-wr10-128.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'JAZZ RADIO - Jazz & Classique', url: 'http://jazz-wr17.ice.infomaniak.ch/jazz-wr17-128.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'JAZZ RADIO LADIES', url: 'http://jazzladiescrooners.ice.infomaniak.ch/jazzladiescrooners-high.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'JAZZ RADIO BLACK MUSIC', url: 'http://jazzblackmusic.ice.infomaniak.ch/jazzblackmusic-high.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'JAZZ RADIO GROOVE', url: 'http://jazz-wr08.ice.infomaniak.ch/jazz-wr08-128.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'JAZZ RADIO (NRJ)', url: 'https://streaming.nrjaudio.fm/ouo6uw7nfibk?origine=radio.net&aw_0_1st.station=Nostalgie-Jazz', genre: 'Unknown', type: 'streaming' },
-  { name: 'JAZZ RADIO Jazz & Cinema', url: 'http://jzr-wr20.ice.infomaniak.ch/jzr-wr20.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'RADIO LIVE NY', url: 'https://streaming.radiostreamlive.com/radiolovelive_devices', genre: 'Unknown', type: 'streaming' },
-  { name: 'PINGUIN VINTAGE 80', url: 'https://14223.live.streamtheworld.com/SP_R4017895_SC', genre: 'Unknown', type: 'streaming' },
-  { name: 'SHARP STREAM DANCE', url: 'http://listen-nation.sharp-stream.com/nationhitsdab.mp3?ref=RF', genre: 'Unknown', type: 'streaming' },
-  { name: 'HOTMIX LOUNGE', url: 'https://streaming.hotmixradio.fr/hotmix-lounge-en-mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'EDM HOUSE LAS VEGAS', url: 'https://s2.radio.co/s30844a0f4/listen', genre: 'Unknown', type: 'streaming' },
-  { name: 'Maretimo Lounge', url: 'https://s35.derstream.net/lounge.mp3?_=1', genre: 'Unknown', type: 'streaming' },
-  { name: 'LOUNGE FM - AUSTRIA', url: 'https://s35.derstream.net/100austria.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'LITE RADIO - 70 80', url: 'https://ais-sa2.cdnstream1.com/2382_128.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'UMSH - HOUSE', url: 'https://icy.unitedradio.it/um036.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Point Blank FM - HOUSE', url: 'https://pointblankradio.co.uk/stream?latency=high', genre: 'Unknown', type: 'streaming' },
-  { name: 'Electro Radio - Techno', url: 'http://stream.electroradio.fm/stream.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Exclusive Legends', url: 'https://streaming.exclusive.radio/er/donnasummer/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio News24', url: 'https://stream6.xdevel.com/audio6s975889-649/stream/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Italia Radio', url: 'https://italianradio.streamingmedia.it/play', genre: 'Unknown', type: 'streaming' },
-  { name: 'Village Radio Hilton', url: 'http://das-edge15-live365-dal02.cdnstream.com/a73319', genre: 'Unknown', type: 'streaming' },
-  { name: 'POWERHIT NY ROCK', url: 'http://live.powerhitz.com/70s?aw_0_req.gdpr=true', genre: 'Unknown', type: 'streaming' },
-  { name: 'FUNKY RADIO NY', url: 'https://funkyradio.streamingmedia.it/audio.aac', genre: 'Unknown', type: 'streaming' },
-  { name: 'DISCO FUNKY', url: 'https://discofunk.streamingmedia.it/usa', genre: 'Unknown', type: 'streaming' },
-  { name: 'Funky Corner', url: 'https://ais-sa2.cdnstream1.com/2447_96.aac', genre: 'Unknown', type: 'streaming' },
-  { name: 'POP LOUNGE CAFE', url: 'https://stream.laut.fm/poploungecafe', genre: 'Unknown', type: 'streaming' },
-  { name: 'Nostalgie - New York - 70 80', url: 'http://c32.radioboss.fm:8139/stream', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Indie Disco Miami', url: 'https://broadcast.miami/proxy/indiedisco?mp=/stream/', genre: 'Unknown', type: 'streaming' },
-  { name: 'Salsoul - Disco Miami', url: 'https://broadcast.miami/proxy/salsoul?mp=/stream/', genre: 'Unknown', type: 'streaming' },
-  { name: 'RMC Disco Funky', url: 'http://edge.radiomontecarlo.net/rmcweb025', genre: 'Unknown', type: 'streaming' },
-  { name: 'COOLFM Jazz', url: 'https://mediagw.e-tiger.net/stream/zc13', genre: 'Unknown', type: 'streaming' },
-  { name: 'Jazz Radio Black Music', url: 'http://jazzblackmusic.ice.infomaniak.ch/jazzblackmusic-high.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'The Soul Of London', url: 'http://londonsoulradio.out.airtime.pro:8000/londonsoulradio_a', genre: 'Unknown', type: 'streaming' },
-  { name: 'Music Art Club - Lounge', url: 'https://eu9.fastcast4u.com/proxy/musicart?mp=/1', genre: 'Unknown', type: 'streaming' },
-  { name: 'Dance Wave!', url: 'http://dancewave.online/dance.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'La Patate Douce Radio - Electro House Disco Funk Africa', url: 'http://listen.radioking.com/radio/285742/stream/331753', genre: 'Unknown', type: 'streaming' },
-  { name: 'REYFM - House', url: 'https://listen.reyfm.de/houseparty_192kbps.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Traxx FM', url: 'http://traxx001.ice.infomaniak.ch/traxx001-low.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'OXYGEN MUSIC - MIX', url: 'https://oxygenmusic.hu:2443/hls/oxygenmusic.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Beethoven', url: 'https://unlimited3-cl.dps.live/beethovenfm/gotardis/audio/now/livestream1.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Bob Marley', url: 'https://listen.radioking.com/radio/500896/stream/558190', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Symphony', url: 'https://streaming.radiostreamlive.com/radiosymphony_devices', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Romeo And Juliet Lounge', url: 'https://onair7.xdevel.com/proxy/xautocloud_vovi_2030?mp=/1/', genre: 'Unknown', type: 'streaming' },
-  { name: 'Diana Krall', url: 'https://streaming.exclusive.radio/uber/easydianakrall/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Fleetwood Mac - non stop', url: 'https://streaming.exclusive.radio/er-app/fleetwoodmachits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Eric Clapton - non stop', url: 'https://streaming.exclusive.radio/er-app/ericclaptonhits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Dire Straits - non stop', url: 'https://streaming.exclusive.radio/er-app/direstraitshits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Chic - non stop', url: 'https://streaming.exclusive.radio/er-app/chichits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Carpenters - non stop', url: 'https://streaming.exclusive.radio/er-app/carpentershits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Barry White - non stop', url: 'https://streaming.exclusive.radio/er-app/barrywhitehits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Marvin Gaye - non stop', url: 'https://streaming.exclusive.radio/er-app/marvingayehits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'David Bowie - non stop', url: 'https://streaming.exclusive.radio/er-app/davidbowiehits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Frank Sinatra - non stop', url: 'https://streaming.exclusive.radio/er-app/franksinatrahits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'James Taylor - non stop', url: 'https://streaming.exclusive.radio/er-app/jamestaylorhits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Nat King Cole - non stop', url: 'https://streaming.exclusive.radio/er-app/natkingcolehits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Phil Collins - non stop', url: 'https://streaming.exclusive.radio/er-app/philcollinshits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Pink Floyd - non stop', url: 'https://streaming.exclusive.radio/er-app/pinkfloydhits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Steely Dan - non stop', url: 'https://streaming.exclusive.radio/er-app/steelydanhits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'George Michael - non stop', url: 'https://streaming.exclusive.radio/er-app/georgemichaelhits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Elton John - non stop', url: 'https://streaming.exclusive.radio/er-app/eltonjohnhits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Eagles - non stop', url: 'https://streaming.exclusive.radio/er-app/eagleshits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Genesis - non stop', url: 'https://streaming.exclusive.radio/er-app/genesishits/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Avicii non stop', url: 'https://streaming.exclusive.radio/er-app/adamlambert/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: '10cc non stop', url: 'https://streaming.exclusive.radio/er-app/10cc/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Alison Moyet non stop', url: 'https://streaming.exclusive.radio/er-app/alisonmoyet/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Gregory Porter Non stop', url: 'https://streaming.exclusive.radio/er-app/gregoryporter/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Depeche Mode Non stop', url: 'https://streaming.exclusive.radio/er-app/depechemode/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Donna Summer Non stop', url: 'https://streaming.exclusive.radio/er-app/donnasummer/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Al Green Non stop', url: 'https://streaming.exclusive.radio/er-app/algreen/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Earth Wind & Fire Non stop', url: 'https://streaming.exclusive.radio/er-app/earthwindandfire/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Black Sabbath Non stop', url: 'https://streaming.exclusive.radio/er-app/blacksabbath/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Deep Purple Non stop', url: 'https://streaming.exclusive.radio/er-app/deeppurple/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Joe Satriani Non stop', url: 'https://streaming.exclusive.radio/er-app/joesatriani/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Simple Minds Non stop', url: 'https://streaming.exclusive.radio/er-app/simpleminds/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Stone Temple Pilots Non stop', url: 'https://streaming.exclusive.radio/er-app/stonetemplepilots/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'U2 Non stop', url: 'https://streaming.exclusive.radio/er-app/u2/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'ZZ TOP Non stop', url: 'https://streaming.exclusive.radio/er-app/zztop/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'John Lennon Non stop', url: 'https://streaming.exclusive.radio/er-app/lennon/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Joe Bonamassa Non stop', url: 'https://streaming.exclusive.radio/er-app/joebonamassa/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'George Benson Non stop', url: 'https://streaming.exclusive.radio/er-app/georgebenson/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Herbie Hancock Non stop', url: 'https://streaming.exclusive.radio/er-app/herbiehancock/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'R.E.M. Non stop', url: 'https://streaming.exclusive.radio/er-app/rem/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'The Cure Non stop', url: 'https://streaming.exclusive.radio/er-app/thecure/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Smiths', url: 'https://streaming.exclusive.radio/er-app/thesmiths/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Olivia Newton John Non stop', url: 'https://streaming.exclusive.radio/er-app/onj/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Spandau Ballet Non stop', url: 'https://streaming.exclusive.radio/er-app/spandauballet/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Tears For Fears Non stop', url: 'https://streaming.exclusive.radio/er-app/tearsforfears/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Cars Non stop', url: 'https://streaming.exclusive.radio/er-app/thecars/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'The Police Non stop', url: 'https://streaming.exclusive.radio/er-app/police/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Chicago Non stop', url: 'https://streaming.exclusive.radio/er-app/chicago/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Chris Rea Non stop', url: 'https://streaming.exclusive.radio/er-app/chrisrea/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Huey Lewis & The News Non stop', url: 'https://streaming.exclusive.radio/er-app/hueylewis/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Santana Non stop', url: 'https://streaming.exclusive.radio/er-app/santana/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Supertramp Non stop', url: 'https://streaming.exclusive.radio/er-app/supertramp/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Sade Non stop', url: 'https://streaming.exclusive.radio/er-app/sade/icecast.audio', genre: 'Unknown', type: 'streaming' },
-  { name: 'Rai 1', url: 'https://dash2.antik.sk/live/test_rai_uno_tizen/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Canale 5', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-c5/c5-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Italia 1', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-i1/i1-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Rete 4', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-r4/r4-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: '27 Twentyseven', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-ts/ts-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Cine 34', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-b6/b6-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Focus', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-fu/fu-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'GRANDE FRATELLO', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-kq/kq-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Iris', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-ki/ki-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Italia 2', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-i2/i2-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'La 5', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-ka/ka-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Mediaset 20', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-lb/lb-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Mediaset Extra', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-kq/kq-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Top Crime', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-lt/lt-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'TGR Sicilia', url: 'https://odmsto.com/returned/668707.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Tgcom24', url: 'https://live02-seg.msf.cdn.mediaset.net/live/ch-kf/kf-clr.isml/index.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'SportItalia', url: 'https://sportsitalia-samsungitaly.amagi.tv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'LA ZANZARA', url: 'https://podcast-radio24.ilsole24ore.com/radio24_audio/2025/250528-lazanzara.mp3?awCollectionId=lazanzara&awEpisodeId=250528-lazanzara', genre: 'Unknown', type: 'streaming' },
-  { name: 'RadiO Delfino I love 80', url: 'https://stream.radiodelfino.com:8060/radio.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'Rádio Antena 1 94.7 FM São Paulo', url: 'https://antenaone.crossradio.com.br/stream/1/', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Bruno TV', url: 'https://router.xdevel.com/video0s975758-473/stream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Marte Tv', url: 'https://router.xdevel.com/video0s975753-750/stream/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Party Groove', url: 'http://stream15.top-ix.org:80/partygroove', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Mela', url: 'http://91.121.38.216:8016/stream/1/', genre: 'Unknown', type: 'streaming' },
-  { name: '51 Radio TV 80', url: 'http://wms.shared.streamshow.it:80/canale51/canale51/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Radio Company TV', url: 'https://5929b138b139d.streamlock.net/CompanyTV/livestream_720p/HasBahCa.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Vintage Radio Tv 70 80', url: 'https://5f22d76e220e1.streamlock.net/vintageradiotv/vintageradiotv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: '54 Funk Soul Dance', url: 'http://stream.laut.fm/54-funk-soul-dance', genre: 'Unknown', type: 'streaming' },
-  { name: 'Trace Urban', url: 'https://cdn-ue1-prod.tsv2.amagi.tv/linear/amg01076-lightningintern-traceurban-xiaomi/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Trace Brazuca', url: 'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01131-tracetv-tracebrazuca-xiaomi/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'Qwest TV Jazz', url: 'https://cdn-ue1-prod.tsv2.amagi.tv/linear/qwestAAAA-qwestjazz-uk-samsungtv/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
-  { name: 'JAZZ RADIO LOUNGE', url: 'http://jazzlounge.ice.infomaniak.ch/jazzlounge-high.mp3', genre: 'Unknown', type: 'streaming' },
-  { name: 'EDM HOUSE LAS VEGAS', url: 'https://s2.radio.co/s30844a0f4/listen', genre: 'Unknown', type: 'streaming' },
-  { name: 'Lost Psychedelic Rock 1971', url: 'https://www.youtube.com/watch?v=u53TYEWb8x8', type: 'youtube-link' },
-  { name: 'Lost Pink Floyd Session Psychedelic', url: 'https://youtu.be/IEDD8bgHbqM?list=RDu53TYEWb8x8', type: 'youtube-link' },
-  { name: 'YouTube - Test', url: '', type: 'youtube-link' },
-  { name: 'YouTube - Test', url: '', type: 'youtube-link' },
-  { name: 'YouTube - Test', url: '', type: 'youtube-link' },
-    ];
-
-    var STORAGE_FAVORITES = 'acusstream_favorites';
-    var eqValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+// MENU MOBILE TOGGLE
+menuToggle.addEventListener('click', function() {
+sidebar.classList.add('open');
+overlay.classList.add('show');
+document.body.classList.add('no-scroll');
+});
+overlay.addEventListener('click', closeMenu);
+function closeMenu() {
+sidebar.classList.remove('open');
+overlay.classList.remove('show');
+document.body.classList.remove('no-scroll');
+}
+function showToast(msg) {
+toast.textContent = msg;
+toast.style.display = 'block';
+clearTimeout(toast._t);
+toast._t = setTimeout(function() {
+toast.style.display = 'none';
+}, 2500);
+}
+function loadFromLocalStorage(key, defaultValue) {
+try {
+var data = localStorage.getItem(key);
+return data ? JSON.parse(data) : defaultValue;
+} catch(e) {
+return defaultValue;
+}
+}
+function saveToLocalStorage(key, data) {
+try {
+localStorage.setItem(key, JSON.stringify(data));
+} catch(e) {
+console.error('LocalStorage error:', e);
+}
+}
+function isFavorite(name) {
+var favorites = loadFromLocalStorage(STORAGE_FAVORITES, []);
+return favorites.indexOf(name) >= 0;
+}
+function toggleFavorite(name) {
+var favorites = loadFromLocalStorage(STORAGE_FAVORITES, []);
+var idx = favorites.indexOf(name);
+if (idx >= 0) {
+favorites.splice(idx, 1);
+showToast('Rimosso dai preferiti');
+} else {
+favorites.push(name);
+showToast('Aggiunto ai preferiti');
+}
+saveToLocalStorage(STORAGE_FAVORITES, favorites);
+renderChannels();
+}
+function renderChannels() {
+channelListEl.innerHTML = '';
+var channels = [];
+var title = '';
+if (currentTab === 'favorites') {
+channels = channelsData.filter(function(ch) { return isFavorite(ch.name); });
+title = 'Preferiti';
+} else if (currentTab === 'local') {
+channels = localFiles;
+title = 'Local';
+} else {
+channels = channelsData.concat(localFiles);
+title = 'Tutti i canali';
+}
+var header = document.createElement('div');
+header.style.color = 'var(--text-secondary)';
+header.style.padding = '6px 8px';
+header.style.fontSize = '12px';
+header.style.fontWeight = '700';
+header.textContent = title;
+channelListEl.appendChild(header);
+var q = searchInput.value.toLowerCase();
+var filtered = channels.filter(function(ch) {
+return ch.name.toLowerCase().indexOf(q) >= 0;
+});
+if (filtered.length === 0) {
+var empty = document.createElement('div');
+empty.style.padding = '12px';
+empty.style.color = 'var(--text-secondary)';
+empty.style.fontSize = '12px';
+empty.textContent = 'Nessun elemento';
+channelListEl.appendChild(empty);
+return;
+}
+filtered.forEach(function(ch) {
+var el = document.createElement('div');
+el.className = 'channel';
+var nameEl = document.createElement('div');
+nameEl.className = 'channel-name';
+nameEl.textContent = ch.name;
+var actionsEl = document.createElement('div');
+actionsEl.className = 'channel-actions';
+var favoriteBtn = document.createElement('button');
+favoriteBtn.className = 'channel-btn';
+favoriteBtn.textContent = isFavorite(ch.name) ? '⭐' : '☆';
+favoriteBtn.addEventListener('click', function(e) {
+e.stopPropagation();
+toggleFavorite(ch.name);
+});
+actionsEl.appendChild(favoriteBtn);
+el.appendChild(nameEl);
+el.appendChild(actionsEl);
+el.addEventListener('click', function() {
+playChannel(el, ch.name, ch.url, ch.type);
+if (window.innerWidth <= 768) {
+closeMenu();
+}
+});
+channelListEl.appendChild(el);
+});
+}
+sidebarTabs.forEach(function(tab) {
+tab.addEventListener('click', function() {
+currentTab = tab.dataset.tab;
+sidebarTabs.forEach(function(t) {
+t.classList.toggle('active', t.dataset.tab === currentTab);
+});
+renderChannels();
+});
+});
+openFilesBtn.addEventListener('click', function() {
+fileInput.click();
+});
+fileInput.addEventListener('change', function(e) {
+if (e.target.files && e.target.files.length) {
+Array.from(e.target.files).forEach(function(file) {
+var id = 'local-' + (++localCounter);
+var url = URL.createObjectURL(file);
+localBlobURLs.add(url);
+localFiles.push({id: id, name: file.name, url: url, type: 'local'});
+});
+currentTab = 'local';
+sidebarTabs.forEach(function(t) {
+t.classList.toggle('active', t.dataset.tab === currentTab);
+});
+renderChannels();
+showToast('File aggiunti!');
+}
+fileInput.value = '';
+});
+clearLocalBtn.addEventListener('click', function() {
+localFiles.forEach(function(f) {
+if (f.url && localBlobURLs.has(f.url)) {
+URL.revokeObjectURL(f.url);
+localBlobURLs.delete(f.url);
+}
+});
+localFiles = [];
+unifiedPlayer.pause();
+unifiedPlayer.src = '';
+loadingInfo.style.display = 'none';
+renderChannels();
+showToast('File rimossi');
+});
+function stopStream() {
+if (currentHls) {
+try { currentHls.destroy(); } catch(e) {}
+currentHls = null;
+}
+unifiedPlayer.pause();
+unifiedPlayer.src = '';
+loadingInfo.style.display = 'none';
+statusText.textContent = 'Fermato';
+statusDot.classList.remove('playing');
+}
+function isM3U8(url) {
+return url.toLowerCase().indexOf('.m3u8') >= 0;
+}
+function playChannel(element, name, url, type) {
+document.querySelectorAll('.channel').forEach(function(ch) {
+ch.classList.remove('active');
+});
+element.classList.add('active');
+currentChannelDisplay.textContent = name;
+statusText.textContent = 'Caricamento...';
+loadingInfo.style.display = 'none';
+stopStream();
+if (type === 'youtube-link') {
+playYouTubeLink(name, url);
+} else if (isM3U8(url) && window.Hls && Hls.isSupported()) {
+playHLS(name, url);
+} else {
+playStandard(name, url);
+}
+}
+function playHLS(name, url) {
+currentHls = new Hls();
+currentHls.loadSource(url);
+currentHls.attachMedia(unifiedPlayer);
+unifiedPlayer.style.display = 'block';
+loadingInfo.style.display = 'none';
+currentHls.on(Hls.Events.MANIFEST_PARSED, function() {
+unifiedPlayer.play();
+statusText.textContent = 'In riproduzione';
+statusDot.classList.add('playing');
+});
+currentHls.on(Hls.Events.ERROR, function() {
+showToast('Errore HLS');
+});
+}
+function playStandard(name, url) {
+unifiedPlayer.src = url;
+unifiedPlayer.style.display = 'block';
+loadingInfo.style.display = 'none';
+unifiedPlayer.play();
+statusText.textContent = 'In riproduzione';
+statusDot.classList.add('playing');
+}
+function playYouTubeLink(name, url) {
+loadingInfo.style.display = 'block';
+unifiedPlayer.style.display = 'block';
+window.open(url, '_blank');
+setTimeout(function() {
+loadingInfo.style.display = 'none';
+statusText.textContent = 'Aperto su YouTube';
+statusDot.classList.add('playing');
+playerInfo.textContent = '🎬 ' + name + ' - Apri su YouTube';
+showToast('Video YouTube aperto nel browser');
+}, 500);
+}
+mediaPlayButton.addEventListener('click', function() {
+if (unifiedPlayer.src) {
+unifiedPlayer.play();
+statusDot.classList.add('playing');
+} else {
+showToast('Seleziona un canale');
+}
+});
+mediaStopButton.addEventListener('click', function() {
+unifiedPlayer.pause();
+statusDot.classList.remove('playing');
+});
+mediaNextButton.addEventListener('click', function() {
+var visible = Array.from(document.querySelectorAll('.channel')).filter(function(ch) {
+return ch.style.display !== 'none';
+});
+var active = document.querySelector('.channel.active');
+var idx = active ? visible.indexOf(active) : -1;
+if (idx + 1 < visible.length) {
+visible[idx + 1].click();
+}
+});
+// ============================================
+// RICERCA VOCALE - VERSIONE CORRETTA
+// ============================================
+voiceSearchBtn.addEventListener('click', function() {
+    // Controllo supporto API
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
-    var unifiedPlayer = document.getElementById('unified-player');
-    var loadingInfo = document.getElementById('loading-info');
-    var channelListEl = document.getElementById('channel-list');
-    var fileInput = document.getElementById('file-input');
-    var openFilesBtn = document.getElementById('open-files-btn');
-    var clearLocalBtn = document.getElementById('clear-local-btn');
-    var mediaPlayButton = document.getElementById('media-play');
-    var mediaStopButton = document.getElementById('media-stop');
-    var mediaNextButton = document.getElementById('media-next');
-    var voiceSearchBtn = document.getElementById('voice-search');
-    var searchInput = document.getElementById('search-input');
-    var resetSearchBtn = document.getElementById('reset-search');
-    var currentChannelDisplay = document.getElementById('current-channel');
-    var statusDot = document.getElementById('status-dot');
-    var statusText = document.getElementById('status-text');
-    var playerInfo = document.getElementById('player-info');
-    var toast = document.getElementById('toast');
-    var sidebarTabs = document.querySelectorAll('.sidebar-tab');
-    var eqResetBtn = document.getElementById('eq-reset');
-    var eqPresetSelect = document.getElementById('eq-preset-select');
-    var eqBars = document.querySelectorAll('.eq-bar');
-    var eqBarContainers = document.querySelectorAll('.eq-bar-container');
-    var logoImg = document.getElementById('tunex-logo-img');
+    if (!SpeechRecognition) {
+        showToast('❌ Browser non supportato. Usa Chrome/Edge');
+        console.error('Speech Recognition non supportato in questo browser');
+        return;
+    }
     
-    var currentHls = null;
-    var isListening = false;
-    var localFiles = [];
-    var localBlobURLs = new Set();
-    var localCounter = 0;
-    var currentTab = 'all';
-
-    let audioContext = null;
-    let audioSource = null;
-    let eqFilters = [];
-    // nuovi nodi audio
-    let preamp = null;
-    let bassBoost = null;
-    let presenceBoost = null;
-    const EQ_FREQUENCIES = [20, 40, 80, 160, 320, 640, 1250, 2500, 5000, 10000, 15000, 20000, 22050, 22050, 22050];
-
-    function showToast(msg) {
-      toast.textContent = msg;
-      toast.style.display = 'block';
-      clearTimeout(toast._t);
-      toast._t = setTimeout(function() {
-        toast.style.display = 'none';
-      }, 2500);
+    // Controllo contesto sicuro (HTTPS)
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        showToast('⚠️ Richiesto HTTPS per il microfono');
+        console.warn('Speech Recognition richiede HTTPS');
     }
-
-    function loadFromLocalStorage(key, defaultValue) {
-      try {
-        var data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : defaultValue;
-      } catch(e) {
-        return defaultValue;
-      }
-    }
-
-    function saveToLocalStorage(key, data) {
-      try {
-        localStorage.setItem(key, JSON.stringify(data));
-      } catch(e) {
-        console.error('LocalStorage error:', e);
-      }
-    }
-
-    function isFavorite(name) {
-      var favorites = loadFromLocalStorage(STORAGE_FAVORITES, []);
-      return favorites.indexOf(name) >= 0;
-    }
-
-    function toggleFavorite(name) {
-      var favorites = loadFromLocalStorage(STORAGE_FAVORITES, []);
-      var idx = favorites.indexOf(name);
-      if (idx >= 0) {
-        favorites.splice(idx, 1);
-        showToast('Rimosso dai preferiti');
-      } else {
-        favorites.push(name);
-        showToast('Aggiunto ai preferiti');
-      }
-      saveToLocalStorage(STORAGE_FAVORITES, favorites);
-      renderChannels();
-    }
-
-    function renderChannels() {
-      channelListEl.innerHTML = '';
-      
-      var channels = [];
-      var title = '';
-      
-      if (currentTab === 'favorites') {
-        channels = channelsData.filter(function(ch) { return isFavorite(ch.name); });
-        title = 'Preferiti';
-      } else if (currentTab === 'local') {
-        channels = localFiles;
-        title = 'Local';
-      } else {
-        channels = channelsData.concat(localFiles);
-        title = 'Tutti i canali';
-      }
-
-      var header = document.createElement('div');
-      header.style.color = 'var(--text-secondary)';
-      header.style.padding = '6px 8px';
-      header.style.fontSize = '12px';
-      header.style.fontWeight = '700';
-      header.textContent = title;
-      channelListEl.appendChild(header);
-
-      var q = searchInput.value.toLowerCase();
-      var filtered = channels.filter(function(ch) {
-        return ch.name.toLowerCase().indexOf(q) >= 0;
-      });
-
-      if (filtered.length === 0) {
-        var empty = document.createElement('div');
-        empty.style.padding = '12px';
-        empty.style.color = 'var(--text-secondary)';
-        empty.style.fontSize = '12px';
-        empty.textContent = 'Nessun elemento';
-        channelListEl.appendChild(empty);
-        return;
-      }
-
-      filtered.forEach(function(ch) {
-        var el = document.createElement('div');
-        el.className = 'channel';
-
-        var nameEl = document.createElement('div');
-        nameEl.className = 'channel-name';
-        nameEl.textContent = ch.name;
-
-        var actionsEl = document.createElement('div');
-        actionsEl.className = 'channel-actions';
-
-        var favoriteBtn = document.createElement('button');
-        favoriteBtn.className = 'channel-btn';
-        favoriteBtn.textContent = isFavorite(ch.name) ? '⭐' : '☆';
-        favoriteBtn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          toggleFavorite(ch.name);
-        });
-
-        actionsEl.appendChild(favoriteBtn);
-        el.appendChild(nameEl);
-        el.appendChild(actionsEl);
-        el.addEventListener('click', function() { playChannel(el, ch.name, ch.url, ch.type); });
-        channelListEl.appendChild(el);
-      });
-    }
-
-    sidebarTabs.forEach(function(tab) {
-      tab.addEventListener('click', function() {
-        currentTab = tab.dataset.tab;
-        sidebarTabs.forEach(function(t) {
-          t.classList.toggle('active', t.dataset.tab === currentTab);
-        });
-        renderChannels();
-      });
-    });
-
-    openFilesBtn.addEventListener('click', function() {
-      fileInput.click();
-    });
-
-    fileInput.addEventListener('change', function(e) {
-      if (e.target.files && e.target.files.length) {
-        Array.from(e.target.files).forEach(function(file) {
-          var id = 'local-' + (++localCounter);
-          var url = URL.createObjectURL(file);
-          localBlobURLs.add(url);
-          localFiles.push({id: id, name: file.name, url: url, type: 'local'});
-        });
-        currentTab = 'local';
-        sidebarTabs.forEach(function(t) {
-          t.classList.toggle('active', t.dataset.tab === currentTab);
-        });
-        renderChannels();
-        showToast('File aggiunti!');
-      }
-      fileInput.value = '';
-    });
-
-    clearLocalBtn.addEventListener('click', function() {
-      localFiles.forEach(function(f) {
-        if (f.url && localBlobURLs.has(f.url)) {
-          URL.revokeObjectURL(f.url);
-          localBlobURLs.delete(f.url);
-        }
-      });
-      localFiles = [];
-      unifiedPlayer.pause();
-      unifiedPlayer.src = '';
-      loadingInfo.style.display = 'none';
-      renderChannels();
-      showToast('File rimossi');
-    });
-
-    function stopStream() {
-        if (currentHls) {
-            try { currentHls.destroy(); } catch(e) {}
-            currentHls = null;
-        }
-        unifiedPlayer.pause();
-        unifiedPlayer.src = '';
-        
-        // ✅ Reset audioSource per forzare riconnessione al prossimo play
-        if (audioSource) {
-            try { audioSource.disconnect(); } catch(e) {}
-            audioSource = null;
-        }
-        
-        loadingInfo.style.display = 'none';
-        statusText.textContent = 'Fermato';
-        statusDot.classList.remove('playing');
-    }
-
-    function isM3U8(url) {
-      return url.toLowerCase().indexOf('.m3u8') >= 0;
-    }
-
-    function playChannel(element, name, url, type) {
-    // ✅ INIZIALIZZA AUDIO CONTEXT PRIMA DI TUTTO
-        initAudioEQ();
-
-        document.querySelectorAll('.channel').forEach(function(ch) {
-            ch.classList.remove('active');
-        });
-        element.classList.add('active');
-
-        currentChannelDisplay.textContent = name;
-        statusText.textContent = 'Caricamento...';
-        loadingInfo.style.display = 'none';
-        stopStream();
-
-        if (type === 'youtube-link') {
-            playYouTubeLink(name, url);
-        } else if (isM3U8(url) && window.Hls && Hls.isSupported()) {
-            playHLS(name, url);
-        } else {
-            playStandard(name, url);
-        }
-    }
-
-    function playHLS(name, url) {
-      currentHls = new Hls();
-      currentHls.loadSource(url);
-      currentHls.attachMedia(unifiedPlayer);
-      unifiedPlayer.style.display = 'block';
-      loadingInfo.style.display = 'none';
-      
-      currentHls.on(Hls.Events.MANIFEST_PARSED, function() {
-        unifiedPlayer.play();
-        statusText.textContent = 'In riproduzione';
-        statusDot.classList.add('playing');
-      });
-
-      currentHls.on(Hls.Events.ERROR, function() {
-        showToast('Errore HLS');
-      });
-    }
-
-    function playStandard(name, url) {
-    unifiedPlayer.src = url;
-    unifiedPlayer.style.display = 'block';
-    loadingInfo.style.display = 'none';
-
-    // ✅ Resume IMMEDIATO prima di qualsiasi operazione audio
-    if (audioContext && audioContext.state === 'suspended') {
-        audioContext.resume().catch(()=>{});
-    }
-
-    // collega EQ quando lo stream è pronto
-    unifiedPlayer.onloadedmetadata = function () {
-        try { 
-        connectEQChain(unifiedPlayer); 
-        } catch(e) {}
-    };
-
-    unifiedPlayer.play().catch(()=>{});
-    statusText.textContent = 'In riproduzione';
-    statusDot.classList.add('playing');
-    }
-
-    function playYouTubeLink(name, url) {
-      loadingInfo.style.display = 'block';
-      unifiedPlayer.style.display = 'block';
-      
-      window.open(url, '_blank');
-      
-      setTimeout(function() {
-        loadingInfo.style.display = 'none';
-        statusText.textContent = 'Aperto su YouTube';
-        statusDot.classList.add('playing');
-        playerInfo.textContent = '🎬 ' + name + ' - Apri su YouTube';
-        showToast('Video YouTube aperto nel browser');
-      }, 500);
-    }
-
-    mediaPlayButton.addEventListener('click', async function() {
-        if (unifiedPlayer.src) {
-            // inizializza equalizzatore
-            initAudioEQ();
-            connectEQChain(unifiedPlayer);
-
-            // ✅ Resume con await per garantire completamento
-            if (audioContext && audioContext.state === 'suspended') {
-            try { await audioContext.resume(); } catch(e) {}
-            }
-
-            unifiedPlayer.play();
-            statusDot.classList.add('playing');
-        } else {
-            showToast('Seleziona un canale');
-        }
-    });
-
-    mediaStopButton.addEventListener('click', function() {
-      unifiedPlayer.pause();
-      statusDot.classList.remove('playing');
-    });
-
-    mediaNextButton.addEventListener('click', function() {
-      var visible = Array.from(document.querySelectorAll('.channel')).filter(function(ch) {
-        return ch.style.display !== 'none';
-      });
-      var active = document.querySelector('.channel.active');
-      var idx = active ? visible.indexOf(active) : -1;
-      if (idx + 1 < visible.length) {
-        visible[idx + 1].click();
-      }
-    });
-
-    voiceSearchBtn.addEventListener('click', function() {
-      var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        showToast('Ricerca vocale non supportata');
-        return;
-      }
-
-      if (isListening) {
+    
+    // Controllo stato ascolto
+    if (isListening) {
         isListening = false;
         voiceSearchBtn.classList.remove('listening');
+        voiceSearchBtn.innerHTML = '<i class="fas fa-microphone"></i> Voice';
+        showToast('Ricerca vocale interrotta');
         return;
-      }
-
-      var recognition = new SpeechRecognition();
-      recognition.lang = 'it-IT';
-      isListening = true;
-      voiceSearchBtn.classList.add('listening');
-      showToast('Ascoltando...');
-
-      recognition.onresult = function(event) {
-        var transcript = event.results[0][0].transcript.toLowerCase();
-        searchInput.value = transcript;
-        searchInput.dispatchEvent(new Event('input'));
-      };
-
-      recognition.onend = function() {
+    }
+    
+    try {
+        var recognition = new SpeechRecognition();
+        recognition.lang = 'it-IT';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        
+        isListening = true;
+        voiceSearchBtn.classList.add('listening');
+        voiceSearchBtn.innerHTML = '<i class="fas fa-microphone-slash"></i> Stop';
+        showToast('🎤 Parla ora...');
+        
+        recognition.onstart = function() {
+            console.log('✅ Riconoscimento vocale avviato');
+        };
+        
+        recognition.onresult = function(event) {
+            var transcript = event.results[0][0].transcript.toLowerCase();
+            console.log('🎤 Testo riconosciuto:', transcript);
+            searchInput.value = transcript;
+            searchInput.dispatchEvent(new Event('input'));
+            showToast('🔍 Cercando: ' + transcript);
+            renderChannels();
+        };
+        
+        recognition.onerror = function(event) {
+            console.error('❌ Errore riconoscimento:', event.error);
+            isListening = false;
+            voiceSearchBtn.classList.remove('listening');
+            voiceSearchBtn.innerHTML = '<i class="fas fa-microphone"></i> Voice';
+            
+            switch(event.error) {
+                case 'not-allowed':
+                    showToast('❌ Permesso microfono negato');
+                    break;
+                case 'no-speech':
+                    showToast('⚠️ Nessun audio rilevato');
+                    break;
+                case 'audio-capture':
+                    showToast('❌ Microfono non trovato');
+                    break;
+                case 'network':
+                    showToast('⚠️ Errore di rete');
+                    break;
+                default:
+                    showToast('⚠️ Errore: ' + event.error);
+            }
+        };
+        
+        recognition.onend = function() {
+            console.log('🔚 Riconoscimento vocale terminato');
+            isListening = false;
+            voiceSearchBtn.classList.remove('listening');
+            voiceSearchBtn.innerHTML = '<i class="fas fa-microphone"></i> Voice';
+        };
+        
+        recognition.start();
+        
+    } catch(e) {
+        console.error('❌ Eccezione Speech Recognition:', e);
+        showToast('❌ Errore: ' + e.message);
         isListening = false;
         voiceSearchBtn.classList.remove('listening');
-      };
-
-      recognition.start();
-    });
-
-    // EQUALIZER CONTROLS - 15 BANDE
-    eqBarContainers.forEach(function(container) {
-      container.addEventListener('click', function(e) {
-        var rect = container.getBoundingClientRect();
-        var clickY = e.clientY - rect.top;
-        var height = rect.height;
-        var percentage = 100 - (clickY / height * 100);
-        percentage = Math.max(0, Math.min(100, percentage));
-        
-        var bandIndex = parseInt(container.dataset.band);
-        eqValues[bandIndex] = (percentage / 100) * 24 - 12;
-        
-        updateEqualizer();
-      });
-
-      container.addEventListener('mousemove', function(e) {
-        container.style.cursor = 'pointer';
-      });
-    });
-
-    function updateEqualizer() {
-      // Aggiorna UI barre (codice originale)
-      eqBars.forEach(function(bar, index) {
-        var value = eqValues[index] + 12;
-        var percentage = (value / 24) * 100;
-        percentage = Math.max(5, Math.min(100, percentage));
-        bar.style.height = percentage + '%';
-        if (percentage > 40) {
-          bar.classList.add('active');
-        } else {
-          bar.classList.remove('active');
-        }
-      });
-      
-      // Applica valori audio (con try/catch e sintassi compatibile)
-      try {
-        if (audioContext && audioContext.state === 'running' && eqFilters.length > 0) {
-          for (var i = 0; i < eqValues.length; i++) {
-            if (eqFilters[i] && eqFilters[i].gain) {
-              eqFilters[i].gain.value = eqValues[i];
-            }
-          }
-        }
-      } catch(e) {
-        // Silenzioso: non blocca mai l'UI
-        console.warn('EQ audio update error:', e);
-      }
+        voiceSearchBtn.innerHTML = '<i class="fas fa-microphone"></i> Voice';
     }
+});
+// EQUALIZER CONTROLS - TOUCH SUPPORT
+var activeEQContainer = null;
+function handleEQInteraction(e) {
+if (!activeEQContainer) return;
+e.preventDefault();
+var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+var rect = activeEQContainer.getBoundingClientRect();
+var clickY = clientY - rect.top;
+var height = rect.height;
+var percentage = 100 - (clickY / height * 100);
+percentage = Math.max(0, Math.min(100, percentage));
+var bandIndex = parseInt(activeEQContainer.dataset.band);
+eqValues[bandIndex] = (percentage / 100) * 24 - 12;
+updateEqualizer();
+}
+eqBarContainers.forEach(function(container) {
+container.addEventListener('mousedown', function(e) {
+activeEQContainer = container;
+handleEQInteraction(e);
+});
+container.addEventListener('mousemove', function(e) {
+if (activeEQContainer) {
+handleEQInteraction(e);
+}
+});
+container.addEventListener('touchstart', function(e) {
+activeEQContainer = container;
+handleEQInteraction(e);
+}, {passive: false});
+container.addEventListener('touchmove', function(e) {
+if (activeEQContainer) {
+handleEQInteraction(e);
+}
+}, {passive: false});
+container.addEventListener('mouseenter', function(e) {
+container.style.cursor = 'pointer';
+});
+});
+document.addEventListener('mouseup', function() {
+activeEQContainer = null;
+});
+document.addEventListener('touchend', function() {
+activeEQContainer = null;
+});
+function updateEqualizer() {
+eqBars.forEach(function(bar, index) {
+var value = eqValues[index] + 12;
+var percentage = (value / 24) * 100;
+percentage = Math.max(5, Math.min(100, percentage));
+bar.style.height = percentage + '%';
+if (percentage > 40) {
+bar.classList.add('active');
+} else {
+bar.classList.remove('active');
+}
+});
+}
+eqResetBtn.addEventListener('click', function() {
+eqValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+updateEqualizer();
+if (eqPresetSelect) eqPresetSelect.value = "";
+showToast('Equalizzatore ripristinato');
+});
+const eqPresets = {
+flat:     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+bass:     [8,7,6,5,3,1,0,-1,-2,-3,-4,-5,-6,-7,-8],
+treble:   [-8,-7,-6,-5,-3,-1,0,1,2,3,4,5,6,7,8],
+vocal:    [-2,-1,0,2,4,5,4,2,0,-1,-2,-3,-4,-5,-6],
+rock:     [4,5,6,4,2,0,-1,1,3,5,6,5,4,3,2],
+pop:      [3,4,5,3,1,0,1,2,3,4,3,2,1,0,-1],
+jazz:     [2,3,4,5,3,1,0,1,2,3,4,3,2,1,0],
+classical:[1,2,3,4,5,4,3,2,1,0,-1,-2,-3,-4,-5],
+electronic:[6,5,4,3,1,0,2,4,6,7,8,7,6,5,4],
+dance:    [7,6,5,4,2,0,1,3,5,7,8,7,6,5,4],
+podcast:  [-3,-2,0,3,5,6,5,3,1,0,-1,-2,-3,-4,-5],
+live:     [2,3,4,3,1,0,1,2,3,4,5,4,3,2,1]
+};
+function applyPreset(presetName) {
+if (!presetName || !eqPresets[presetName]) return;
+eqValues = [...eqPresets[presetName]];
+updateEqualizer();
+if (eqPresetSelect) eqPresetSelect.value = "";
+showToast('Preset applicato: ' + presetName.toUpperCase());
+}
+if (eqPresetSelect) {
+eqPresetSelect.addEventListener('change', function(e) {
+applyPreset(e.target.value);
+});
+}
+searchInput.addEventListener('input', renderChannels);
+resetSearchBtn.addEventListener('click', function() {
+searchInput.value = '';
+renderChannels();
+});
+unifiedPlayer.addEventListener('ended', function() {
+setTimeout(function() { mediaNextButton.click(); }, 200);
+});
+window.addEventListener('beforeunload', function() {
+localBlobURLs.forEach(function(url) {
+try { URL.revokeObjectURL(url); } catch(e) {}
+});
+});
+document.addEventListener('DOMContentLoaded', function() {
+eqValues = [...eqPresets.flat];
+updateEqualizer();
+});
 
-    eqResetBtn.addEventListener('click', function() {
-      eqValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-      updateEqualizer();
-      if (eqPresetSelect) eqPresetSelect.value = "";
-      showToast('Equalizzatore ripristinato');
+// PREVENT DOUBLE-TAP ZOOM ON IOS
+var lastTouchEnd = 0;
+document.addEventListener('touchend', function(e) {
+var now = Date.now();
+if (now - lastTouchEnd <= 300) {
+e.preventDefault();
+}
+lastTouchEnd = now;
+}, false);
+
+// ✅ NUOVA REGISTRAZIONE SERVICE WORKER
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('./sw.js')
+    .then((reg) => {
+      console.log('✅ Service Worker registrato:', reg.scope);
+    })
+    .catch((err) => {
+      console.error('❌ Service Worker fallito:', err);
     });
+}
 
-    // 🎚️ EQUALIZER PRESETS - 12 configurazioni predefinite
-    const eqPresets = {
-        // === PRESET ESISTENTI (mantieni questi) ===
-        flat:     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        bass:     [12,10,8,6,4,2,0,-1,-2,-3,-4,-5,-6,-7,-8],
-        treble:   [-8,-7,-6,-5,-3,-1,0,1,2,3,4,5,6,7,8],
-        vocal:    [-2,-1,0,2,4,5,4,2,0,-1,-2,-3,-4,-5,-6],
-        rock:     [4,5,6,4,2,0,-1,1,3,5,6,5,4,3,2],
-        pop:      [3,4,5,3,1,0,1,2,3,4,3,2,1,0,-1],
-        jazz:     [2,3,4,5,3,1,0,1,2,3,4,3,2,1,0],
-        classical:[1,2,3,4,5,4,3,2,1,0,-1,-2,-3,-4,-5],
-        electronic:[6,5,4,3,1,0,2,4,6,7,8,7,6,5,4],
-        dance:    [7,6,5,4,2,0,1,3,5,7,8,7,6,5,4],
-        podcast:  [-3,-2,0,3,5,6,5,3,1,0,-1,-2,-3,-4,-5],
-        live:     [2,3,4,3,1,0,1,2,3,4,5,4,3,2,1],
-        
-        // === 🆕 NUOVI PRESET (AGGIUNGI QUESTI) ===
-        
-        // 🎤 Hip Hop / Rap - Bassi profondi + vocali chiari
-        hiphop:   [11,10,9,7,5,3,1,0,1,2,3,4,3,2,1],
-        
-        // 🎸 Metal - Medi aggressivi + alti taglienti
-        metal:    [5,6,7,8,9,8,7,8,9,10,9,8,7,6,5],
-        
-        // 🌊 Ambient / Chill - Suono morbido e avvolgente
-        ambient:  [4,3,2,1,0,-1,-2,-1,0,-1,-2,-3,-2,-1,0],
-        
-        // 🤠 Country - Bilanciato con presenza vocale
-        country:  [2,3,4,3,2,1,2,3,4,3,2,1,0,-1,-2],
-        
-        // 🎵 R&B / Soul - Bassi caldi + alti morbidi
-        rnb:      [8,7,6,5,4,3,2,1,2,3,4,3,2,1,0],
-        
-        // 🎮 Gaming - Frequenze spaziali per effetti 3D
-        gaming:   [4,5,6,5,4,3,4,5,6,7,8,9,8,7,6],
-        
-        // 🎬 Cinema / Movie - Dinamica per colonne sonore
-        cinema:   [6,7,8,7,6,5,6,7,8,9,10,9,8,7,6],
-        
-        // 🌙 Night Mode - Compresso per ascolto notturno
-        night:    [2,2,3,3,4,4,4,4,4,3,3,2,2,1,1],
-        
-        // 🔊 Loudness - Massimo volume senza distorsione
-        loudness: [3,4,5,6,7,8,9,10,10,9,8,7,6,5,4],
-        
-        // 🎻 Acoustic - Riproduzione naturale strumenti
-        acoustic: [1,2,3,4,5,6,5,4,3,2,1,0,-1,-2,-3],
-        
-        // 🎹 EDM - Bassi punchy + highs cristallini
-        edm:      [10,9,8,7,5,3,2,3,5,7,9,10,9,8,7],
-        
-        // 🏖️ Reggae - Mid-bass prominente
-        reggae:   [6,7,8,9,8,7,6,5,4,3,2,1,0,-1,-2],
-        
-        // 🎷 Blues - Medi caldi e avvolgenti
-        blues:    [3,4,5,6,7,8,7,6,5,4,3,2,1,0,-1],
-        
-        // 🌲 Folk - Vocali in primo piano, naturale
-        folk:     [1,2,3,4,6,8,7,5,4,3,2,1,0,-1,-2],
-        
-        // 🧘 Meditation - Frequenze calmanti
-        meditation:[2,1,0,-1,-2,-1,0,-1,-2,-3,-2,-1,0,1,2],
-        
-        // 📻 Radio AM - Simula suono radio vintage
-        radio:    [-5,-4,-3,-2,3,5,6,5,3,-2,-4,-6,-8,-10,-12],
-        
-        // 🎧 Headphone - Ottimizzato per cuffie
-        headphone:[4,5,6,5,4,3,2,1,0,1,2,3,4,5,6],
-        
-        // 🔊 Speaker - Ottimizzato per casse esterne
-        speaker:  [6,7,8,7,6,5,4,3,2,1,0,-1,-2,-3,-4],
-        
-        // 🚗 Car Audio - Compensa acustica automobile
-        car:      [8,9,10,9,8,7,6,5,4,3,2,1,0,-1,-2],
-        
-        // 🎵 Bass Only - Solo frequenze basse (test subwoofer)
-        bassonly: [12,12,12,10,8,-12,-12,-12,-12,-12,-12,-12,-12,-12,-12],
-        
-        // 🎵 Treble Only - Solo frequenze alte (test tweeter)
-        trebleonly:[-12,-12,-12,-12,-12,-12,-12,-12,-12,12,12,12,12,12,12]
-    };
-
-    function applyPreset(presetName) {
-      if (!presetName || !eqPresets[presetName]) return;
-
-          // ✅ CONTROLLA IL BASS BOOST IN BASE AL PRESET
-      if (audioContext && bassBoost) {
-        if (presetName === 'bass' || presetName === 'hiphop' || presetName === 'edm' || presetName === 'dance') {
-            bassBoost.gain.value = 6;  // +6dB per preset con bassi
-        } else if (presetName === 'flat' || presetName === 'vocal' || presetName === 'podcast') {
-            bassBoost.gain.value = 0;  // 0dB per flat e vocali
-        } else {
-            bassBoost.gain.value = 2;  // +2dB leggero per altri
-        }
-     }
-      
-      eqValues = [...eqPresets[presetName]];
-      updateEqualizer();
-      
-      if (eqPresetSelect) eqPresetSelect.value = "";
-      
-      showToast('Preset applicato: ' + presetName.toUpperCase());
-    }
-
-    // Listener per il dropdown preset
-    if (eqPresetSelect) {
-      eqPresetSelect.addEventListener('change', function(e) {
-        applyPreset(e.target.value);
-      });
-    }
-
-    searchInput.addEventListener('input', renderChannels);
-    resetSearchBtn.addEventListener('click', function() {
-      searchInput.value = '';
-      renderChannels();
-    });
-
-    unifiedPlayer.addEventListener('ended', function() {
-      setTimeout(function() { mediaNextButton.click(); }, 200);
-    });
-
-    window.addEventListener('beforeunload', function() {
-      localBlobURLs.forEach(function(url) {
-        try { URL.revokeObjectURL(url); } catch(e) {}
-      });
-    });
-
-    // Applica preset Flat di default all'avvio
-    document.addEventListener('DOMContentLoaded', function() {
-      eqValues = [...eqPresets.flat];
-      updateEqualizer();
-    });
-    // ➕ AGGIUNGI QUESTA FUNZIONE (dopo updateEqualizer)
-    function initAudioEQ() {
-        console.log("🔧 initAudioEQ chiamata");
-        
-        // ✅ CONTROLLO SICURO: verifica tipo PRIMA di usare come costruttore
-        let AudioContextCtor = null;
-        
-        if (typeof window.AudioContext === 'function') {
-            AudioContextCtor = window.AudioContext;
-            console.log("🔍 Usato: window.AudioContext");
-        } else if (typeof window.webkitAudioContext === 'function') {
-            AudioContextCtor = window.webkitAudioContext;
-            console.log("🔍 Usato: window.webkitAudioContext");
-        }
-        
-        // Se non trovato, ESCI SILENZIOSAMENTE - audio diretto funzionerà comunque
-        if (!AudioContextCtor) {
-            console.log("⚠️ Web Audio API non disponibile → audio senza EQ (normale)");
-            return;
-        }
-
-        // ✅ CREA AUDIO CONTEXT CON TRY/CATCH
-        try {
-            if (!audioContext) {
-                audioContext = new AudioContextCtor();
-                console.log("✅ AudioContext creato. Stato:", audioContext.state);
-            }
-        } catch (e) {
-            console.warn("⚠️ Creazione AudioContext fallita:", e.message);
-            console.warn("⚠️ Audio continuerà SENZA equalizzatore");
-            return; // Non bloccare il playback
-        }
-
-        // ✅ RESUME SE SUSPENDED (obbligatorio Chrome/Safari)
-        if (audioContext.state === 'suspended') {
-            audioContext.resume().catch(()=>{});
-        }
-
-        // ✅ CREA NODI AUDIO (solo se audioContext esiste)
-        if (!preamp) {
-            preamp = audioContext.createGain();
-            preamp.gain.value = 1.0;
-        }
-        if (!bassBoost) {
-            bassBoost = audioContext.createBiquadFilter();
-            bassBoost.type = "lowshelf";
-            bassBoost.frequency.value = 80;
-            bassBoost.gain.value = 0;  // ← ✅ DEFAULT A 0 (nessun boost - super bassi max 12)
-        }
-        if (!presenceBoost) {
-            presenceBoost = audioContext.createBiquadFilter();
-            presenceBoost.type = "highshelf";
-            presenceBoost.frequency.value = 4500;
-            presenceBoost.gain.value = 2;
-        }
-        
-        // ✅ CREA 15 FILTRI EQ
-        if (eqFilters.length === 0) {
-            for (let i = 0; i < EQ_FREQUENCIES.length; i++) {
-                try {
-                    const f = audioContext.createBiquadFilter();
-                    f.type = "peaking";
-                    f.frequency.value = EQ_FREQUENCIES[i];
-                    f.Q.value = 1.4;
-                    f.gain.value = 0;
-                    eqFilters.push(f);
-                } catch(e) {
-                    console.warn("⚠️ Filtro EQ[" + i + "] fallito");
-                }
-            }
-            console.log("✅ Creati", eqFilters.length, "filtri EQ");
-        }
-    }
-
-        // ➕ AGGIUNGI QUESTA FUNZIONE
-    function connectEQChain(mediaElement) {
-        // ✅ SE MANCA QUALCOSA, ESCI SENZA ERRORI (audio diretto)
-        if (!audioContext || !preamp || eqFilters.length === 0) {
-            console.log("⚠️ EQ non pronto → audio diretto (funziona comunque)");
-            return;
-        }
-        
-        try {
-            // Disconnetti vecchia source se esiste
-            if (audioSource) { try { audioSource.disconnect(); } catch(e) {} }
-            
-            // Crea nuova source dal media element
-            audioSource = audioContext.createMediaElementSource(mediaElement);
-            
-            // Costruisci catena completa
-            let node = audioSource;
-            node.connect(preamp); node = preamp;
-            node.connect(bassBoost); node = bassBoost;
-            node.connect(presenceBoost); node = presenceBoost;
-            eqFilters.forEach(f => { node.connect(f); node = f; });
-            node.connect(audioContext.destination);
-            
-            console.log("✅ Catena EQ collegata");
-        } catch(e) {
-            console.warn("⚠️ Connessione EQ fallita:", e.message);
-            console.warn("⚠️ Audio funzionerà senza equalizzatore");
-            // IMPORTANTE: non lanciare errore
-        }
-    }
-        renderChannels();
-  </script>
+renderChannels();
+</script>
 </body>
 </html>
