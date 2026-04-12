@@ -2025,7 +2025,16 @@ audio.media-player { width: 100%; height: auto; display: block; }
         }, {passive: false});
         eqVis.addEventListener('touchend', () => { isDown = false; }, {passive: true});
     }
-
+    // Fix layout video su resize/orientamento
+    function fixVideoLayout() {
+        const vp = unifiedPlayer.parentElement;
+        if (vp && window.innerWidth <= 1024) {
+            vp.style.maxHeight = window.innerWidth > 700 ? '45vh' : '40vh';
+        }
+    }
+    window.addEventListener('resize', fixVideoLayout);
+    window.addEventListener('orientationchange', () => setTimeout(fixVideoLayout, 300));
+    document.addEventListener('DOMContentLoaded', fixVideoLayout);
   </script>
 </body>
 </html>
