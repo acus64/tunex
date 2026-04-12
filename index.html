@@ -458,39 +458,145 @@ audio.media-player { width: 100%; height: auto; display: block; }
   font-size: 13px; max-width: 300px; z-index: 500;
 }
 
-@media (max-width: 900px) {
-  .sidebar { width: 250px; } video.media-player { height: 320px; }
-  .equalizer-visualizer { height: 140px; gap: 4px; } .eq-bar-container { height: 110px; }
-  .eq-bar-wrapper { min-width: 32px; } .eq-label { font-size: 8px; } .channel-name-display { font-size: 22px; }
+/* Tablet: ottimizzazione equalizzatore (701px-1024px) */
+@media (min-width: 701px) and (max-width: 1024px) {
+  .equalizer-visualizer {
+    height: 220px !important;
+    gap: 10px !important;
+    padding: 20px 16px !important;
+    justify-content: flex-start !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: thin;
+  }
+  .eq-bar-container {
+    height: 180px !important;
+    min-width: 52px !important;
+    border-radius: 8px !important;
+  }
+  .eq-bar-wrapper {
+    min-width: 52px !important;
+    gap: 16px !important;
+  }
+  .eq-bar {
+    min-height: 8px !important;
+  }
+  .eq-label {
+    font-size: 11px !important;
+    white-space: nowrap !important;
+  }
+  .equalizer-title {
+    font-size: 14px !important;
+    letter-spacing: 2px !important;
+  }
+  .eq-controls {
+    gap: 14px !important;
+  }
+  .eq-reset-btn, .eq-preset-select {
+    font-size: 12px !important;
+    padding: 10px 16px !important;
+    min-height: 44px !important;
+  }
 }
+
+/* Mobile: compatto ma touch-friendly (≤700px) */
 @media (max-width: 700px) {
   body { flex-direction: column; height: 100dvh; overflow: hidden; }
   .main-container { order: 2; width: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .sidebar { width: 100%; height: auto; min-height: auto; order: 1; border-right: none; border-bottom: 2px solid var(--border); }
   video.media-player { height: auto; min-height: 200px; aspect-ratio: 16/9; }
-  .channel-name-display { font-size: 18px; } .sidebar-tab { font-size: 11px; padding: 10px 4px; }
-  .tunex-logo { width: 60px; } .equalizer-container { padding: 12px 8px; margin-top: 12px; }
-  .equalizer-visualizer { height: 100px; gap: 2px; padding: 10px 4px; justify-content: flex-start; }
-  .eq-bar-wrapper { min-width: 24px; gap: 8px; } .eq-bar-container { height: 70px; border-radius: 6px; }
-  .eq-bar { min-height: 3px; } .eq-label { font-size: 7px; line-height: 1.2; }
-  .equalizer-title { font-size: 11px; letter-spacing: 1px; }
-  .eq-controls { flex-direction: column; gap: 10px; width: 100%; }
-  .eq-reset-btn { padding: 8px 16px; font-size: 11px; width: 100%; max-width: 200px; }
-  .eq-preset-select { width: 100%; max-width: 200px; font-size: 10px; padding: 8px 28px 8px 12px; }
-  .main-controls { gap: 10px; width: 100%; }
-  .btn { padding: 12px 16px; font-size: 13px; flex: 1 1 45%; justify-content: center; min-width: 120px; }
-  .footer { position: relative; font-size: 11px; } #toast { right: 10px; left: 10px; bottom: 60px; max-width: none; }
+  .channel-name-display { font-size: 18px; }
+  .sidebar-tab { font-size: 11px; padding: 10px 4px; }
+  .tunex-logo { width: 60px; }
+  
+  /* Equalizer mobile ottimizzato */
+  .equalizer-container { padding: 12px 8px !important; margin-top: 12px !important; }
+  .equalizer-visualizer {
+    height: 180px !important;
+    gap: 8px !important;
+    padding: 15px 8px !important;
+    justify-content: flex-start !important;
+    -webkit-overflow-scrolling: touch !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-behavior: smooth !important;
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+  .equalizer-visualizer::-webkit-scrollbar { display: none !important; }
+  .eq-bar-container {
+    height: 140px !important;
+    min-width: 42px !important;
+    border-radius: 6px !important;
+  }
+  .eq-bar-wrapper {
+    min-width: 42px !important;
+    gap: 12px !important;
+    flex: 0 0 auto !important;
+  }
+  .eq-bar { min-height: 6px !important; }
+  .eq-label {
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+    white-space: nowrap !important;
+  }
+  .equalizer-title { font-size: 12px !important; letter-spacing: 1px !important; }
+  .eq-controls {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .eq-reset-btn {
+    padding: 8px 14px !important;
+    font-size: 11px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+  .eq-preset-select {
+    width: auto !important;
+    max-width: 180px !important;
+    font-size: 10px !important;
+    padding: 8px 28px 8px 12px !important;
+    min-width: 140px !important;
+  }
+  .main-controls { gap: 10px !important; width: 100% !important; }
+  .btn {
+    padding: 12px 16px !important;
+    font-size: 13px !important;
+    flex: 1 1 45% !important;
+    justify-content: center !important;
+    min-width: 110px !important;
+  }
+  .footer { position: relative; font-size: 11px; }
+  #toast { right: 10px; left: 10px; bottom: 60px; max-width: none; }
   .theme-dropdown-menu { width: 90%; left: 5%; transform: none; }
+  
+  /* Shazam mobile */
+  #shazam-result { right: 10px; left: 10px; bottom: 80px; max-width: none; }
+  #shazam-btn { flex: 1 1 45%; min-width: 100px; }
 }
+
+/* Mobile piccolo (≤400px) */
 @media (max-width: 400px) {
-  .eq-bar-wrapper { min-width: 20px; } .eq-label { font-size: 6px; }
-  .equalizer-title { font-size: 10px; letter-spacing: 1px; }
-  .btn { padding: 10px 12px; font-size: 12px; flex: 1 1 100%; } .channel { font-size: 12px; padding: 8px; }
-  .eq-preset-select { font-size: 9px; padding: 6px 24px 6px 10px; }
+  .equalizer-visualizer { height: 160px !important; }
+  .eq-bar-container { height: 120px !important; min-width: 36px !important; }
+  .eq-bar-wrapper { min-width: 36px !important; }
+  .eq-label { font-size: 9px !important; }
+  .equalizer-title { font-size: 11px !important; }
+  .btn { padding: 10px 12px !important; font-size: 12px !important; flex: 1 1 100% !important; }
+  .channel { font-size: 12px !important; padding: 8px !important; }
+  .eq-preset-select { font-size: 9px !important; padding: 6px 24px 6px 10px !important; }
 }
+
+/* Landscape mobile (altezza ridotta) */
 @media (orientation: landscape) and (max-height: 550px) {
-  video.media-player { height: 180px; } .equalizer-visualizer { height: 78px; }
-  .eq-bar-container { height: 52px; } .eq-bar-wrapper { min-width: 19px; } .player-section { padding: 8px; }
+  video.media-player { height: 180px; }
+  .equalizer-visualizer { height: 140px !important; }
+  .eq-bar-container { height: 100px !important; }
+  .eq-bar-wrapper { min-width: 32px !important; }
+  .player-section { padding: 8px; }
+  .eq-label { font-size: 8px !important; }
 }
   </style>
 </head>
@@ -1829,6 +1935,25 @@ audio.media-player { width: 100%; height: auto; display: block; }
         }
     });
     // ================= FINE LOGICA SHAZAM =================
+    // Migliora scroll orizzontale equalizzatore su touch
+    const eqVis = document.getElementById('eq-visualizer');
+    if (eqVis) {
+        let isDown = false, startX, scrollLeft;
+        eqVis.addEventListener('touchstart', e => {
+            isDown = true;
+            startX = e.touches[0].pageX - eqVis.offsetLeft;
+            scrollLeft = eqVis.scrollLeft;
+        }, {passive: true});
+        eqVis.addEventListener('touchmove', e => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.touches[0].pageX - eqVis.offsetLeft;
+            const walk = (x - startX) * 1.5;
+            eqVis.scrollLeft = scrollLeft - walk;
+        }, {passive: false});
+        eqVis.addEventListener('touchend', () => { isDown = false; }, {passive: true});
+    }
+
   </script>
 </body>
 </html>
