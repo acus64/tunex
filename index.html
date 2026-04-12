@@ -285,7 +285,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         min-width: 65px;
     }
 }
-video.media-player { width: 100%; height: 420px; display: block; background: #000; }
+video.media-player { width: 100%; height: auto; min-height: 280px; max-height: 50vh; aspect-ratio: 16/9; display: block; background: #000; object-fit: contain; }
 audio.media-player { width: 100%; height: auto; display: block; }
 .loading-info {
   display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -597,6 +597,34 @@ audio.media-player { width: 100%; height: auto; display: block; }
   .eq-bar-wrapper { min-width: 32px !important; }
   .player-section { padding: 8px; }
   .eq-label { font-size: 8px !important; }
+}
+
+/* FIX TABLET: video player intero e scrollabile */
+@media (min-width: 701px) and (max-width: 1024px) {
+  body { overflow: auto !important; }
+  .main-container { overflow: visible !important; }
+  .player-section { 
+    padding: 12px !important; 
+    overflow-y: auto !important; 
+    height: auto !important; 
+    min-height: 0 !important;
+  }
+  .player-card { max-width: 100% !important; margin: 0 auto; }
+  .media-player-container { 
+    width: 100% !important; 
+    min-height: 280px !important; 
+    max-height: 45vh !important;
+    margin: 8px 0 !important;
+  }
+  .equalizer-container { margin-top: 8px !important; }
+}
+/* FIX MOBILE: prevenzione clipping */
+@media (max-width: 700px) {
+  .media-player-container { 
+    min-height: 200px !important; 
+    max-height: 40vh !important;
+    margin: 8px 0 !important;
+  }
 }
   </style>
 </head>
