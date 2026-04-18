@@ -1410,26 +1410,45 @@ audio.media-player::-webkit-media-controls-enclosure {
             else bar.classList.remove('active');
         });
         
-        // Aggiornamento audio
+        // Aggiornamento audio CON GUARD CLAUSE
         try {
-            if (audioContext && audioContext.state === 'running' && eqFilters.length > 0) {
-                for (var i = 0; i < eqValues.length; i++) {
-                    if (eqFilters[i] && eqFilters[i].gain) {
-                        var clamped = Math.max(-6, Math.min(6, eqValues[i]));
-                        eqFilters[i].gain.value = clamped;
-                        // DEBUG: Log ogni update
-                        if (i === 0) {
-                            console.log("🎚️ EQ Band 0:", clamped, "dB | Context:", audioContext.state);
-                        }
-                    }
-                }
-            } else if (!audioContext) {
-                console.warn("⚠️ AudioContext not initialized");
-            } else if (audioContext.state !== 'running') {
-                console.warn("⚠️ AudioContext state:", audioContext.state);
+            // ✅ GUARD: Verifica che audioContext esista
+            if (!audioContext) {
+                console.warn("⚠️ AudioContext not initialized - initializing now...");
+                // Inizializza in background
+                initAudioEQ().catch(e => {
+                    console.error("❌ Cannot initialize AudioContext:", e.message);
+                });
+                return; // EXIT early se non è pronto
             }
+            
+            // ✅ GUARD: Verifica stato
+            if (audioContext.state !== 'running') {
+                console.warn("⚠️ AudioContext state:", audioContext.state, "- resuming...");
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().catch(e => {
+                        console.warn("Cannot resume AudioContext:", e.message);
+                    });
+                }
+                return; // EXIT se non running
+            }
+            
+            // ✅ GUARD: Verifica filtri
+            if (!eqFilters || eqFilters.length === 0) {
+                console.warn("⚠️ EQ filters not initialized");
+                return;
+            }
+            
+            // ✅ UPDATE SICURO - Se arriviamo qui, tutto è pronto
+            for (var i = 0; i < eqValues.length; i++) {
+                if (eqFilters[i] && eqFilters[i].gain) {
+                    var clamped = Math.max(-6, Math.min(6, eqValues[i]));
+                    eqFilters[i].gain.value = clamped;
+                }
+            }
+            
         } catch(e) { 
-            console.warn('❌ EQ audio update error:', e.message); 
+            console.error('❌ EQ audio update error:', e.message); 
         }
     }
     eqResetBtn.addEventListener('click', function() { eqValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; updateEqualizer(); if (eqPresetSelect) eqPresetSelect.value = ""; showToast('Equalizzatore ripristinato'); });
