@@ -10,10 +10,9 @@
   <title>TuneX - Unified Media Player</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="icon" href="data:image/x-icon;base64,AA"> <!-- favicon inline, zero 404 -->
+  <link rel="icon" href="data:image/x-icon;base64,AA">
   <style>
 /* ================= TUNEX V6 - CSS DEFINITIVO ================= */
-/* Reset & Base */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
   --primary: #6407de; --primary-dark: #980332; --primary-light: #ff3366;
@@ -164,7 +163,6 @@ video.media-player, audio.media-player {
 video.media-player.enlarged {
   max-height: 85vh !important; min-height: 300px !important;
 }
-/* Nascondi controlli nativi */
 video.media-player::-webkit-media-controls,
 audio.media-player::-webkit-media-controls,
 video.media-player::-webkit-media-controls-enclosure,
@@ -256,15 +254,15 @@ audio.media-player::-webkit-media-controls-enclosure {
   color: var(--text-secondary); text-align: center;
 }
 
-/* ================= EQUALIZER - DEFINITIVO ================= */
+/* ================= EQUALIZER ================= */
 .equalizer-container {
   width: 100%;
-  max-width: 860px !important; /* 900px player - 40px padding totale */
-  margin: 16px auto 0 auto !important; /* centrato, in linea con player */
+  max-width: 860px !important;
+  margin: 16px auto 0 auto !important;
   background: linear-gradient(135deg, rgba(100,7,222,0.15), rgba(0,204,255,0.08));
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 20px; /* height invariato */
+  padding: 20px;
   box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
   box-sizing: border-box;
 }
@@ -273,9 +271,7 @@ audio.media-player::-webkit-media-controls-enclosure {
   margin-bottom: 16px; text-transform: uppercase; letter-spacing: 2px;
   background: linear-gradient(90deg, var(--tunex-pink), var(--tunex-cyan));
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 20px rgba(255,51,102,0.3);
 }
-/* === FIX EQUALIZER: SOSTITUIRE BLOCCO .equalizer-visualizer === */
 .equalizer-visualizer {
   display: flex;
   justify-content: center !important;
@@ -294,8 +290,6 @@ audio.media-player::-webkit-media-controls-enclosure {
   scroll-behavior: smooth;
   scroll-padding: 0 12px;
 }
-
-/* === FIX EQUALIZER: .eq-bar-wrapper === */
 .eq-bar-wrapper {
   display: flex;
   flex-direction: column;
@@ -306,8 +300,6 @@ audio.media-player::-webkit-media-controls-enclosure {
   min-width: 32px !important;
   width: 32px;
 }
-
-/* === FIX EQUALIZER: .eq-bar-container === */
 .eq-bar-container {
   width: 100%;
   height: 120px !important;
@@ -361,12 +353,8 @@ audio.media-player::-webkit-media-controls-enclosure {
   background-repeat: no-repeat; background-position: right 12px center;
   background-size: 12px; padding-right: 32px;
 }
-.eq-preset-select:hover {
-  border-color: var(--tunex-pink); background-color: rgba(255,51,102,0.1);
-}
-.eq-preset-select:focus {
-  border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,255,136,0.2);
-}
+.eq-preset-select:hover { border-color: var(--tunex-pink); background-color: rgba(255,51,102,0.1); }
+.eq-preset-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,255,136,0.2); }
 .eq-preset-select option { background: var(--tertiary); color: var(--text); padding: 8px; }
 .eq-preset-btn {
   background: rgba(255,255,255,0.04); border: 1px solid var(--border);
@@ -375,9 +363,7 @@ audio.media-player::-webkit-media-controls-enclosure {
   display: flex; align-items: center; gap: 6px;
 }
 .eq-preset-btn:hover { background: rgba(255,255,255,0.08); border-color: var(--accent); }
-.eq-preset-btn.danger {
-  background: rgba(255,51,102,0.1); border-color: var(--danger); color: var(--danger);
-}
+.eq-preset-btn.danger { background: rgba(255,51,102,0.1); border-color: var(--danger); color: var(--danger); }
 .eq-preset-btn.danger:hover { background: rgba(255,51,102,0.2); }
 
 /* ================= THEME DROPDOWN ================= */
@@ -408,10 +394,7 @@ audio.media-player::-webkit-media-controls-enclosure {
 }
 .theme-option:hover { background: rgba(255,255,255,0.1); }
 .theme-option.active { background: var(--primary); color: #fff; font-weight: 600; }
-.theme-dot {
-  width: 12px; height: 12px; border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0;
-}
+.theme-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.3); flex-shrink: 0; }
 
 /* ================= MAIN CONTROLS & BUTTONS ================= */
 .main-controls, .controls {
@@ -424,10 +407,7 @@ audio.media-player::-webkit-media-controls-enclosure {
   cursor: pointer; display: flex; gap: 8px; align-items: center;
   font-weight: 600; transition: all 0.2s;
 }
-.btn.secondary {
-  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
-  color: var(--text);
-}
+.btn.secondary { background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text); }
 .btn.voice-btn { background: linear-gradient(135deg, #ff6b6b, #ff3355); }
 .btn.voice-btn.listening {
   animation: pulse-btn 1s infinite; box-shadow: 0 0 20px rgba(255,51,85,0.5);
@@ -476,6 +456,37 @@ audio.media-player::-webkit-media-controls-enclosure {
 }
 .shazam-close:hover { color: var(--text); }
 
+/* Shazam Recording Indicator */
+.shazam-rec-indicator {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(0,204,255,0.1);
+  border: 1px solid rgba(0,204,255,0.3);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--tunex-cyan);
+}
+.shazam-rec-indicator.active { display: flex; }
+.shazam-rec-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #ff3366;
+  animation: rec-blink 1s infinite;
+}
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.shazam-rec-timer {
+  font-family: 'Segoe UI', monospace;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+}
+
 /* Footer & Toast */
 .footer {
   position: fixed; bottom: 0; left: 0; right: 0;
@@ -490,7 +501,7 @@ audio.media-player::-webkit-media-controls-enclosure {
   font-size: 13px; max-width: 300px; z-index: 500;
 }
 
-/* Video Overlay (Fullscreen) - CORRETTO */
+/* Video Overlay (Fullscreen) */
 #video-overlay {
   display: none;
   position: fixed;
@@ -502,157 +513,81 @@ audio.media-player::-webkit-media-controls-enclosure {
   padding: 0;
   margin: 0;
 }
-
-#video-overlay.active {
-  display: flex !important;
-}
-
+#video-overlay.active { display: flex !important; }
 #video-overlay video {
-  width: 100vw;
-  height: 100vh;
-  object-fit: contain;
-  max-width: 100vw;
-  max-height: 100vh;
-  aspect-ratio: auto; /* RIMUOVI aspect-ratio fisso */
+  width: 100vw; height: 100vh; object-fit: contain;
+  max-width: 100vw; max-height: 100vh;
 }
-
 #overlay-close {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: rgba(255,255,255,0.2);
-  border: none;
-  color: #fff;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  font-size: 20px;
-  cursor: pointer;
-  z-index: 1001;
-  transition: all 0.2s;
+  position: fixed; top: 20px; right: 20px;
+  background: rgba(255,255,255,0.2); border: none; color: #fff;
+  width: 44px; height: 44px; border-radius: 50%;
+  font-size: 20px; cursor: pointer; z-index: 1001; transition: all 0.2s;
 }
-
-#overlay-close:hover {
-  background: rgba(255,255,255,0.4);
-  transform: scale(1.1);
-}
+#overlay-close:hover { background: rgba(255,255,255,0.4); transform: scale(1.1); }
 
 /* ================= RESPONSIVE - TABLET (701-1024px) ================= */
 @media (min-width: 701px) and (max-width: 1024px) {
   body { overflow: auto !important; }
   .main-container { overflow: visible !important; }
-  .player-section {
-    padding: 12px !important; overflow-y: auto !important;
-    height: auto !important; min-height: 0 !important;
-  }
+  .player-section { padding: 12px !important; overflow-y: auto !important; height: auto !important; min-height: 0 !important; }
   .player-card { max-width: 100% !important; margin: 0 auto; }
-  .media-player-container {
-    width: 100% !important; min-height: 280px !important;
-    max-height: 45vh !important; margin: 8px 0 !important;
-  }
+  .media-player-container { width: 100% !important; min-height: 280px !important; max-height: 45vh !important; margin: 8px 0 !important; }
   .equalizer-container { margin-top: 8px !important; padding: 16px !important; }
-  .equalizer-visualizer {
-    height: 170px !important; gap: 3px !important; padding: 12px 6px !important;
-  }
+  .equalizer-visualizer { height: 170px !important; gap: 3px !important; padding: 12px 6px !important; }
   .eq-bar-wrapper { min-width: 26px !important; gap: 8px !important; }
   .eq-bar-container { height: 130px !important; }
   .eq-label { font-size: 8px !important; }
   .equalizer-title { font-size: 12px !important; }
   .eq-controls { gap: 10px !important; }
-  .eq-reset-btn, .eq-preset-select {
-    font-size: 11px !important; padding: 8px 12px !important; min-height: 40px !important;
-  }
+  .eq-reset-btn, .eq-preset-select { font-size: 11px !important; padding: 8px 12px !important; min-height: 40px !important; }
 }
 
-/* ================= RESPONSIVE - MOBILE (≤700px) ================= */
+/* ================= RESPONSIVE - MOBILE (<=700px) ================= */
 @media (max-width: 700px) {
   body { flex-direction: column; height: 100dvh; overflow: hidden; }
-  .main-container {
-    order: 2; width: 100%; overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .sidebar {
-    width: 100%; height: auto; min-height: auto; order: 1;
-    border-right: none; border-bottom: 2px solid var(--border);
-  }
-  video.media-player, audio.media-player {
-    height: auto; min-height: 200px; aspect-ratio: 16/9;
-  }
+  .main-container { order: 2; width: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .sidebar { width: 100%; height: auto; min-height: auto; order: 1; border-right: none; border-bottom: 2px solid var(--border); }
+  video.media-player, audio.media-player { height: auto; min-height: 200px; aspect-ratio: 16/9; }
   .channel-name-display { font-size: 18px; }
   .sidebar-tab { font-size: 11px; padding: 10px 4px; }
   .tunex-logo { width: 60px; }
-  
-  /* Player Container Mobile */
-  .media-player-container {
-    min-height: 200px !important; max-height: 40vh !important;
-    margin: 8px 0 !important;
-  }
-  
-  /* Custom Controls Mobile */
+  .media-player-container { min-height: 200px !important; max-height: 40vh !important; margin: 8px 0 !important; }
   .custom-controls { padding: 12px !important; gap: 8px !important; }
   .ctrl-btn { width: 32px; height: 32px; font-size: 14px; }
   .ctrl-btn.play-pause { width: 40px; height: 40px; }
   .volume-container { width: 80px; }
   .time-display { font-size: 11px; min-width: 65px; }
-  
-  /* Equalizer Mobile */
   .equalizer-container { padding: 10px 4px !important; margin-top: 10px !important; }
-  .equalizer-visualizer {
-    height: 150px !important; gap: 2px !important; padding: 10px 4px !important;
-  }
+  .equalizer-visualizer { height: 150px !important; gap: 2px !important; padding: 10px 4px !important; }
   .eq-bar-wrapper { min-width: 24px !important; gap: 6px !important; }
   .eq-bar-container { height: 110px !important; border-radius: 4px; }
   .eq-bar { min-height: 3px !important; }
   .eq-label { font-size: 7px !important; }
   .equalizer-title { font-size: 11px !important; margin-bottom: 10px !important; }
-  .eq-controls {
-    flex-direction: row !important; flex-wrap: wrap !important;
-    gap: 8px !important; width: 100% !important; justify-content: center !important;
-  }
-  .eq-reset-btn {
-    padding: 6px 12px !important; font-size: 10px !important;
-    width: auto !important; max-width: none !important;
-  }
-  .eq-preset-select {
-    width: auto !important; max-width: 160px !important;
-    font-size: 9px !important; padding: 6px 24px 6px 10px !important;
-    min-width: 120px !important;
-  }
-  
-  /* Main Controls Mobile */
+  .eq-controls { flex-direction: row !important; flex-wrap: wrap !important; gap: 8px !important; width: 100% !important; justify-content: center !important; }
+  .eq-reset-btn { padding: 6px 12px !important; font-size: 10px !important; width: auto !important; max-width: none !important; }
+  .eq-preset-select { width: auto !important; max-width: 160px !important; font-size: 9px !important; padding: 6px 24px 6px 10px !important; min-width: 120px !important; }
   .main-controls { gap: 10px !important; width: 100% !important; }
-  .btn {
-    padding: 12px 16px !important; font-size: 13px !important;
-    flex: 1 1 45% !important; justify-content: center !important;
-    min-width: 110px !important;
-  }
-  
-  /* Footer & Toast Mobile */
+  .btn { padding: 12px 16px !important; font-size: 13px !important; flex: 1 1 45% !important; justify-content: center !important; min-width: 110px !important; }
   .footer { position: relative; font-size: 11px; }
   #toast { right: 10px; left: 10px; bottom: 60px; max-width: none; }
   .theme-dropdown-menu { width: 90%; left: 5%; transform: none; }
-  
-  /* Shazam Mobile */
   #shazam-result { right: 10px; left: 10px; bottom: 80px; max-width: none; }
   #shazam-btn { flex: 1 1 45%; min-width: 100px; }
 }
 
-/* ================= MOBILE PICCOLO (≤400px) ================= */
 @media (max-width: 400px) {
   .equalizer-visualizer { height: 140px !important; gap: 1px !important; }
   .eq-bar-wrapper { min-width: 22px !important; }
   .eq-bar-container { height: 100px !important; }
   .eq-label { font-size: 6px !important; }
   .equalizer-title { font-size: 10px !important; }
-  .btn {
-    padding: 10px 12px !important; font-size: 12px !important;
-    flex: 1 1 100% !important;
-  }
+  .btn { padding: 10px 12px !important; font-size: 12px !important; flex: 1 1 100% !important; }
   .channel { font-size: 12px !important; padding: 8px !important; }
   .eq-preset-select { font-size: 9px !important; padding: 6px 20px 6px 10px !important; }
 }
 
-/* ================= LANDSCAPE MOBILE ================= */
 @media (orientation: landscape) and (max-height: 550px) {
   video.media-player, audio.media-player { height: 180px; }
   .equalizer-visualizer { height: 120px !important; gap: 2px !important; }
@@ -668,19 +603,16 @@ audio.media-player::-webkit-media-controls-enclosure {
     <div class="sidebar-header">
       <img src="images/logo.png" id="logo" class="tunex-logo">
     </div>
-
     <div class="sidebar-tabs">
       <button class="sidebar-tab active" data-tab="all"><i class="fas fa-list"></i> Tutti</button>
       <button class="sidebar-tab" data-tab="favorites"><i class="fas fa-star"></i> Favoriti</button>
       <button class="sidebar-tab" data-tab="local"><i class="fas fa-folder"></i> Local</button>
     </div>
-
     <div class="sidebar-actions">
       <button class="sidebar-btn" id="open-files-btn"><i class="fas fa-folder-open"></i> File</button>
       <button class="sidebar-btn danger" id="clear-local-btn"><i class="fas fa-trash"></i> Pulisci</button>
       <input id="file-input" type="file" accept="audio/*,video/*" multiple style="display:none" />
     </div>
-
     <div class="channel-container" id="channel-list"></div>
   </div>
 
@@ -704,37 +636,39 @@ audio.media-player::-webkit-media-controls-enclosure {
         </div>
 
         <div class="media-player-container" id="player-container">
-            <video id="unified-player" class="media-player"></video>
-            <!-- Controlli custom -->
-            <div class="custom-controls" id="custom-controls">
-                <div class="progress-container" id="progress-container">
-                    <div class="progress-bar" id="progress-bar"></div>
-                </div>
-                <div class="controls-row">
-                <div class="controls-left">
-                    <button class="ctrl-btn play-pause" id="ctrl-play-pause">
-                        <i class="fas fa-play"></i>
-                    </button>
-                    <button class="ctrl-btn" id="ctrl-stop">
-                        <i class="fas fa-stop"></i>
-                    </button>
-                    <span class="time-display" id="time-display">0:00 / 0:00</span>
-                </div>
-                <div class="controls-right">
-                    <button class="ctrl-btn" id="ctrl-volume">
-                        <i class="fas fa-volume-high"></i>
-                    </button>
-                    <div class="volume-container">
-                        <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.05" value="1">
-                    </div>
-                </div>
+          <video id="unified-player" class="media-player"></video>
+          <div class="custom-controls" id="custom-controls">
+            <div class="progress-container" id="progress-container">
+              <div class="progress-bar" id="progress-bar"></div>
             </div>
+            <div class="controls-row">
+              <div class="controls-left">
+                <button class="ctrl-btn play-pause" id="ctrl-play-pause">
+                  <i class="fas fa-play"></i>
+                </button>
+                <button class="ctrl-btn" id="ctrl-stop">
+                  <i class="fas fa-stop"></i>
+                </button>
+                <span class="time-display" id="time-display">0:00 / 0:00</span>
+              </div>
+              <div class="controls-right">
+                <button class="ctrl-btn" id="ctrl-volume">
+                  <i class="fas fa-volume-high"></i>
+                </button>
+                <div class="volume-container">
+                  <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.05" value="1">
                 </div>
+                <!-- FIX #6: Aggiunto bottone fullscreen mancante -->
+                <button class="ctrl-btn fullscreen" id="ctrl-fullscreen" title="Fullscreen">
+                  <i class="fas fa-expand"></i>
+                </button>
+              </div>
             </div>
-            <div id="loading-info" class="loading-info">
-                <div class="spinner"></div>
-                <p>Caricamento video...</p>
-            </div>
+          </div>
+          <div id="loading-info" class="loading-info">
+            <div class="spinner"></div>
+            <p>Caricamento video...</p>
+          </div>
         </div>
 
         <div class="main-controls" id="main-controls">
@@ -748,29 +682,28 @@ audio.media-player::-webkit-media-controls-enclosure {
         <div class="player-info" id="player-info"></div>
 
         <div class="equalizer-container">
-          <div class="equalizer-title">🎚️ EQUALIZZATORE (15 BANDE)</div>
-          
+          <div class="equalizer-title">EQUALIZZATORE (15 BANDE)</div>
           <div class="equalizer-visualizer" id="eq-visualizer">
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="0"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">20 Hz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="1"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">40 Hz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="2"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">80 Hz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="3"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">160 Hz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="4"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">320 Hz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="5"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">640 Hz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="6"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">1.2 kHz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="7"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">2.5 kHz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="8"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">5 kHz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="9"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">10 kHz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="10"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">15 kHz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="11"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">20 kHz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="12"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">25 kHz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="13"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">30 kHz</label></div>
-            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="14"><div class="eq-bar" style="height: 20%;"></div></div><label class="eq-label">40 kHz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="0"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">20 Hz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="1"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">40 Hz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="2"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">80 Hz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="3"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">160 Hz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="4"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">320 Hz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="5"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">640 Hz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="6"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">1.2 kHz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="7"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">2.5 kHz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="8"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">5 kHz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="9"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">10 kHz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="10"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">15 kHz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="11"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">20 kHz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="12"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">25 kHz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="13"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">30 kHz</label></div>
+            <div class="eq-bar-wrapper"><div class="eq-bar-container" data-band="14"><div class="eq-bar" style="height:20%"></div></div><label class="eq-label">40 kHz</label></div>
           </div>
           <div class="eq-controls">
             <button class="eq-reset-btn" id="eq-reset"><i class="fas fa-undo"></i> RESET</button>
             <select id="eq-preset-select" class="eq-preset-select">
-              <option value="">🎚️ PRESET...</option>
+              <option value="">PRESET...</option>
             </select>
             <button class="eq-preset-btn" id="eq-preset-save" title="Salva preset corrente"><i class="fas fa-save"></i></button>
             <button class="eq-preset-btn danger" id="eq-preset-delete" title="Elimina preset selezionato"><i class="fas fa-trash"></i></button>
@@ -784,21 +717,35 @@ audio.media-player::-webkit-media-controls-enclosure {
     </div>
   </div>
 
-  <div class="footer">© 2025 TuneX • Premium Audio Player</div>
+  <div class="footer">&copy; 2025 TuneX &bull; Premium Audio Player</div>
   <div id="toast"></div>
+
   <!-- Shazam Result Box -->
   <div id="shazam-result">
-    <span class="shazam-close" onclick="document.getElementById('shazam-result').classList.remove('show')">×</span>
+    <span class="shazam-close" id="shazam-close-btn">&times;</span>
     <div style="display:flex; gap:12px; align-items:center;">
       <img id="s-img" class="shazam-artwork" src="" style="display:none">
       <div>
         <div id="s-title" class="shazam-title">Ascolto in corso...</div>
         <div id="s-artist" class="shazam-artist">Attendere 10 secondi</div>
+        <div class="shazam-rec-indicator" id="shazam-rec-indicator">
+          <div class="shazam-rec-dot"></div>
+          <span>REC</span>
+          <span class="shazam-rec-timer" id="shazam-rec-timer">0:00</span>
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- FIX #7: Aggiunto video overlay con player interno -->
+  <div id="video-overlay">
+    <video id="overlay-player" playsinline></video>
+  </div>
+  <button id="overlay-close" style="display:none"><i class="fas fa-compress"></i></button>
+
   <script>
+
+    // ================= DATI & VARIABILI GLOBALI =================
     var channelsData = [
   { name: '70-80.it TV ti ricordi?', url: 'https://585b674743bbb.streamlock.net/9050/9050/playlist.m3u8', genre: 'Unknown', type: 'streaming' },
   { name: 'RadiO Delfino I love 80', url: 'https://stream.radiodelfino.com:8060/radio.mp3', genre: 'Unknown', type: 'streaming' },
@@ -1066,7 +1013,7 @@ audio.media-player::-webkit-media-controls-enclosure {
     var STORAGE_FAVORITES = 'acusstream_favorites';
     var STORAGE_PRESETS = 'tunex_eq_presets';
     var eqValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    
+
     var unifiedPlayer = document.getElementById('unified-player');
     var loadingInfo = document.getElementById('loading-info');
     var channelListEl = document.getElementById('channel-list');
@@ -1091,7 +1038,8 @@ audio.media-player::-webkit-media-controls-enclosure {
     var eqPresetDeleteBtn = document.getElementById('eq-preset-delete');
     var eqBars = document.querySelectorAll('.eq-bar');
     var eqBarContainers = document.querySelectorAll('.eq-bar-container');
-    var logoImg = document.getElementById('logo');    
+    var logoImg = document.getElementById('logo');
+
     var currentHls = null;
     var isListening = false;
     var localFiles = [];
@@ -1100,22 +1048,20 @@ audio.media-player::-webkit-media-controls-enclosure {
     var currentTab = 'all';
 
     function debounce(fn, ms) {
-        let t;
-        return function(...args) {
-            clearTimeout(t);
-            t = setTimeout(() => fn.apply(this, args), ms);
-        };
+        var t;
+        return function() { var args = arguments; var ctx = this; clearTimeout(t); t = setTimeout(function() { fn.apply(ctx, args); }, ms); };
     }
 
     // Variabili globali EQ
-    let audioContext = null;
-    let audioSource = null;
-    let eqFilters = [];
-    let preamp = null;
-    let bassBoost = null;
-    let presenceBoost = null;
-    const EQ_FREQUENCIES = [20,40,80,160,320,640,1250,2500,5000,10000,12500,15000,16000,18000,20000];   
+    var audioContext = null;
+    var audioSource = null;
+    var eqFilters = [];
+    var preamp = null;
+    var bassBoost = null;
+    var presenceBoost = null;
+    var EQ_FREQUENCIES = [20,40,80,160,320,640,1250,2500,5000,10000,12500,15000,16000,18000,20000];
 
+    // ================= UTILITIES =================
     function showToast(msg) {
       toast.textContent = msg;
       toast.style.display = 'block';
@@ -1138,10 +1084,6 @@ audio.media-player::-webkit-media-controls-enclosure {
       else { favorites.push(name); showToast('Aggiunto ai preferiti'); }
       saveToLocalStorage(STORAGE_FAVORITES, favorites);
       renderChannels();
-      // Fallback: forza reflow se lista vuota
-      if (channelListEl.children.length === 0) {
-          channelListEl.innerHTML = '<div style="padding:12px;color:var(--text-secondary)">Nessun canale</div>';
-      }
     }
 
     function renderChannels() {
@@ -1168,7 +1110,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         return;
       }
 
-      const fragment = document.createDocumentFragment();
+      var fragment = document.createDocumentFragment();
       filtered.forEach(function(ch) {
           var el = document.createElement('div');
           el.className = 'channel';
@@ -1179,7 +1121,7 @@ audio.media-player::-webkit-media-controls-enclosure {
           actionsEl.className = 'channel-actions';
           var favoriteBtn = document.createElement('button');
           favoriteBtn.className = 'channel-btn';
-          favoriteBtn.textContent = isFavorite(ch.name) ? '⭐' : '☆';
+          favoriteBtn.textContent = isFavorite(ch.name) ? '\u2B50' : '\u2606';
           favoriteBtn.addEventListener('click', function(e) { e.stopPropagation(); toggleFavorite(ch.name); });
           actionsEl.appendChild(favoriteBtn);
           el.appendChild(nameEl);
@@ -1190,6 +1132,7 @@ audio.media-player::-webkit-media-controls-enclosure {
       channelListEl.appendChild(fragment);
     }
 
+    // ================= SIDEBAR TABS =================
     sidebarTabs.forEach(function(tab) {
       tab.addEventListener('click', function() {
         currentTab = tab.dataset.tab;
@@ -1198,6 +1141,7 @@ audio.media-player::-webkit-media-controls-enclosure {
       });
     });
 
+    // ================= LOCAL FILES =================
     openFilesBtn.addEventListener('click', function() { fileInput.click(); });
     fileInput.addEventListener('change', function(e) {
       if (e.target.files && e.target.files.length) {
@@ -1223,29 +1167,26 @@ audio.media-player::-webkit-media-controls-enclosure {
       showToast('File rimossi');
     });
 
+    // ================= STREAM CONTROL =================
     function stopStream() {
         if (currentHls) { try { currentHls.destroy(); } catch(e) {} currentHls = null; }
         unifiedPlayer.pause();
-        unifiedPlayer.src = '';
-        // ⚠️ MANTIENI _eqStatus: traccia fallimenti CORS tra cambio canale
-        // ⚠️ NON resettare audioContext/eqFilters (globali e riutilizzabili)
+        unifiedPlayer.removeAttribute('src');
+        unifiedPlayer.load();
         loadingInfo.style.display = 'none';
         statusText.textContent = 'Fermato';
         statusDot.classList.remove('playing');
     }
-
-    // Reset solo al caricamento pagina, non al cambio canale
-    window.addEventListener('beforeunload', function() {
-        if (audioContext) { try { audioContext.close(); } catch(e) {} }
-        localBlobURLs.forEach(function(url) { try { URL.revokeObjectURL(url); } catch(e) {} });
-    });
 
     function isM3U8(url) { return url.toLowerCase().indexOf('.m3u8') >= 0; }
 
     async function playChannel(element, name, url, type) {
         document.querySelectorAll('.channel').forEach(function(ch) { ch.classList.remove('active'); });
         element.classList.add('active');
-        currentChannelDisplay.textContent = name; statusText.textContent = 'Caricamento...'; loadingInfo.style.display = 'none'; stopStream();
+        currentChannelDisplay.textContent = name;
+        statusText.textContent = 'Caricamento...';
+        loadingInfo.style.display = 'none';
+        stopStream();
         await initAudioEQ();
         if (type === 'youtube-link') { playYouTubeLink(name, url); }
         else if (isM3U8(url)) {
@@ -1258,19 +1199,31 @@ audio.media-player::-webkit-media-controls-enclosure {
     function playHLS(name, url) {
         if (currentHls) { currentHls.destroy(); currentHls = null; }
         currentHls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60, startLevel: -1, debug: false });
-        currentHls.loadSource(url); currentHls.attachMedia(unifiedPlayer);
-        unifiedPlayer.style.display = 'block'; loadingInfo.style.display = 'none';
+        currentHls.loadSource(url);
+        currentHls.attachMedia(unifiedPlayer);
+        unifiedPlayer.style.display = 'block';
+        loadingInfo.style.display = 'none';
         currentHls.on(Hls.Events.MANIFEST_PARSED, async function() {
-            try { await unifiedPlayer.play(); statusText.textContent = 'In riproduzione'; statusDot.classList.add('playing'); }
-            catch(err) { if (err.name === 'NotAllowedError') { statusText.textContent = 'Premi Play per avviare'; showToast('Tocca Play per iniziare'); } statusDot.classList.remove('playing'); }
+            try {
+                await initAudioEQ();
+                connectEQChain(unifiedPlayer);
+                await unifiedPlayer.play();
+                statusText.textContent = 'In riproduzione';
+                statusDot.classList.add('playing');
+            } catch(err) {
+                if (err.name === 'NotAllowedError') {
+                    statusText.textContent = 'Premi Play per avviare';
+                    showToast('Tocca Play per iniziare');
+                }
+                statusDot.classList.remove('playing');
+            }
         });
         currentHls.on(Hls.Events.ERROR, function(event, data) {
             if (data.fatal) {
-                // Fallback per errori CORS su playlist HLS
                 if (data.type === Hls.ErrorTypes.NETWORK_ERROR && data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
-                    console.warn("⚠️ HLS CORS fallback: tentativo playback diretto");
+                    console.warn("HLS CORS fallback: tentativo playback diretto");
                     stopStream();
-                    playStandard(name, url); // Tenta come stream standard
+                    playStandard(name, url);
                     return;
                 }
                 switch (data.type) {
@@ -1283,54 +1236,44 @@ audio.media-player::-webkit-media-controls-enclosure {
     }
 
     function playStandard(name, url) {
+        // FIX #9: Rimuovi listener precedente per evitare accumulo
+        unifiedPlayer.removeEventListener('loadedmetadata', playStandard_onMeta);
+        unifiedPlayer.removeEventListener('error', playStandard_onError);
+
         // Se stream precedente ha fallito CORS, resetta elemento video DOM
         if (unifiedPlayer._eqStatus === 'failed') {
             resetVideoElement();
         }
-        
+
         unifiedPlayer.pause();
-        unifiedPlayer.src = '';
         unifiedPlayer.removeAttribute('crossorigin');
         unifiedPlayer._eqStatus = undefined;
-        
+
+        // FIX #9: Usa removeAttribute + load invece di src=''
+        unifiedPlayer.removeAttribute('src');
+        unifiedPlayer.load();
+
         unifiedPlayer.src = url;
         unifiedPlayer.style.display = 'block';
         loadingInfo.style.display = 'none';
-        
+
         if (audioContext && audioContext.state === 'suspended') {
-            audioContext.resume().catch(()=>{});
+            audioContext.resume().catch(function(){});
         }
-        
-        unifiedPlayer.onloadedmetadata = async function() { 
-            try {
-                // Skip EQ init per stream blacklisted
-                if (!isCorsRestricted(url)) {
-                    const eqInit = await initAudioEQ();
-                    if (eqInit) {
-                        const eqConnected = connectEQChain(unifiedPlayer);
-                        if (!eqConnected) {
-                         
-                        }
-                    }
-                } else {
-                    
-                }
-            } catch(e) { console.warn("EQ init error:", e.message); }
-        };
-        
-        if (unifiedPlayer.readyState >= 1) { unifiedPlayer.onloadedmetadata(); }
-        
-        unifiedPlayer.onerror = function() {
-            stopStream();
-            showToast('Errore caricamento stream');
-            statusText.textContent = 'Stream non disponibile';
-            statusDot.classList.remove('playing');
-        };
-        
-        unifiedPlayer.play().then(() => {
+
+        // FIX #9: Funzioni nominate per poter rimuovere i listener
+        unifiedPlayer.addEventListener('loadedmetadata', playStandard_onMeta);
+        unifiedPlayer.addEventListener('error', playStandard_onError);
+
+        // Se i metadati sono gia' caricati, forza l'handler
+        if (unifiedPlayer.readyState >= 1) {
+            playStandard_onMeta();
+        }
+
+        unifiedPlayer.play().then(function() {
             statusText.textContent = 'In riproduzione';
             statusDot.classList.add('playing');
-        }).catch(err => {
+        }).catch(function(err) {
             if (err.name === 'NotAllowedError') {
                 statusText.textContent = 'Premi Play per avviare';
                 showToast('Tocca Play per iniziare');
@@ -1339,163 +1282,191 @@ audio.media-player::-webkit-media-controls-enclosure {
         });
     }
 
-    function playYouTubeLink(name, url) {
-      loadingInfo.style.display = 'block'; unifiedPlayer.style.display = 'block';
-      window.open(url, '_blank');
-      setTimeout(function() { loadingInfo.style.display = 'none'; statusText.textContent = 'Aperto su YouTube'; statusDot.classList.add('playing'); playerInfo.textContent = '🎬 ' + name + ' - Apri su YouTube'; showToast('Video YouTube aperto nel browser'); }, 500);
+    // FIX #9: Handler nominati rimovibili
+    function playStandard_onMeta() {
+        try {
+            if (!isCorsRestricted(unifiedPlayer.src)) {
+                initAudioEQ().then(function(eqInit) {
+                    if (eqInit) connectEQChain(unifiedPlayer);
+                });
+            }
+        } catch(e) { console.warn("EQ init error:", e.message); }
     }
 
+    function playStandard_onError() {
+        stopStream();
+        showToast('Errore caricamento stream');
+        statusText.textContent = 'Stream non disponibile';
+        statusDot.classList.remove('playing');
+    }
+
+    function playYouTubeLink(name, url) {
+      loadingInfo.style.display = 'block';
+      unifiedPlayer.style.display = 'block';
+      window.open(url, '_blank');
+      setTimeout(function() {
+          loadingInfo.style.display = 'none';
+          statusText.textContent = 'Aperto su YouTube';
+          statusDot.classList.add('playing');
+          playerInfo.textContent = name + ' - Apri su YouTube';
+          showToast('Video YouTube aperto nel browser');
+      }, 500);
+    }
+
+    // ================= PLAYER CONTROLS =================
     mediaPlayButton.addEventListener('click', async function() {
-        if (unifiedPlayer.src) { await initAudioEQ(); connectEQChain(unifiedPlayer); unifiedPlayer.play().catch(()=>{}); statusDot.classList.add('playing'); }
-        else { showToast('Seleziona un canale'); }
+        if (unifiedPlayer.src || unifiedPlayer.currentSrc) {
+            await initAudioEQ();
+            connectEQChain(unifiedPlayer);
+            unifiedPlayer.play().catch(function(){});
+            statusDot.classList.add('playing');
+        } else { showToast('Seleziona un canale'); }
     });
-    mediaStopButton.addEventListener('click', function() { unifiedPlayer.pause(); statusDot.classList.remove('playing'); });
+    mediaStopButton.addEventListener('click', function() {
+        unifiedPlayer.pause();
+        statusDot.classList.remove('playing');
+    });
     mediaNextButton.addEventListener('click', function() {
       var visible = Array.from(document.querySelectorAll('.channel')).filter(function(ch) { return ch.style.display !== 'none'; });
       var active = document.querySelector('.channel.active');
       var idx = active ? visible.indexOf(active) : -1;
       if (idx + 1 < visible.length) { visible[idx + 1].click(); }
     });
+
+    // ================= VOICE SEARCH =================
     voiceSearchBtn.addEventListener('click', function() {
       var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) { showToast('Ricerca vocale non supportata'); return; }
       if (isListening) { isListening = false; voiceSearchBtn.classList.remove('listening'); return; }
-      var recognition = new SpeechRecognition(); recognition.lang = 'it-IT'; isListening = true; voiceSearchBtn.classList.add('listening'); showToast('Ascoltando...');
-      recognition.onresult = function(event) { var transcript = event.results[0][0].transcript.toLowerCase(); searchInput.value = transcript; searchInput.dispatchEvent(new Event('input')); };
+      var recognition = new SpeechRecognition();
+      recognition.lang = 'it-IT';
+      isListening = true;
+      voiceSearchBtn.classList.add('listening');
+      showToast('Ascoltando...');
+      recognition.onresult = function(event) {
+          var transcript = event.results[0][0].transcript.toLowerCase();
+          searchInput.value = transcript;
+          searchInput.dispatchEvent(new Event('input'));
+      };
       recognition.onend = function() { isListening = false; voiceSearchBtn.classList.remove('listening'); };
+      recognition.onerror = function(e) {
+          console.warn('Speech error:', e.error);
+          isListening = false;
+          voiceSearchBtn.classList.remove('listening');
+          if (e.error === 'no-speech') showToast('Nessun discorso rilevato');
+          else if (e.error === 'not-allowed') showToast('Microfono non autorizzato');
+          else showToast('Errore ricerca vocale: ' + e.error);
+      };
       recognition.start();
     });
 
-    let eqUpdatePending = false;
+    // ================= EQUALIZER INTERACTION =================
+    var eqUpdatePending = false;
     function processEQInteraction(e) {
       if (eqUpdatePending) return;
       eqUpdatePending = true;
-      
-      requestAnimationFrame(() => {
-        // Fallback: cerca il container partendo dal target effettivo
-        const container = e.currentTarget || (e.target && e.target.closest ? e.target.closest('.eq-bar-container') : null);
-        if (!container || !container.dataset) { eqUpdatePending = false; return; }
-        
-        const band = parseInt(container.dataset.band);
-        if (isNaN(band)) { eqUpdatePending = false; return; }
-        
-        const rect = container.getBoundingClientRect();
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const clickY = clientY - rect.top;
-        const height = rect.height || 140;
-        
-        // Top = +12dB, Bottom = -12dB
-        const pct = Math.max(0, Math.min(100, (1 - clickY / height) * 100));
-        const gain = (pct / 100) * 24 - 12;
-        
-        eqValues[band] = gain;
-        
-        // Aggiornamento visivo immediato
-        const bar = container.querySelector('.eq-bar');
-        if (bar) {
-          const visualPct = Math.max(5, Math.min(100, pct));
-          bar.style.height = visualPct + '%';
-          bar.classList.toggle('active', visualPct > 40);
-        }
-        
-        // Aggiornamento audio
-        try {
-          if (audioContext && audioContext.state === 'running' && eqFilters[band]) {
-            eqFilters[band].gain.value = gain;
+      requestAnimationFrame(function() {
+          var container = e.currentTarget || (e.target && e.target.closest ? e.target.closest('.eq-bar-container') : null);
+          if (!container || !container.dataset) { eqUpdatePending = false; return; }
+          var band = parseInt(container.dataset.band);
+          if (isNaN(band)) { eqUpdatePending = false; return; }
+          var rect = container.getBoundingClientRect();
+          var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          var clickY = clientY - rect.top;
+          var height = rect.height || 140;
+          var pct = Math.max(0, Math.min(100, (1 - clickY / height) * 100));
+          var gain = (pct / 100) * 24 - 12;
+          eqValues[band] = gain;
+          var bar = container.querySelector('.eq-bar');
+          if (bar) {
+            var visualPct = Math.max(5, Math.min(100, pct));
+            bar.style.height = visualPct + '%';
+            bar.classList.toggle('active', visualPct > 40);
           }
-        } catch(err) { console.warn('EQ gain update error:', err); }
-        
-        eqUpdatePending = false;
+          try {
+            if (audioContext && audioContext.state === 'running' && eqFilters[band]) {
+              eqFilters[band].gain.value = gain;
+            }
+          } catch(err) { console.warn('EQ gain update error:', err); }
+          eqUpdatePending = false;
       });
     }
-    eqBarContainers.forEach(c => { c.addEventListener('touchstart', processEQInteraction, { passive: true }); c.addEventListener('touchmove', processEQInteraction, { passive: true }); c.addEventListener('mousedown', processEQInteraction); });
+    eqBarContainers.forEach(function(c) {
+      c.addEventListener('touchstart', processEQInteraction, { passive: true });
+      c.addEventListener('touchmove', processEQInteraction, { passive: true });
+      c.addEventListener('mousedown', processEQInteraction);
+    });
+
     function updateEqualizer() {
-        // Aggiornamento visivo barre
         eqBars.forEach(function(bar, index) {
             var value = eqValues[index] + 12;
             var percentage = (value / 24) * 100;
             percentage = Math.max(5, Math.min(100, percentage));
             bar.style.height = percentage + '%';
-            if (percentage > 40) bar.classList.add('active'); 
+            if (percentage > 40) bar.classList.add('active');
             else bar.classList.remove('active');
         });
-        
-        // Aggiornamento audio CON GUARD CLAUSE
         try {
-            // ✅ GUARD: Verifica che audioContext esista
             if (!audioContext) {
-                console.warn("⚠️ AudioContext not initialized - initializing now...");
-                // Inizializza in background
-                initAudioEQ().catch(e => {
-                    console.error("❌ Cannot initialize AudioContext:", e.message);
-                });
-                return; // EXIT early se non è pronto
-            }
-            
-            // ✅ GUARD: Verifica stato
-            if (audioContext.state !== 'running') {
-                console.warn("⚠️ AudioContext state:", audioContext.state, "- resuming...");
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume().catch(e => {
-                        console.warn("Cannot resume AudioContext:", e.message);
-                    });
-                }
-                return; // EXIT se non running
-            }
-            
-            // ✅ GUARD: Verifica filtri
-            if (!eqFilters || eqFilters.length === 0) {
-                console.warn("⚠️ EQ filters not initialized");
+                initAudioEQ().catch(function(e) { console.error("Cannot init AudioContext:", e.message); });
                 return;
             }
-            
-            // ✅ UPDATE SICURO - Se arriviamo qui, tutto è pronto
+            if (audioContext.state !== 'running') {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().catch(function() {});
+                }
+                return;
+            }
+            if (!eqFilters || eqFilters.length === 0) return;
             for (var i = 0; i < eqValues.length; i++) {
                 if (eqFilters[i] && eqFilters[i].gain) {
-                    var clamped = Math.max(-6, Math.min(6, eqValues[i]));
+                    var clamped = Math.max(-12, Math.min(12, eqValues[i]));
                     eqFilters[i].gain.value = clamped;
                 }
             }
-            
-        } catch(e) { 
-            console.error('❌ EQ audio update error:', e.message); 
-        }
+        } catch(e) { console.error('EQ audio update error:', e.message); }
     }
-    eqResetBtn.addEventListener('click', function() { eqValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; updateEqualizer(); if (eqPresetSelect) eqPresetSelect.value = ""; showToast('Equalizzatore ripristinato'); });
+
+    eqResetBtn.addEventListener('click', function() {
+        eqValues = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        updateEqualizer();
+        if (eqPresetSelect) eqPresetSelect.value = "";
+        showToast('Equalizzatore ripristinato');
+    });
 
     // ================= PRESET SYSTEM =================
-    const defaultPresets = {
-        flat:     { label:"⚪ Flat", values:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], builtin:true },
-        bass:     { label:"🔊 Bass Boost", values:[6,6,5,5,4,2,1,0,-1,-2,-3,-4,-5,-5,-6], builtin:true },
-        treble:   { label:"🎵 Treble", values:[-6,-5,-4,-4,-2,-1,1,2,3,4,5,5,6,6,6], builtin:true },
-        vocal:    { label:"🎤 Vocal", values:[-5,-4,-2,2,4,6,6,4,2,-1,-2,-4,-6,-6,-6], builtin:true },
-        rock:     { label:"🎸 Rock", values:[4,5,6,4,2,0,-1,1,3,4,5,4,2,1,0], builtin:true },
-        pop:      { label:"🎧 Pop", values:[3,4,5,4,2,0,1,3,4,5,4,2,1,0,-1], builtin:true },
-        jazz:     { label:"🎷 Jazz", values:[2,4,5,6,4,2,0,1,2,4,5,4,2,1,0], builtin:true },
-        classical:{ label:"🎻 Classical", values:[1,2,4,5,6,4,2,1,0,-2,-4,-5,-6,-6,-6], builtin:true },
-        electronic:{label:"🎛️ Electronic", values:[5,4,3,2,0,-1,2,4,5,6,5,4,3,2,1], builtin:true },
-        dance:    { label:"💃 Dance", values:[6,5,4,2,1,-1,2,4,5,6,5,4,2,1,0], builtin:true },
-        podcast:  { label:"🎙️ Podcast", values:[-6,-5,-3,3,5,6,5,4,1,-1,-4,-6,-6,-6,-6], builtin:true },
-        live:     { label:"🎪 Live", values:[3,4,5,4,2,1,2,4,5,6,6,5,4,2,1], builtin:true },
-        hiphop:   { label:"🎤 Hip Hop", values:[6,6,5,4,3,1,0,1,2,4,5,4,3,2,1], builtin:true },
-        metal:    { label:"🎸 Metal", values:[4,5,6,6,5,3,2,3,4,5,6,5,4,3,2], builtin:true },
-        ambient:  { label:"🌊 Ambient", values:[3,2,1,0,-1,-2,-4,-2,-1,-2,-4,-5,-4,-2,-1], builtin:true },
-        country:  { label:"🤠 Country", values:[2,3,4,3,2,0,1,3,4,3,2,0,-1,-3,-4], builtin:true },
-        rnb:      { label:"🎵 R&B Soul", values:[5,5,4,2,1,0,1,2,4,5,4,3,2,1,0], builtin:true },
-        gaming:   { label:"🎮 Gaming", values:[3,4,5,4,2,1,2,4,5,6,5,5,4,2,2], builtin:true },
-        cinema:   { label:"🎬 Cinema", values:[4,5,6,5,3,2,3,5,6,6,5,4,3,2,1], builtin:true },
-        night:    { label:"🌙 Night Mode", values:[2,2,3,3,4,4,4,4,4,3,3,2,2,2,2], builtin:true },
-        loudness: { label:"🔊 Loudness", values:[6,5,5,4,4,3,4,5,6,5,5,4,4,3,2], builtin:true },
-        acoustic: { label:"🎻 Acoustic", values:[1,2,4,5,6,6,5,3,1,0,-2,-4,-5,-6,-6], builtin:true },
-        edm:      { label:"🎹 EDM", values:[6,5,5,4,2,1,1,3,5,6,6,5,4,3,2], builtin:true },
-        reggae:   { label:"🏖️ Reggae", values:[5,5,6,6,5,3,2,1,-1,-3,-5,-6,-6,-6,-6], builtin:true },
-        blues:    { label:"🎷 Blues", values:[3,4,5,6,6,5,4,2,1,-2,-4,-6,-6,-6,-6], builtin:true },
-        folk:     { label:"🌲 Folk", values:[1,2,4,5,6,5,4,2,1,0,-2,-4,-5,-6,-6], builtin:true },
-        meditation:{label:"🧘 Meditation", values:[2,1,0,-1,-2,-1,0,-1,-2,-4,-2,-1,0,1,2], builtin:true },
-        radio:    { label:"📻 Radio Vintage", values:[-6,-5,-4,-2,3,5,6,5,3,-2,-4,-6,-6,-6,-6], builtin:true },
-        headphone:{ label:"🎧 Headphone", values:[4,5,6,5,3,2,1,1,2,4,5,5,5,4,3], builtin:true },
-        speaker:  { label:"🔊 Speaker", values:[5,6,6,5,3,2,0,-2,-4,-5,-6,-6,-6,-6,-6], builtin:true },
-        car:      { label:"🚗 Car Audio", values:[6,6,5,4,3,2,0,-2,-4,-5,-6,-6,-6,-6,-6], builtin:true }
+    var defaultPresets = {
+        flat:      { label:"Flat", values:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], builtin:true },
+        bass:      { label:"Bass Boost", values:[6,6,5,5,4,2,1,0,-1,-2,-3,-4,-5,-5,-6], builtin:true },
+        treble:    { label:"Treble", values:[-6,-5,-4,-4,-2,-1,1,2,3,4,5,5,6,6,6], builtin:true },
+        vocal:     { label:"Vocal", values:[-5,-4,-2,2,4,6,6,4,2,-1,-2,-4,-6,-6,-6], builtin:true },
+        rock:      { label:"Rock", values:[4,5,6,4,2,0,-1,1,3,4,5,4,2,1,0], builtin:true },
+        pop:       { label:"Pop", values:[3,4,5,4,2,0,1,3,4,5,4,2,1,0,-1], builtin:true },
+        jazz:      { label:"Jazz", values:[2,4,5,6,4,2,0,1,2,4,5,4,2,1,0], builtin:true },
+        classical: { label:"Classical", values:[1,2,4,5,6,4,2,1,0,-2,-4,-5,-6,-6,-6], builtin:true },
+        electronic:{ label:"Electronic", values:[5,4,3,2,0,-1,2,4,5,6,5,4,3,2,1], builtin:true },
+        dance:     { label:"Dance", values:[6,5,4,2,1,-1,2,4,5,6,5,4,2,1,0], builtin:true },
+        podcast:   { label:"Podcast", values:[-6,-5,-3,3,5,6,5,4,1,-1,-4,-6,-6,-6,-6], builtin:true },
+        live:      { label:"Live", values:[3,4,5,4,2,1,2,4,5,6,6,5,4,2,1], builtin:true },
+        hiphop:    { label:"Hip Hop", values:[6,6,5,4,3,1,0,1,2,4,5,4,3,2,1], builtin:true },
+        metal:     { label:"Metal", values:[4,5,6,6,5,3,2,3,4,5,6,5,4,3,2], builtin:true },
+        ambient:   { label:"Ambient", values:[3,2,1,0,-1,-2,-4,-2,-1,-2,-4,-5,-4,-2,-1], builtin:true },
+        country:   { label:"Country", values:[2,3,4,3,2,0,1,3,4,3,2,0,-1,-3,-4], builtin:true },
+        rnb:       { label:"R&B Soul", values:[5,5,4,2,1,0,1,2,4,5,4,3,2,1,0], builtin:true },
+        gaming:    { label:"Gaming", values:[3,4,5,4,2,1,2,4,5,6,5,5,4,2,2], builtin:true },
+        cinema:    { label:"Cinema", values:[4,5,6,5,3,2,3,5,6,6,5,4,3,2,1], builtin:true },
+        night:     { label:"Night Mode", values:[2,2,3,3,4,4,4,4,4,3,3,2,2,2,2], builtin:true },
+        loudness:  { label:"Loudness", values:[6,5,5,4,4,3,4,5,6,5,5,4,4,3,2], builtin:true },
+        acoustic:  { label:"Acoustic", values:[1,2,4,5,6,6,5,3,1,0,-2,-4,-5,-6,-6], builtin:true },
+        edm:       { label:"EDM", values:[6,5,5,4,2,1,1,3,5,6,6,5,4,3,2], builtin:true },
+        reggae:    { label:"Reggae", values:[5,5,6,6,5,3,2,1,-1,-3,-5,-6,-6,-6,-6], builtin:true },
+        blues:     { label:"Blues", values:[3,4,5,6,6,5,4,2,1,-2,-4,-6,-6,-6,-6], builtin:true },
+        folk:      { label:"Folk", values:[1,2,4,5,6,5,4,2,1,0,-2,-4,-5,-6,-6], builtin:true },
+        meditation:{ label:"Meditation", values:[2,1,0,-1,-2,-1,0,-1,-2,-4,-2,-1,0,1,2], builtin:true },
+        radio:     { label:"Radio Vintage", values:[-6,-5,-4,-2,3,5,6,5,3,-2,-4,-6,-6,-6,-6], builtin:true },
+        headphone: { label:"Headphone", values:[4,5,6,5,3,2,1,1,2,4,5,5,5,4,3], builtin:true },
+        speaker:   { label:"Speaker", values:[5,6,6,5,3,2,0,-2,-4,-5,-6,-6,-6,-6,-6], builtin:true },
+        car:       { label:"Car Audio", values:[6,6,5,4,3,2,0,-2,-4,-5,-6,-6,-6,-6,-6], builtin:true }
     };
 
     function getAllPresets() {
@@ -1508,7 +1479,7 @@ audio.media-player::-webkit-media-controls-enclosure {
 
     function populatePresetSelect() {
         if (!eqPresetSelect) return;
-        eqPresetSelect.innerHTML = '<option value="">🎚️ PRESET...</option>';
+        eqPresetSelect.innerHTML = '<option value="">PRESET...</option>';
         var presets = getAllPresets();
         var keys = Object.keys(presets);
         keys.sort(function(a,b) {
@@ -1519,7 +1490,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         keys.forEach(function(key) {
             var opt = document.createElement('option');
             opt.value = key;
-            opt.textContent = presets[key].label + (presets[key].builtin ? '' : ' ✏️');
+            opt.textContent = presets[key].label + (presets[key].builtin ? '' : ' (custom)');
             eqPresetSelect.appendChild(opt);
         });
     }
@@ -1529,11 +1500,11 @@ audio.media-player::-webkit-media-controls-enclosure {
         if (!key || !presets[key]) return;
         var p = presets[key];
         if (audioContext && bassBoost) {
-            if (['bass','hiphop','edm','dance'].includes(key)) bassBoost.gain.value = 6;
-            else if (['flat','vocal','podcast'].includes(key)) bassBoost.gain.value = 0;
+            if (['bass','hiphop','edm','dance'].indexOf(key) >= 0) bassBoost.gain.value = 6;
+            else if (['flat','vocal','podcast'].indexOf(key) >= 0) bassBoost.gain.value = 0;
             else bassBoost.gain.value = 2;
         }
-        eqValues = [...p.values];
+        eqValues = p.values.slice();
         updateEqualizer();
         if (eqPresetSelect) eqPresetSelect.value = key;
         showToast('Preset applicato: ' + p.label);
@@ -1543,7 +1514,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         if (!name) { name = prompt('Nome preset:'); if (!name) return; }
         var key = 'user_' + Date.now();
         var userPresets = loadFromLocalStorage(STORAGE_PRESETS, {});
-        userPresets[key] = { label: '🎨 ' + name, values: [...eqValues], builtin: false };
+        userPresets[key] = { label: name, values: eqValues.slice(), builtin: false };
         saveToLocalStorage(STORAGE_PRESETS, userPresets);
         populatePresetSelect();
         eqPresetSelect.value = key;
@@ -1554,10 +1525,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         var key = eqPresetSelect.value;
         if (!key) { showToast('Nessun preset selezionato'); return; }
         var presets = getAllPresets();
-        if (presets[key] && presets[key].builtin) {
-            showToast('Impossibile eliminare preset di sistema');
-            return;
-        }
+        if (presets[key] && presets[key].builtin) { showToast('Impossibile eliminare preset di sistema'); return; }
         if (!confirm('Eliminare il preset "' + presets[key].label + '"?')) return;
         var userPresets = loadFromLocalStorage(STORAGE_PRESETS, {});
         delete userPresets[key];
@@ -1577,14 +1545,13 @@ audio.media-player::-webkit-media-controls-enclosure {
     });
     if (eqPresetDeleteBtn) eqPresetDeleteBtn.addEventListener('click', deleteSelectedPreset);
 
-    const debouncedSearch = debounce(renderChannels, 150);
-    searchInput.addEventListener('input', debouncedSearch); 
+    // ================= SEARCH =================
+    var debouncedSearch = debounce(renderChannels, 150);
+    searchInput.addEventListener('input', debouncedSearch);
     resetSearchBtn.addEventListener('click', function() { searchInput.value = ''; renderChannels(); });
-    unifiedPlayer.addEventListener('ended', function() { setTimeout(function() { mediaNextButton.click(); }, 200); });
-    window.addEventListener('beforeunload', function() { localBlobURLs.forEach(function(url) { try { URL.revokeObjectURL(url); } catch(e) {} }); });
 
-        // ================= BLACKLIST CORS (domini noti senza supporto) =================
-    const CORS_BLACKLIST = [
+    // ================= CORS BLACKLIST =================
+    var CORS_BLACKLIST = [
         '.streaming.rs', '.nsv', 'shoutcast', 'icecast',
         'ice.infomaniak.ch', 'radio.co', 'openstream.co',
         'radioparadise.com', 'streamtheworld.com', 'msvdn.net',
@@ -1595,374 +1562,123 @@ audio.media-player::-webkit-media-controls-enclosure {
         'radiodelfino.com', 'crossradio.com.br',
         'electroradio.fm', 'sharp-stream.com', 'cdnstream1.com',
         'exclusive.radio', 'streamingmedia.it', 'live365', 'derstream.net',
-        'streaming.radiostreamlive.com', 'hotmixradio.fr', 'italianradio',
-        ':8002/', ':8042/', ':8382/', ':8022/', ':8060/', ';stream', ';?n=', ';?rj-', ';mp3', ';aac', '.cdnstream.com'
+        'streaming.radiostreamlive.com', 'hotmixradio.fr', 'italianradio'
     ];
     function isCorsRestricted(url) {
         if (!url) return false;
-        const u = url.toLowerCase().split('?')[0]; // Ignora query params per match
-        return CORS_BLACKLIST.some(pattern => {
-            if (pattern.startsWith(':') || pattern.startsWith(';')) return url.includes(pattern);
-            return u.includes(pattern) || u.endsWith(pattern);
-        });
+        var u = url.toLowerCase().split('?')[0];
+        return CORS_BLACKLIST.some(function(pattern) { return u.indexOf(pattern) >= 0; });
     }
 
-    // ================= SOSTITUZIONE ELEMENTO VIDEO (reset stato browser) =================
+    // ================= RESET VIDEO ELEMENT =================
     function resetVideoElement() {
-        const container = unifiedPlayer.parentElement;
+        var container = unifiedPlayer.parentElement;
         if (!container) return;
-        const newPlayer = document.createElement('video');
+        var oldPlayer = unifiedPlayer;
+        var newPlayer = document.createElement('video');
         newPlayer.id = 'unified-player';
         newPlayer.className = 'media-player';
-        newPlayer.controls = true;
-        newPlayer.crossOrigin = 'anonymous';
-        newPlayer.style.cssText = unifiedPlayer.style.cssText;
+        newPlayer.playsInline = true;
         newPlayer._eqStatus = undefined;
-        container.replaceChild(newPlayer, unifiedPlayer);
+        container.replaceChild(newPlayer, oldPlayer);
         unifiedPlayer = newPlayer;
+        audioSource = null;
+        // FIX #10: Riassegna tutti i riferimenti ai controlli
+        ctrlPlayPause = document.getElementById('ctrl-play-pause');
+        ctrlStop = document.getElementById('ctrl-stop');
+        progressBar = document.getElementById('progress-bar');
+        progressContainer = document.getElementById('progress-container');
+        timeDisplay = document.getElementById('time-display');
+        volumeSlider = document.getElementById('volume-slider');
+        ctrlVolume = document.getElementById('ctrl-volume');
+        ctrlFullscreen = document.getElementById('ctrl-fullscreen');
         // Riassegna listener base
-        unifiedPlayer.addEventListener('play', () => { 
-            statusText.textContent = 'In riproduzione'; 
-            statusDot.classList.add('playing'); 
+        unifiedPlayer.addEventListener('play', function() {
+            statusText.textContent = 'In riproduzione';
+            statusDot.classList.add('playing');
         });
-        unifiedPlayer.addEventListener('pause', () => { 
-            if (statusText.textContent !== 'Fermato' && statusText.textContent !== 'Premi Play per avviare') { 
-                statusText.textContent = 'In pausa'; 
-                statusDot.classList.remove('playing'); 
-            } 
+        unifiedPlayer.addEventListener('pause', function() {
+            if (statusText.textContent !== 'Fermato' && statusText.textContent !== 'Premi Play per avviare') {
+                statusText.textContent = 'In pausa';
+                statusDot.classList.remove('playing');
+            }
         });
-        unifiedPlayer.addEventListener('ended', function() { 
-            setTimeout(function() { mediaNextButton.click(); }, 200); 
+        unifiedPlayer.addEventListener('ended', function() {
+            setTimeout(function() { mediaNextButton.click(); }, 200);
         });
+        // Riassegna custom controls
+        setupCustomControls();
     }
 
+    // ================= AUDIO EQ INIT =================
     async function initAudioEQ() {
         if (audioContext) return true;
-        
-        const Ctor = window.AudioContext || window.webkitAudioContext;
+        var Ctor = window.AudioContext || window.webkitAudioContext;
         if (!Ctor) return false;
-        
         try {
             audioContext = new Ctor();
-            
-            // Resume se sospeso (necessario dopo user interaction)
             if (audioContext.state === 'suspended') {
-                console.log("⏸️ AudioContext suspended, resuming...");
                 await audioContext.resume();
             }
-            
-            console.log("✅ AudioContext state:", audioContext.state);
-            
-            // Crea nodi base
-            if (!preamp) { 
-                preamp = audioContext.createGain(); 
-                preamp.gain.value = 0.85; 
-            }
-            if (!bassBoost) { 
-                bassBoost = audioContext.createBiquadFilter(); 
-                bassBoost.type = "lowshelf"; 
-                bassBoost.frequency.value = 80; 
-                bassBoost.gain.value = 0; 
-            }
-            if (!presenceBoost) { 
-                presenceBoost = audioContext.createBiquadFilter(); 
-                presenceBoost.type = "highshelf"; 
-                presenceBoost.frequency.value = 4500; 
-                presenceBoost.gain.value = 2; 
-            }
-            
-            // Crea filtri EQ se non esistono
+            if (!preamp) { preamp = audioContext.createGain(); preamp.gain.value = 0.85; }
+            if (!bassBoost) { bassBoost = audioContext.createBiquadFilter(); bassBoost.type = "lowshelf"; bassBoost.frequency.value = 80; bassBoost.gain.value = 0; }
+            if (!presenceBoost) { presenceBoost = audioContext.createBiquadFilter(); presenceBoost.type = "highshelf"; presenceBoost.frequency.value = 4500; presenceBoost.gain.value = 2; }
             if (eqFilters.length === 0) {
-                EQ_FREQUENCIES.forEach(f => {
-                    const filt = audioContext.createBiquadFilter();
-                    filt.type = "peaking"; 
-                    filt.frequency.value = f; 
-                    filt.Q.value = 1.4; 
+                EQ_FREQUENCIES.forEach(function(f) {
+                    var filt = audioContext.createBiquadFilter();
+                    filt.type = "peaking";
+                    filt.frequency.value = f;
+                    filt.Q.value = 1.4;
                     filt.gain.value = 0;
                     eqFilters.push(filt);
                 });
-                console.log("✅ EQ filters initialized:", eqFilters.length);
             }
-            
             return true;
-            
-        } catch(e) { 
-            console.error("❌ Init EQ failed:", e.message); 
-            return false; 
-        }
+        } catch(e) { console.error("Init EQ failed:", e.message); return false; }
     }
 
     function connectEQChain(mediaElement) {
-        // Skip EQ per stream blacklisted
-        if (isCorsRestricted(mediaElement.src)) {
-            console.warn("⚠️ EQ skipped: stream CORS-restricted");
-            return false;
-        }
+        if (isCorsRestricted(mediaElement.src)) return false;
         if (!audioContext || eqFilters.length === 0) return false;
         if (mediaElement._eqStatus === 'failed') return false;
-        
-        // Se già attivo, riusa la connessione
-        if (mediaElement._eqStatus === 'active' && audioSource) {
-            try {
-                // Verifica che la catena sia ancora connessa
-                eqFilters[0].connect(audioContext.destination);
-                return true;
-            } catch(e) {
-                console.warn('EQ chain reconnect failed, resetting...');
-                mediaElement._eqStatus = 'pending';
-            }
-        }
-        
         try {
-            // Prova createMediaElementSource
-            let source;
-            try {
-                source = audioContext.createMediaElementSource(mediaElement);
-                if (!source) throw new Error('null source');
-            } catch (mediaErr) {
-                // Fallback: usa AnalyserNode diretto (funziona anche con CORS)
-                console.warn("⚠️ MediaElementSource failed, using direct audio:", mediaErr.message);
-                source = audioContext.createGain();
-                mediaElement._eqStatus = 'fallback';
+            if (!audioSource || audioSource._mediaElement !== mediaElement) {
+                if (audioSource) { try { audioSource.disconnect(); } catch(e) {} }
+                audioSource = audioContext.createMediaElementSource(mediaElement);
+                audioSource._mediaElement = mediaElement;
             }
-            
-            audioSource = source;
-            
-            // Disconnect vecchia catena
-            try {
-                [preamp, bassBoost, presenceBoost].forEach(n => { 
-                    try { n?.disconnect(); } catch(e) {} 
-                });
-                eqFilters.forEach(f => { 
-                    try { f.disconnect(); } catch(e) {} 
-                });
-            } catch(e) {}
-            
-            // Ricostruisci catena
+            try { preamp.disconnect(); } catch(e) {}
+            try { bassBoost.disconnect(); } catch(e) {}
+            try { presenceBoost.disconnect(); } catch(e) {}
+            eqFilters.forEach(function(f) { try { f.disconnect(); } catch(e) {} });
+
             audioSource.connect(preamp);
             preamp.connect(bassBoost);
             bassBoost.connect(presenceBoost);
-            
-            let last = presenceBoost;
-            eqFilters.forEach(f => { 
-                last.connect(f); 
-                last = f; 
-            });
+            var last = presenceBoost;
+            eqFilters.forEach(function(f) { last.connect(f); last = f; });
             last.connect(audioContext.destination);
-            
+
             mediaElement._eqStatus = 'active';
-            console.log("✅ EQ chain connected successfully");
             return true;
-            
         } catch(e) {
-            const msg = e.message || '';
-            console.warn("❌ EQ chain failed:", msg);
-            
-            // Fallback finale: equalizzatore come gain semplice
-            try {
-                if (!audioSource) {
-                    audioSource = audioContext.createGain();
-                    audioSource.connect(audioContext.destination);
-                }
-                mediaElement._eqStatus = 'fallback_gain';
-                return true;
-            } catch(fallbackErr) {
-                mediaElement._eqStatus = 'failed';
-                audioSource = null;
-                return false;
-            }
+            console.warn('EQ chain failed:', e.message);
+            mediaElement._eqStatus = 'failed';
+            return false;
         }
     }
 
-    unifiedPlayer.addEventListener('play', () => { statusText.textContent = 'In riproduzione'; statusDot.classList.add('playing'); });
-    unifiedPlayer.addEventListener('pause', () => { if (statusText.textContent !== 'Fermato' && statusText.textContent !== 'Premi Play per avviare') { statusText.textContent = 'In pausa'; statusDot.classList.remove('playing'); } });
-
-    // ================= THEME ENGINE + COLOR PICKER =================
-    let userThemes = JSON.parse(localStorage.getItem('tunex_user_themes') || '{}');
-        const themes = {
-      // ===== MINIMAL TECH =====
-      tech_minimal: { label: "⚙️ Tech Minimal", primary: "#e8e8e8", dark: "#b0b0b0", light: "#ffffff", sec: "#1a1a1a", ter: "#262626", acc: "#0066ff", bg: "linear-gradient(135deg, #1a1a1a 0%, #262626 50%, #1f1f1f 100%)", meta: "#e8e8e8" },
-      
-      grid_tech: { label: "📊 Grid Tech", primary: "#00d4ff", dark: "#00a8cc", light: "#33e0ff", sec: "#0d1b2a", ter: "#1a2a3a", acc: "#ffffff", bg: "linear-gradient(135deg, #0d1b2a 0%, #1a3a5a 50%, #1a2a3a 100%)", meta: "#00d4ff" },
-      
-      matrix: { label: "🖥️ Matrix Code", primary: "#00ff00", dark: "#00cc00", light: "#33ff33", sec: "#000000", ter: "#0a0a0a", acc: "#ffff00", bg: "linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #050505 100%)", meta: "#00ff00" },
-      
-      // ===== FUTURISTIC =====
-      hologram: { label: "🌐 Hologram", primary: "#00f7ff", dark: "#00ccff", light: "#66ffff", sec: "#0a1a2a", ter: "#1a3a5a", acc: "#ff00ff", bg: "linear-gradient(135deg, #0a1a2a 0%, #1a4a7a 50%, #1a3a5a 100%)", meta: "#00f7ff" },
-      
-      quantum: { label: "⚛️ Quantum Field", primary: "#00ffaa", dark: "#00cc88", light: "#33ffbb", sec: "#0a2a20", ter: "#1a5a4a", acc: "#ff0080", bg: "linear-gradient(135deg, #0a2a20 0%, #1a6f5f 50%, #1a5a4a 100%)", meta: "#00ffaa" },
-      
-      hyperspace: { label: "🚀 Hyperspace", primary: "#7c3aed", dark: "#6d28d9", light: "#a78bfa", sec: "#0f0a2a", ter: "#2a1a5a", acc: "#00ffff", bg: "linear-gradient(135deg, #0f0a2a 0%, #3a1a7f 50%, #2a1a5a 100%)", meta: "#7c3aed" },
-      
-      // ===== DARK BLUE STEEL =====
-      steel_blue: { label: "🔧 Steel Blue", primary: "#4a7c9e", dark: "#2c5282", light: "#7ba3c0", sec: "#0f1f2f", ter: "#1a3a4f", acc: "#b8cfe0", bg: "linear-gradient(135deg, #0f1f2f 0%, #1a4a6f 50%, #1a3a4f 100%)", meta: "#4a7c9e" },
-      
-      titanium: { label: "⚔️ Titanium", primary: "#6b8aa6", dark: "#4a6a86", light: "#8fa3b8", sec: "#0d1a2a", ter: "#1a2a3a", acc: "#c0d8e8", bg: "linear-gradient(135deg, #0d1a2a 0%, #1a4a6a 50%, #1a2a3a 100%)", meta: "#6b8aa6" },
-      
-      gunmetal: { label: "🔫 Gunmetal", primary: "#505a6e", dark: "#3a4a5e", light: "#707a8e", sec: "#0a1019", ter: "#151a25", acc: "#a0b0c8", bg: "linear-gradient(135deg, #0a1019 0%, #1a3a5a 50%, #151a25 100%)", meta: "#505a6e" },
-      
-      arctic_steel: { label: "❄️ Arctic Steel", primary: "#5ba3c7", dark: "#3a7a9f", light: "#7bc0e0", sec: "#0a1a2f", ter: "#15304f", acc: "#d0e8f8", bg: "linear-gradient(135deg, #0a1a2f 0%, #1a5a7f 50%, #15304f 100%)", meta: "#5ba3c7" },
-      
-      // ===== DARK VARIATIONS =====
-      dark_charcoal: { label: "⬛ Charcoal Dark", primary: "#a8a8a8", dark: "#696969", light: "#c0c0c0", sec: "#1a1a1a", ter: "#2a2a2a", acc: "#87ceeb", bg: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1f1f1f 100%)", meta: "#a8a8a8" },
-      
-      dark_slate: { label: "🪨 Slate Dark", primary: "#708090", dark: "#475569", light: "#8fa1b0", sec: "#0f1419", ter: "#1a2432", acc: "#94b3d9", bg: "linear-gradient(135deg, #0f1419 0%, #1a4a6a 50%, #1a2432 100%)", meta: "#708090" },
-      
-      dark_purple: { label: "🌑 Dark Purple", primary: "#6b5b95", dark: "#4a3a75", light: "#8b7bb5", sec: "#0f0a1a", ter: "#1f0a3a", acc: "#b8a8d8", bg: "linear-gradient(135deg, #0f0a1a 0%, #2a1a4a 50%, #1f0a3a 100%)", meta: "#6b5b95" },
-      
-      dark_teal: { label: "🌊 Dark Teal", primary: "#2d6a6a", dark: "#1a4a4a", light: "#4d8a8a", sec: "#0a1a1a", ter: "#152a2a", acc: "#6dbfbf", bg: "linear-gradient(135deg, #0a1a1a 0%, #1a5a5a 50%, #152a2a 100%)", meta: "#2d6a6a" },
-      
-      dark_amber: { label: "🔥 Dark Amber", primary: "#8b6f47", dark: "#6b5537", light: "#ab8f67", sec: "#1a1410", ter: "#2a1f10", acc: "#d4af37", bg: "linear-gradient(135deg, #1a1410 0%, #3a2f1f 50%, #2a1f10 100%)", meta: "#8b6f47" },
-      
-      // ===== CYBERPUNK TECH =====
-      cyberpunk_blue: { label: "🔵 Cyberpunk Blue", primary: "#00bfff", dark: "#0099cc", light: "#33d4ff", sec: "#0a0f2f", ter: "#1a1f4f", acc: "#ff00ff", bg: "linear-gradient(135deg, #0a0f2f 0%, #1a2f5f 50%, #1a1f4f 100%)", meta: "#00bfff" },
-      
-      cyberpunk_purple: { label: "🟣 Cyberpunk Purple", primary: "#b020d9", dark: "#8b1aa3", light: "#d060f9", sec: "#1a0a3f", ter: "#3a1a7f", acc: "#00ffff", bg: "linear-gradient(135deg, #1a0a3f 0%, #4a1a9f 50%, #3a1a7f 100%)", meta: "#b020d9" },
-      
-      cyberpunk_red: { label: "🔴 Cyberpunk Red", primary: "#ff0055", dark: "#cc0044", light: "#ff3377", sec: "#1a0a0f", ter: "#3a0a1f", acc: "#00ffff", bg: "linear-gradient(135deg, #1a0a0f 0%, #4a0a2f 50%, #3a0a1f 100%)", meta: "#ff0055" },
-      
-      // ===== ULTRA DARK MINIMAL =====
-      void_minimal: { label: "🌑 Void Minimal", primary: "#808080", dark: "#404040", light: "#a0a0a0", sec: "#0a0a0a", ter: "#141414", acc: "#00ffff", bg: "linear-gradient(135deg, #0a0a0a 0%, #141414 50%, #0f0f0f 100%)", meta: "#808080" },
-      
-      abyss: { label: "⚫ Abyss", primary: "#505050", dark: "#282828", light: "#707070", sec: "#050505", ter: "#0f0f0f", acc: "#00ff88", bg: "linear-gradient(135deg, #050505 0%, #0f0f0f 50%, #0a0a0a 100%)", meta: "#505050" },
-    };
-
-    const themeBtn = document.getElementById('theme-btn');
-    const themeMenu = document.getElementById('theme-dropdown');
-    const metaThemeColor = document.getElementById('meta-theme-color');
-    const cpVars = [
-      { key: '--primary', label: 'Primary', def: '#6407de' },
-      { key: '--primary-dark', label: 'Dark', def: '#980332' },
-      { key: '--primary-light', label: 'Light', def: '#ff3366' },
-      { key: '--secondary', label: 'Secondary', def: '#1a2e2c' },
-      { key: '--tertiary', label: 'Tertiary', def: '#16213e' },
-      { key: '--accent', label: 'Accent', def: '#00ff33' },
-      { key: 'meta', label: 'Barra Browser', def: '#6407de', isMeta: true }
-    ];
-
-    function buildThemeMenu() {
-      themeMenu.innerHTML = '';
-      Object.keys(themes).forEach(key => {
-        const t = themes[key];
-        const opt = document.createElement('div');
-        opt.className = 'theme-option'; opt.dataset.theme = key;
-        opt.innerHTML = `<span class="theme-dot" style="background:${t.primary}"></span> ${t.label}`;
-        opt.addEventListener('click', () => applyTheme(key));
-        themeMenu.appendChild(opt);
-      });
-      const customOpt = document.createElement('div');
-      customOpt.className = 'theme-option';
-      customOpt.innerHTML = '✏️ Personalizza...';
-      customOpt.style.cssText = 'border-top:1px solid var(--border); margin-top:6px; padding-top:8px;';
-      customOpt.addEventListener('click', () => { editorPanel.style.display = 'block'; editorOverlay.style.display = 'block'; });
-      themeMenu.appendChild(customOpt);
-    }
-
-    function applyTheme(key) {
-      if (!themes[key]) return;
-      const t = themes[key];
-      const r = document.documentElement.style;
-      r.setProperty('--primary', t.primary); r.setProperty('--primary-dark', t.dark);
-      r.setProperty('--primary-light', t.light); r.setProperty('--secondary', t.sec);
-      r.setProperty('--tertiary', t.ter); r.setProperty('--accent', t.acc);
-      document.body.style.background = t.bg;
-      metaThemeColor.content = t.meta;
-      localStorage.setItem('tunex_active_theme', key);
-      document.querySelectorAll('.theme-option').forEach(el => el.classList.toggle('active', el.dataset.theme === key));
-      themeMenu.classList.remove('open');
-      showToast('Tema applicato');
-    }
-
-    // COLOR PICKER UI
-    const editorOverlay = document.createElement('div');
-    editorOverlay.id = 'cp-overlay';
-    editorOverlay.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:599; backdrop-filter:blur(4px);';
-    document.body.appendChild(editorOverlay);
-
-    const editorPanel = document.createElement('div');
-    editorPanel.id = 'cp-panel';
-    editorPanel.style.cssText = 'display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--tertiary); border:1px solid var(--border); border-radius:12px; padding:16px; z-index:600; min-width:260px; box-shadow:0 12px 32px rgba(0,0,0,0.7);';
-    editorPanel.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <span style="font-size:14px; font-weight:700; color:var(--text);">🎨 Editor Colori</span>
-        <button id="cp-close" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:18px;">✕</button>
-      </div>
-      <input id="cp-name" type="text" placeholder="Nome tema (es. Mia Sera)" style="width:100%; padding:7px; margin-bottom:10px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:12px; outline:none;">
-      <div id="cp-grid" style="display:grid; gap:6px; margin-bottom:12px;"></div>
-      <div style="display:flex; gap:8px;">
-        <button id="cp-save" class="btn" style="flex:1; font-size:11px; padding:8px;">💾 Salva & Applica</button>
-        <button id="cp-reset" class="btn secondary" style="flex:1; font-size:11px; padding:8px;">↺ Default</button>
-      </div>`;
-    document.body.appendChild(editorPanel);
-
-    const cpGrid = document.getElementById('cp-grid');
-    cpVars.forEach(v => {
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex; align-items:center; gap:8px;';
-      row.innerHTML = `<label style="font-size:11px; width:95px; color:var(--text-secondary);">${v.label}</label>
-        <input type="color" data-key="${v.key}" data-is-meta="${v.isMeta||0}" value="${v.def}" style="width:32px; height:26px; border:none; cursor:pointer; background:none; padding:0;">
-        <span class="cp-hex" style="font-size:10px; color:var(--text-secondary); font-family:monospace;">${v.def}</span>`;
-      cpGrid.appendChild(row);
+    // ================= PLAYER EVENT LISTENERS =================
+    unifiedPlayer.addEventListener('play', function() {
+        statusText.textContent = 'In riproduzione';
+        statusDot.classList.add('playing');
     });
-
-    cpGrid.querySelectorAll('input[type="color"]').forEach(inp => {
-      inp.addEventListener('input', e => {
-        const val = e.target.value;
-        e.target.nextElementSibling.textContent = val;
-        if (e.target.dataset.isMeta === 'true') metaThemeColor.content = val;
-        else document.documentElement.style.setProperty(e.target.dataset.key, val);
-      });
+    unifiedPlayer.addEventListener('pause', function() {
+        if (statusText.textContent !== 'Fermato' && statusText.textContent !== 'Premi Play per avviare') {
+            statusText.textContent = 'In pausa';
+            statusDot.classList.remove('playing');
+        }
     });
-
-    document.getElementById('cp-close').onclick = () => { editorPanel.style.display = 'none'; editorOverlay.style.display = 'none'; };
-    editorOverlay.onclick = document.getElementById('cp-close').onclick;
-
-    document.getElementById('cp-save').onclick = () => {
-      const nameInp = document.getElementById('cp-name');
-      let name = nameInp.value.trim();
-      if (!name) { name = prompt('Inserisci nome tema:', 'Tema Personalizzato'); if (!name) return; }
-      
-      const themeKey = 'custom_' + Date.now();
-      const getVal = k => document.querySelector(`input[data-key="${k}"]`).value;
-      
-      const newTheme = {
-        label: `🎨 ${name}`, primary: getVal('--primary'), dark: getVal('--primary-dark'),
-        light: getVal('--primary-light'), sec: getVal('--secondary'), ter: getVal('--tertiary'),
-        acc: getVal('--accent'), bg: `linear-gradient(135deg, ${getVal('--secondary')}, ${getVal('--tertiary')})`, meta: getVal('meta')
-      };
-
-      userThemes[themeKey] = newTheme;
-      localStorage.setItem('tunex_user_themes', JSON.stringify(userThemes));
-      themes[themeKey] = newTheme;
-      buildThemeMenu();
-      applyTheme(themeKey);
-      editorPanel.style.display = 'none'; editorOverlay.style.display = 'none';
-      nameInp.value = '';
-      showToast(`Tema "${name}" salvato!`);
-    };
-
-    document.getElementById('cp-reset').onclick = () => {
-      cpVars.forEach(v => {
-        const inp = cpGrid.querySelector(`input[data-key="${v.key}"]`);
-        inp.value = v.def; inp.dispatchEvent(new Event('input'));
-      });
-    };
-
-    themeBtn.addEventListener('click', e => { e.stopPropagation(); themeMenu.classList.toggle('open'); });
-    document.addEventListener('click', e => { if (!themeBtn.contains(e.target) && !themeMenu.contains(e.target)) themeMenu.classList.remove('open'); });
-
-    document.addEventListener('DOMContentLoaded', function() {
-      buildThemeMenu();
-      const saved = localStorage.getItem('tunex_active_theme') || 'default';
-      applyTheme(saved);
-      populatePresetSelect();
-      eqValues = [...defaultPresets.flat.values]; updateEqualizer(); renderChannels();
-    });
-    // Reset stato EQ solo al ricaricamento pagina
-    window.addEventListener('load', () => {
-        if (unifiedPlayer) unifiedPlayer._eqStatus = undefined;
-    });
-
 
     // ================= CUSTOM CONTROLS =================
     var playerContainer = document.getElementById('player-container');
@@ -1974,334 +1690,920 @@ audio.media-player::-webkit-media-controls-enclosure {
     var timeDisplay = document.getElementById('time-display');
     var volumeSlider = document.getElementById('volume-slider');
     var ctrlVolume = document.getElementById('ctrl-volume');
+    var ctrlFullscreen = document.getElementById('ctrl-fullscreen');
 
-    if (playerContainer && customControls) {
-        // Play/Pause toggle
+    function setupCustomControls() {
+        // Play/Pause
         function updatePlayPauseIcon() {
-            if (unifiedPlayer.paused) {
-                ctrlPlayPause.innerHTML = '<i class="fas fa-play"></i>';
-            } else {
-                ctrlPlayPause.innerHTML = '<i class="fas fa-pause"></i>';
-            }
+            if (!ctrlPlayPause) return;
+            ctrlPlayPause.innerHTML = unifiedPlayer.paused ?
+                '<i class="fas fa-play"></i>' : '<i class="fas fa-pause"></i>';
         }
 
-        ctrlPlayPause.addEventListener('click', function() {
-            if (unifiedPlayer.paused) { unifiedPlayer.play(); } 
-            else { unifiedPlayer.pause(); }
-        });
+        if (ctrlPlayPause) {
+            ctrlPlayPause.onclick = function() {
+                if (unifiedPlayer.paused) unifiedPlayer.play(); else unifiedPlayer.pause();
+            };
+        }
+        if (ctrlStop) {
+            ctrlStop.onclick = function() {
+                unifiedPlayer.pause();
+                unifiedPlayer.currentTime = 0;
+                updatePlayPauseIcon();
+            };
+        }
 
-        // Stop
-        ctrlStop.addEventListener('click', function() {
-            unifiedPlayer.pause();
-            unifiedPlayer.currentTime = 0;
-            updatePlayPauseIcon();
-        });
-
-        // Progress bar
+        // Progress
         unifiedPlayer.addEventListener('timeupdate', function() {
-            if (unifiedPlayer.duration) {
+            if (unifiedPlayer.duration && progressBar && timeDisplay) {
                 var pct = (unifiedPlayer.currentTime / unifiedPlayer.duration) * 100;
                 progressBar.style.width = pct + '%';
                 timeDisplay.textContent = formatTime(unifiedPlayer.currentTime) + ' / ' + formatTime(unifiedPlayer.duration);
             }
         });
 
-        progressContainer.addEventListener('click', function(e) {
-            if (unifiedPlayer.duration) {
-                var rect = progressContainer.getBoundingClientRect();
-                var pos = (e.clientX - rect.left) / rect.width;
-                unifiedPlayer.currentTime = pos * unifiedPlayer.duration;
-            }
-        });
+        if (progressContainer) {
+            progressContainer.addEventListener('click', function(e) {
+                if (unifiedPlayer.duration) {
+                    var rect = progressContainer.getBoundingClientRect();
+                    var pos = (e.clientX - rect.left) / rect.width;
+                    unifiedPlayer.currentTime = pos * unifiedPlayer.duration;
+                }
+            });
+        }
 
         // Volume
-        volumeSlider.addEventListener('input', function() {
-            unifiedPlayer.volume = this.value;
-            updateVolumeIcon();
-        });
-
-        ctrlVolume.addEventListener('click', function() {
-            if (unifiedPlayer.volume > 0) {
-                unifiedPlayer.dataset.prevVolume = unifiedPlayer.volume;
-                unifiedPlayer.volume = 0;
-                volumeSlider.value = 0;
-            } else {
-                unifiedPlayer.volume = unifiedPlayer.dataset.prevVolume || 1;
-                volumeSlider.value = unifiedPlayer.volume;
-            }
-            updateVolumeIcon();
-        });
+        if (volumeSlider) {
+            volumeSlider.addEventListener('input', function() {
+                unifiedPlayer.volume = this.value;
+                updateVolumeIcon();
+            });
+        }
+        if (ctrlVolume) {
+            ctrlVolume.addEventListener('click', function() {
+                if (unifiedPlayer.volume > 0) {
+                    unifiedPlayer.dataset.prevVolume = unifiedPlayer.volume;
+                    unifiedPlayer.volume = 0;
+                    volumeSlider.value = 0;
+                } else {
+                    unifiedPlayer.volume = parseFloat(unifiedPlayer.dataset.prevVolume) || 1;
+                    volumeSlider.value = unifiedPlayer.volume;
+                }
+                updateVolumeIcon();
+            });
+        }
 
         function updateVolumeIcon() {
+            if (!ctrlVolume) return;
             var icon = 'fa-volume-high';
             if (unifiedPlayer.volume === 0) icon = 'fa-volume-xmark';
             else if (unifiedPlayer.volume < 0.5) icon = 'fa-volume-low';
             ctrlVolume.innerHTML = '<i class="fas ' + icon + '"></i>';
         }
 
-        function formatTime(seconds) {
-            if (isNaN(seconds)) return '0:00';
-            var mins = Math.floor(seconds / 60);
-            var secs = Math.floor(seconds % 60);
-            return mins + ':' + (secs < 10 ? '0' : '') + secs;
-        }
-
         unifiedPlayer.addEventListener('play', updatePlayPauseIcon);
         unifiedPlayer.addEventListener('pause', updatePlayPauseIcon);
 
-        playerContainer.addEventListener('mousemove', function() {
-            customControls.classList.add('visible');
-            clearTimeout(playerContainer._ctrlTimeout);
-            playerContainer._ctrlTimeout = setTimeout(function() {
+        // Mouse visibility controls
+        if (playerContainer && customControls) {
+            playerContainer.addEventListener('mousemove', function() {
+                customControls.classList.add('visible');
+                clearTimeout(playerContainer._ctrlTimeout);
+                playerContainer._ctrlTimeout = setTimeout(function() {
+                    if (!unifiedPlayer.paused) customControls.classList.remove('visible');
+                }, 2000);
+            });
+            playerContainer.addEventListener('mouseleave', function() {
                 if (!unifiedPlayer.paused) customControls.classList.remove('visible');
-            }, 2000);
-        });
-
-        playerContainer.addEventListener('mouseleave', function() {
-            if (!unifiedPlayer.paused) customControls.classList.remove('visible');
-        });
+            });
+        }
     }
 
-    // ================= SHAZAM FIX (MICROFONO KEEP-ALIVE) =================
-    const shazamBtn = document.getElementById('shazam-btn');
-    const shazamResult = document.getElementById('shazam-result');
-    const sTitle = document.getElementById('s-title');
-    const sArtist = document.getElementById('s-artist');
-    const sImg = document.getElementById('s-img');
+    function formatTime(seconds) {
+        if (isNaN(seconds)) return '0:00';
+        var mins = Math.floor(seconds / 60);
+        var secs = Math.floor(seconds % 60);
+        return mins + ':' + (secs < 10 ? '0' : '') + secs;
+    }
 
-    const AUD_D_TOKEN = '2aa7bc785cad68eb78089f19df2188a1';
+    setupCustomControls();
 
-    let activeMicStream = null; // Keep-alive stream
+    // ================= THEME ENGINE =================
+    var userThemes = {};
+    try { userThemes = JSON.parse(localStorage.getItem('tunex_user_themes') || '{}'); } catch(e) {}
+
+    var themes = {
+      tech_minimal:    { label: "Tech Minimal",     primary: "#e8e8e8", dark: "#b0b0b0", light: "#ffffff", sec: "#1a1a1a", ter: "#262626", acc: "#0066ff", bg: "linear-gradient(135deg, #1a1a1a 0%, #262626 50%, #1f1f1f 100%)", meta: "#e8e8e8" },
+      grid_tech:       { label: "Grid Tech",         primary: "#00d4ff", dark: "#00a8cc", light: "#33e0ff", sec: "#0d1b2a", ter: "#1a2a3a", acc: "#ffffff", bg: "linear-gradient(135deg, #0d1b2a 0%, #1a3a5a 50%, #1a2a3a 100%)", meta: "#00d4ff" },
+      matrix:          { label: "Matrix Code",        primary: "#00ff00", dark: "#00cc00", light: "#33ff33", sec: "#000000", ter: "#0a0a0a", acc: "#ffff00", bg: "linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #050505 100%)", meta: "#00ff00" },
+      hologram:        { label: "Hologram",           primary: "#00f7ff", dark: "#00ccff", light: "#66ffff", sec: "#0a1a2a", ter: "#1a3a5a", acc: "#ff00ff", bg: "linear-gradient(135deg, #0a1a2a 0%, #1a4a7a 50%, #1a3a5a 100%)", meta: "#00f7ff" },
+      quantum:         { label: "Quantum Field",      primary: "#00ffaa", dark: "#00cc88", light: "#33ffbb", sec: "#0a2a20", ter: "#1a5a4a", acc: "#ff0080", bg: "linear-gradient(135deg, #0a2a20 0%, #1a6f5f 50%, #1a5a4a 100%)", meta: "#00ffaa" },
+      hyperspace:      { label: "Hyperspace",         primary: "#7c3aed", dark: "#6d28d9", light: "#a78bfa", sec: "#0f0a2a", ter: "#2a1a5a", acc: "#00ffff", bg: "linear-gradient(135deg, #0f0a2a 0%, #3a1a7f 50%, #2a1a5a 100%)", meta: "#7c3aed" },
+      steel_blue:      { label: "Steel Blue",         primary: "#4a7c9e", dark: "#2c5282", light: "#7ba3c0", sec: "#0f1f2f", ter: "#1a3a4f", acc: "#b8cfe0", bg: "linear-gradient(135deg, #0f1f2f 0%, #1a4a6f 50%, #1a3a4f 100%)", meta: "#4a7c9e" },
+      titanium:        { label: "Titanium",           primary: "#6b8aa6", dark: "#4a6a86", light: "#8fa3b8", sec: "#0d1a2a", ter: "#1a2a3a", acc: "#c0d8e8", bg: "linear-gradient(135deg, #0d1a2a 0%, #1a4a6a 50%, #1a2a3a 100%)", meta: "#6b8aa6" },
+      gunmetal:        { label: "Gunmetal",           primary: "#505a6e", dark: "#3a4a5e", light: "#707a8e", sec: "#0a1019", ter: "#151a25", acc: "#a0b0c8", bg: "linear-gradient(135deg, #0a1019 0%, #1a3a5a 50%, #151a25 100%)", meta: "#505a6e" },
+      arctic_steel:    { label: "Arctic Steel",       primary: "#5ba3c7", dark: "#3a7a9f", light: "#7bc0e0", sec: "#0a1a2f", ter: "#15304f", acc: "#d0e8f8", bg: "linear-gradient(135deg, #0a1a2f 0%, #1a5a7f 50%, #15304f 100%)", meta: "#5ba3c7" },
+      dark_charcoal:   { label: "Charcoal Dark",      primary: "#a8a8a8", dark: "#696969", light: "#c0c0c0", sec: "#1a1a1a", ter: "#2a2a2a", acc: "#87ceeb", bg: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1f1f1f 100%)", meta: "#a8a8a8" },
+      dark_slate:      { label: "Slate Dark",         primary: "#708090", dark: "#475569", light: "#8fa1b0", sec: "#0f1419", ter: "#1a2432", acc: "#94b3d9", bg: "linear-gradient(135deg, #0f1419 0%, #1a4a6a 50%, #1a2432 100%)", meta: "#708090" },
+      dark_purple:     { label: "Dark Purple",        primary: "#6b5b95", dark: "#4a3a75", light: "#8b7bb5", sec: "#0f0a1a", ter: "#1f0a3a", acc: "#b8a8d8", bg: "linear-gradient(135deg, #0f0a1a 0%, #2a1a4a 50%, #1f0a3a 100%)", meta: "#6b5b95" },
+      dark_teal:       { label: "Dark Teal",          primary: "#2d6a6a", dark: "#1a4a4a", light: "#4d8a8a", sec: "#0a1a1a", ter: "#152a2a", acc: "#6dbfbf", bg: "linear-gradient(135deg, #0a1a1a 0%, #1a5a5a 50%, #152a2a 100%)", meta: "#2d6a6a" },
+      dark_amber:      { label: "Dark Amber",         primary: "#8b6f47", dark: "#6b5537", light: "#ab8f67", sec: "#1a1410", ter: "#2a1f10", acc: "#d4af37", bg: "linear-gradient(135deg, #1a1410 0%, #3a2f1f 50%, #2a1f10 100%)", meta: "#8b6f47" },
+      cyberpunk_blue:  { label: "Cyberpunk Blue",     primary: "#00bfff", dark: "#0099cc", light: "#33d4ff", sec: "#0a0f2f", ter: "#1a1f4f", acc: "#ff00ff", bg: "linear-gradient(135deg, #0a0f2f 0%, #1a2f5f 50%, #1a1f4f 100%)", meta: "#00bfff" },
+      cyberpunk_purple:{ label: "Cyberpunk Purple",   primary: "#b020d9", dark: "#8b1aa3", light: "#d060f9", sec: "#1a0a3f", ter: "#3a1a7f", acc: "#00ffff", bg: "linear-gradient(135deg, #1a0a3f 0%, #4a1a9f 50%, #3a1a7f 100%)", meta: "#b020d9" },
+      cyberpunk_red:   { label: "Cyberpunk Red",      primary: "#ff0055", dark: "#cc0044", light: "#ff3377", sec: "#1a0a0f", ter: "#3a0a1f", acc: "#00ffff", bg: "linear-gradient(135deg, #1a0a0f 0%, #4a0a2f 50%, #3a0a1f 100%)", meta: "#ff0055" },
+      void_minimal:    { label: "Void Minimal",       primary: "#808080", dark: "#404040", light: "#a0a0a0", sec: "#0a0a0a", ter: "#141414", acc: "#00ffff", bg: "linear-gradient(135deg, #0a0a0a 0%, #141414 50%, #0f0f0f 100%)", meta: "#808080" },
+      abyss:           { label: "Abyss",              primary: "#505050", dark: "#282828", light: "#707070", sec: "#050505", ter: "#0f0f0f", acc: "#00ff88", bg: "linear-gradient(135deg, #050505 0%, #0f0f0f 50%, #0a0a0a 100%)", meta: "#505050" }
+    };
+
+    var themeBtn = document.getElementById('theme-btn');
+    var themeMenu = document.getElementById('theme-dropdown');
+    var metaThemeColor = document.getElementById('meta-theme-color');
+    var cpVars = [
+      { key: '--primary', label: 'Primary', def: '#6407de' },
+      { key: '--primary-dark', label: 'Dark', def: '#980332' },
+      { key: '--primary-light', label: 'Light', def: '#ff3366' },
+      { key: '--secondary', label: 'Secondary', def: '#1a2e2c' },
+      { key: '--tertiary', label: 'Tertiary', def: '#16213e' },
+      { key: '--accent', label: 'Accent', def: '#00ff33' },
+      { key: 'meta', label: 'Barra Browser', def: '#6407de', isMeta: true }
+    ];
+
+    function buildThemeMenu() {
+      themeMenu.innerHTML = '';
+      Object.keys(themes).forEach(function(key) {
+        var t = themes[key];
+        var opt = document.createElement('div');
+        opt.className = 'theme-option';
+        opt.dataset.theme = key;
+        opt.innerHTML = '<span class="theme-dot" style="background:' + t.primary + '"></span> ' + t.label;
+        opt.addEventListener('click', function() { applyTheme(key); });
+        themeMenu.appendChild(opt);
+      });
+      var customOpt = document.createElement('div');
+      customOpt.className = 'theme-option';
+      customOpt.textContent = 'Personalizza...';
+      customOpt.style.cssText = 'border-top:1px solid var(--border); margin-top:6px; padding-top:8px;';
+      customOpt.addEventListener('click', function() { editorPanel.style.display = 'block'; editorOverlay.style.display = 'block'; });
+      themeMenu.appendChild(customOpt);
+    }
+
+    function applyTheme(key) {
+      if (!themes[key]) return;
+      var t = themes[key];
+      var r = document.documentElement.style;
+      r.setProperty('--primary', t.primary);
+      r.setProperty('--primary-dark', t.dark);
+      r.setProperty('--primary-light', t.light);
+      r.setProperty('--secondary', t.sec);
+      r.setProperty('--tertiary', t.ter);
+      r.setProperty('--accent', t.acc);
+      document.body.style.background = t.bg;
+      metaThemeColor.content = t.meta;
+      localStorage.setItem('tunex_active_theme', key);
+      document.querySelectorAll('.theme-option').forEach(function(el) { el.classList.toggle('active', el.dataset.theme === key); });
+      themeMenu.classList.remove('open');
+      showToast('Tema applicato');
+    }
+
+    // COLOR PICKER UI
+    var editorOverlay = document.createElement('div');
+    editorOverlay.id = 'cp-overlay';
+    editorOverlay.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:599; backdrop-filter:blur(4px);';
+    document.body.appendChild(editorOverlay);
+
+    var editorPanel = document.createElement('div');
+    editorPanel.id = 'cp-panel';
+    editorPanel.style.cssText = 'display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--tertiary); border:1px solid var(--border); border-radius:12px; padding:16px; z-index:600; min-width:260px; box-shadow:0 12px 32px rgba(0,0,0,0.7);';
+    editorPanel.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">' +
+        '<span style="font-size:14px; font-weight:700; color:var(--text);">Editor Colori</span>' +
+        '<button id="cp-close" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:18px;">&times;</button>' +
+        '</div>' +
+        '<input id="cp-name" type="text" placeholder="Nome tema" style="width:100%; padding:7px; margin-bottom:10px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:12px; outline:none;">' +
+        '<div id="cp-grid" style="display:grid; gap:6px; margin-bottom:12px;"></div>' +
+        '<div style="display:flex; gap:8px;">' +
+        '<button id="cp-save" class="btn" style="flex:1; font-size:11px; padding:8px;">Salva & Applica</button>' +
+        '<button id="cp-reset" class="btn secondary" style="flex:1; font-size:11px; padding:8px;">Default</button>' +
+        '</div>';
+    document.body.appendChild(editorPanel);
+
+    var cpGrid = document.getElementById('cp-grid');
+    cpVars.forEach(function(v) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex; align-items:center; gap:8px;';
+      row.innerHTML = '<label style="font-size:11px; width:95px; color:var(--text-secondary);">' + v.label + '</label>' +
+          '<input type="color" data-key="' + v.key + '" data-is-meta="' + (v.isMeta||0) + '" value="' + v.def + '" style="width:32px; height:26px; border:none; cursor:pointer; background:none; padding:0;">' +
+          '<span class="cp-hex" style="font-size:10px; color:var(--text-secondary); font-family:monospace;">' + v.def + '</span>';
+      cpGrid.appendChild(row);
+    });
+
+    cpGrid.querySelectorAll('input[type="color"]').forEach(function(inp) {
+      inp.addEventListener('input', function(e) {
+        var val = e.target.value;
+        e.target.nextElementSibling.textContent = val;
+        if (e.target.dataset.isMeta === '1') metaThemeColor.content = val;
+        else document.documentElement.style.setProperty(e.target.dataset.key, val);
+      });
+    });
+
+    document.getElementById('cp-close').onclick = function() { editorPanel.style.display = 'none'; editorOverlay.style.display = 'none'; };
+    editorOverlay.onclick = document.getElementById('cp-close').onclick;
+
+    document.getElementById('cp-save').onclick = function() {
+      var nameInp = document.getElementById('cp-name');
+      var name = nameInp.value.trim();
+      if (!name) { name = prompt('Inserisci nome tema:', 'Tema Personalizzato'); if (!name) return; }
+      var themeKey = 'custom_' + Date.now();
+      function getVal(k) { return document.querySelector('input[data-key="' + k + '"]').value; }
+      var newTheme = {
+        label: name, primary: getVal('--primary'), dark: getVal('--primary-dark'),
+        light: getVal('--primary-light'), sec: getVal('--secondary'), ter: getVal('--tertiary'),
+        acc: getVal('--accent'), bg: 'linear-gradient(135deg, ' + getVal('--secondary') + ', ' + getVal('--tertiary') + ')',
+        meta: getVal('meta')
+      };
+      userThemes[themeKey] = newTheme;
+      localStorage.setItem('tunex_user_themes', JSON.stringify(userThemes));
+      themes[themeKey] = newTheme;
+      buildThemeMenu();
+      applyTheme(themeKey);
+      editorPanel.style.display = 'none';
+      editorOverlay.style.display = 'none';
+      nameInp.value = '';
+      showToast('Tema "' + name + '" salvato!');
+    };
+
+    document.getElementById('cp-reset').onclick = function() {
+      cpVars.forEach(function(v) {
+        var inp = cpGrid.querySelector('input[data-key="' + v.key + '"]');
+        inp.value = v.def;
+        inp.dispatchEvent(new Event('input'));
+      });
+    };
+
+    themeBtn.addEventListener('click', function(e) { e.stopPropagation(); themeMenu.classList.toggle('open'); });
+    document.addEventListener('click', function(e) { if (!themeBtn.contains(e.target) && !themeMenu.contains(e.target)) themeMenu.classList.remove('open'); });
+
+    // ================= EQUALIZER TOUCH SCROLL =================
+    var eqVis = document.getElementById('eq-visualizer');
+    if (eqVis) {
+      var isDown = false, startX, scrollLeft;
+      eqVis.addEventListener('touchstart', function(e) {
+          isDown = true; startX = e.touches[0].pageX - eqVis.offsetLeft; scrollLeft = eqVis.scrollLeft;
+      }, {passive: true});
+      eqVis.addEventListener('touchmove', function(e) {
+          if (!isDown) return; e.preventDefault();
+          var x = e.touches[0].pageX - eqVis.offsetLeft;
+          eqVis.scrollLeft = scrollLeft - (x - startX) * 1.5;
+      }, {passive: false});
+      eqVis.addEventListener('touchend', function() { isDown = false; }, {passive: true});
+    }
+
+    // ================= VIDEO LAYOUT FIX =================
+    function fixVideoLayout() {
+      var vp = unifiedPlayer ? unifiedPlayer.parentElement : null;
+      if (vp && window.innerWidth <= 1024) {
+        vp.style.maxHeight = window.innerWidth > 700 ? '45vh' : '40vh';
+      }
+    }
+    window.addEventListener('resize', fixVideoLayout);
+    window.addEventListener('orientationchange', function() { setTimeout(fixVideoLayout, 300); });
+
+    // INIT
+    // FIX #8: Un solo beforeunload listener
+    window.addEventListener('beforeunload', function() {
+        if (audioContext) { try { audioContext.close(); } catch(e) {} }
+        localBlobURLs.forEach(function(url) { try { URL.revokeObjectURL(url); } catch(e) {} });
+        if (activeMicStream) {
+            activeMicStream.getTracks().forEach(function(t) { try { t.stop(); } catch(e) {} });
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+      buildThemeMenu();
+      var saved = localStorage.getItem('tunex_active_theme');
+      if (saved && themes[saved]) applyTheme(saved);
+      else if (themes['hyperspace']) applyTheme('hyperspace');
+      populatePresetSelect();
+      eqValues = defaultPresets.flat.values.slice();
+      updateEqualizer();
+      renderChannels();
+      fixVideoLayout();
+    });
+
+    window.addEventListener('load', function() {
+        if (unifiedPlayer) unifiedPlayer._eqStatus = undefined;
+    });
+
+    // ================= SHAZAM RISCITTO (FIX PRINCIPALE) =================
+    var shazamBtn = document.getElementById('shazam-btn');
+    var shazamResult = document.getElementById('shazam-result');
+    var sTitle = document.getElementById('s-title');
+    var sArtist = document.getElementById('s-artist');
+    var sImg = document.getElementById('s-img');
+    var shazamRecIndicator = document.getElementById('shazam-rec-indicator');
+    var shazamRecTimer = document.getElementById('shazam-rec-timer');
+    var AUD_D_TOKEN = '2aa7bc785cad68eb78089f19df2188a1';
+
+    var activeMicStream = null;
+    var shazamCleanupFn = null;
+    var shazamActiveMediaRecorder = null;
+    var shazamRecordingTimeout = null;
+
+    // FIX #1: Rileva mimeType supportato dal browser per MediaRecorder
+    function getSupportedMimeType() {
+        var candidates = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/ogg;codecs=opus',
+            'audio/ogg',
+            'audio/mp4',
+            'audio/mp3',
+            ''
+        ];
+        for (var i = 0; i < candidates.length; i++) {
+            if (candidates[i] === '') return ''; // Nessun mimeType specificato = default del browser
+            if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(candidates[i])) {
+                console.log('MediaRecorder mimeType supportato:', candidates[i]);
+                return candidates[i];
+            }
+        }
+        return '';
+    }
+
+    function getMimeExtension(mimeType) {
+        if (!mimeType || mimeType.indexOf('webm') >= 0) return 'audio/webm';
+        if (mimeType.indexOf('ogg') >= 0) return 'audio/ogg';
+        if (mimeType.indexOf('mp4') >= 0) return 'audio/mp4';
+        return 'audio/webm';
+    }
+
+    // FIX #3: Metodo 1 - Cattura audio dall'AudioContext (alta fedelta')
+    function captureEQAudio() {
+        if (!audioContext || audioContext.state !== 'running' || eqFilters.length === 0) {
+            return null;
+        }
+        try {
+            // Crea un nodo splitter per catturare l'audio senza interrompere la riproduzione
+            var splitter = audioContext.createGain();
+            splitter.gain.value = 1.0;
+
+            // Trova l'ultimo nodo della catena EQ connesso alla destinazione
+            var lastNode = eqFilters[eqFilters.length - 1] || presenceBoost || preamp;
+            if (!lastNode) return null;
+
+            // Inserisci lo splitter nella catena (lastNode -> splitter -> destination)
+            try { lastNode.disconnect(audioContext.destination); } catch(e) {}
+            lastNode.connect(splitter);
+            splitter.connect(audioContext.destination);
+
+            // Crea MediaStreamDestination per catturare l'audio
+            var dest = audioContext.createMediaStreamDestination();
+            splitter.connect(dest);
+
+            return {
+                stream: dest.stream,
+                cleanup: function() {
+                    try {
+                        splitter.disconnect(dest);
+                        splitter.disconnect(audioContext.destination);
+                        lastNode.disconnect(splitter);
+                        lastNode.connect(audioContext.destination);
+                    } catch(e) {
+                        console.warn('Cleanup EQ capture error:', e.message);
+                    }
+                }
+            };
+        } catch(e) {
+            console.warn('EQ audio capture failed:', e.message);
+            return null;
+        }
+    }
+
+    // Countdown timer visivo durante registrazione
+    var shazamCountdownInterval = null;
+    function startCountdown(durationMs) {
+        var remaining = Math.ceil(durationMs / 1000);
+        if (shazamRecTimer) shazamRecTimer.textContent = formatCountdown(remaining);
+        shazamCountdownInterval = setInterval(function() {
+            remaining--;
+            if (remaining <= 0) {
+                stopCountdown();
+                return;
+            }
+            if (shazamRecTimer) shazamRecTimer.textContent = formatCountdown(remaining);
+        }, 1000);
+    }
+    function stopCountdown() {
+        if (shazamCountdownInterval) { clearInterval(shazamCountdownInterval); shazamCountdownInterval = null; }
+        if (shazamRecTimer) shazamRecTimer.textContent = '0:00';
+    }
+    function formatCountdown(secs) {
+        return Math.floor(secs / 60) + ':' + (secs % 60 < 10 ? '0' : '') + (secs % 60);
+    }
+
+    // FIX #12: Funzione di cleanup completo per Shazam
+    function cleanupShazam() {
+        stopCountdown();
+        if (shazamRecIndicator) shazamRecIndicator.classList.remove('active');
+        shazamBtn.classList.remove('listening');
+
+        // Ferma MediaRecorder se attivo
+        if (shazamActiveMediaRecorder && shazamActiveMediaRecorder.state === 'recording') {
+            try { shazamActiveMediaRecorder.stop(); } catch(e) {}
+        }
+        shazamActiveMediaRecorder = null;
+
+        // Ferma timeout
+        if (shazamRecordingTimeout) { clearTimeout(shazamRecordingTimeout); shazamRecordingTimeout = null; }
+
+        // Cleanup stream
+        if (shazamCleanupFn) {
+            try { shazamCleanupFn(); } catch(e) {}
+            shazamCleanupFn = null;
+        }
+        if (activeMicStream) {
+            activeMicStream.getTracks().forEach(function(t) { try { t.stop(); } catch(e) {} });
+            activeMicStream = null;
+        }
+    }
+
+    // Shazam: verifiche supporto browser
+    function checkMediaDevicesSupport() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            var isFileProtocol = window.location.protocol === 'file:';
+            if (isFileProtocol) {
+                return {
+                    supported: false,
+                    reason: 'file_protocol',
+                    message: 'Il file e\' aperto come file:// locale. Il microfono funziona solo tramite server HTTP/HTTPS (localhost o server web). Usa il caricamento file come alternativa.'
+                };
+            }
+            return {
+                supported: false,
+                reason: 'old_browser',
+                message: 'Il browser non supporta l\'accesso al microfono (API mediaDevices mancante). Aggiorna il browser o usa il caricamento file come alternativa.'
+            };
+        }
+        return { supported: true };
+    }
+
+    // Shazam: fallback upload file audio quando mic non disponibile
+    var shazamFileInput = document.createElement('input');
+    shazamFileInput.type = 'file';
+    shazamFileInput.accept = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac,.aac,.wma,.webm';
+    shazamFileInput.style.display = 'none';
+    document.body.appendChild(shazamFileInput);
+
+    shazamFileInput.addEventListener('change', async function(e) {
+        if (!e.target.files || e.target.files.length === 0) return;
+        var file = e.target.files[0];
+
+        shazamBtn.classList.add('listening');
+        shazamResult.classList.add('show');
+        sTitle.textContent = 'Analisi file audio...';
+        sArtist.textContent = 'Invio al server di riconoscimento';
+        sImg.style.display = 'none';
+
+        try {
+            var formData = new FormData();
+            formData.append('file', file);
+            formData.append('api_token', AUD_D_TOKEN);
+            formData.append('return', 'apple_music,spotify');
+
+            var controller = new AbortController();
+            var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
+
+            var response = await fetch('https://api.audd.io/', {
+                method: 'POST',
+                body: formData,
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            var text = await response.text();
+            var data;
+            try { data = JSON.parse(text); } catch(parseErr) {
+                sTitle.textContent = 'Errore risposta server';
+                sArtist.textContent = 'Risposta non valida dal server';
+                cleanupShazam();
+                shazamFileInput.value = '';
+                return;
+            }
+
+            if (data.status === 'success' && data.result) {
+                var r = data.result;
+                sTitle.textContent = (r.title || 'Brano').substring(0, 40);
+                sArtist.textContent = (r.artist || 'Sconosciuto').substring(0, 35);
+
+                if (r.apple_music && r.apple_music.url) {
+                    sArtist.innerHTML += '<br><a href="' + r.apple_music.url + '" target="_blank" style="color:var(--accent);font-size:11px;">Ascolta su Apple Music</a>';
+                } else if (r.spotify && r.spotify.external_urls && r.spotify.external_urls.spotify) {
+                    sArtist.innerHTML += '<br><a href="' + r.spotify.external_urls.spotify + '" target="_blank" style="color:var(--accent);font-size:11px;">Ascolta su Spotify</a>';
+                } else if (r.song_link) {
+                    sArtist.innerHTML += '<br><a href="' + r.song_link + '" target="_blank" style="color:var(--accent);font-size:11px;">Risultato completo</a>';
+                }
+
+                if (r.apple_music && r.apple_music.artwork) {
+                    var artUrl = r.apple_music.artwork.url_400x400 || r.apple_music.artwork.url_100x100 || '';
+                    if (artUrl) { sImg.src = artUrl; sImg.style.display = 'block'; }
+                } else if (r.spotify && r.spotify.album && r.spotify.album.images && r.spotify.album.images.length > 0) {
+                    sImg.src = r.spotify.album.images[0].url;
+                    sImg.style.display = 'block';
+                }
+                showToast('Trovato: ' + r.title);
+            } else if (data.status === 'error') {
+                var errMsg = data.error || {};
+                if (errMsg.error_message) {
+                    sTitle.textContent = 'Errore API';
+                    sArtist.textContent = errMsg.error_message;
+                } else {
+                    sTitle.textContent = 'Non riconosciuto';
+                    sArtist.textContent = 'Riprova con un file audio piu chiaro';
+                }
+                showToast('Brano non identificato');
+            } else {
+                sTitle.textContent = 'Risposta inattesa';
+                sArtist.textContent = 'Il server ha restituito una risposta non prevista';
+                showToast('Errore API');
+            }
+        } catch(apiErr) {
+            console.error('Shazam file API error:', apiErr);
+            if (apiErr.name === 'AbortError') {
+                sTitle.textContent = 'Timeout server';
+                sArtist.textContent = 'Il server ha impiegato troppo tempo. Riprova.';
+            } else {
+                sTitle.textContent = 'Errore API';
+                sArtist.textContent = apiErr.message || 'Errore sconosciuto';
+            }
+            showToast('Errore durante l\'analisi');
+        }
+
+        cleanupShazam();
+        shazamFileInput.value = '';
+    });
 
     shazamBtn.addEventListener('click', async function(e) {
         e.preventDefault();
         e.stopPropagation();
-        
-        if (unifiedPlayer.paused) {
-            showToast("▶️ Avvia riproduzione prima di Shazam");
+
+        // Se gia' sta registrando, ferma tutto
+        if (shazamBtn.classList.contains('listening')) {
+            cleanupShazam();
+            sTitle.textContent = 'Identificazione annullata';
+            sArtist.textContent = 'Premi Shazam per riprovare';
             return;
         }
-        
+
+        // PRIMA: verifica se il browser supporta mediaDevices
+        var mdCheck = checkMediaDevicesSupport();
+        if (!mdCheck.supported) {
+            console.warn('Shazam: mediaDevices non disponibile - reason:', mdCheck.reason);
+
+            // Mostra warning + fallback upload file
+            shazamResult.classList.add('show');
+            sTitle.textContent = 'Microfono non disponibile';
+            sArtist.textContent = mdCheck.message;
+
+            // Crea bottone fallback upload nella card risultato
+            var existingUploadBtn = document.getElementById('shazam-upload-btn');
+            if (!existingUploadBtn) {
+                var uploadBtn = document.createElement('button');
+                uploadBtn.id = 'shazam-upload-btn';
+                uploadBtn.className = 'btn';
+                uploadBtn.style.cssText = 'margin-top:10px; width:100%; font-size:12px; padding:8px 12px; justify-content:center;';
+                uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Carica file audio da identificare';
+                uploadBtn.addEventListener('click', function(ev) {
+                    ev.stopPropagation();
+                    shazamFileInput.click();
+                });
+                // Inserisci dopo la sezione artwork/info
+                var resultContent = shazamResult.querySelector('div');
+                if (resultContent) resultContent.appendChild(uploadBtn);
+            }
+
+            showToast('Microfono non disponibile - usa upload file');
+            return;
+        }
+
+        if (unifiedPlayer.paused) {
+            showToast("Avvia riproduzione prima di Shazam");
+            sTitle.textContent = 'Errore';
+            sArtist.textContent = 'Devi riprodurre audio prima';
+            return;
+        }
+
         shazamBtn.classList.add('listening');
         shazamResult.classList.add('show');
-        sTitle.textContent = "🎤 Attivazione microfono...";
-        sArtist.textContent = "Avvicina il dispositivo alle casse";
+        if (shazamRecIndicator) shazamRecIndicator.classList.add('active');
+        sTitle.textContent = 'Attivazione cattura audio...';
+        sArtist.textContent = 'Preparazione in corso';
         sImg.style.display = 'none';
 
-        try {
-            // SKIP captureStream: inaffidabile con CORS + sospensione
-            // DIRETTO al microfono
-            const micConfig = {
-                audio: {
-                    echoCancellation: false,  // OFF: sentiamo quello che viene riprodotto
-                    noiseSuppression: false,  // OFF: massima sensibilità
-                    autoGainControl: true,    // ON: normalizza volume
-                    sampleRate: 44100
-                },
-                video: false
-            };
+        var audioStream = null;
+        var captureMethod = 'none';
 
-            const micStream = await navigator.mediaDevices.getUserMedia(micConfig);
-            activeMicStream = micStream; // Keep-alive
-
-            // Registra 15 secondi (Shazam richiede fingerprint valido)
-            await recordAndIdentify(micStream, 15000);
-
-        } catch (err) {
-            console.error("Shazam error:", err.name, err.message);
-            
-            if (err.name === 'NotAllowedError') {
-                sTitle.textContent = "❌ Permesso negato";
-                sArtist.textContent = "Abilita microfono nelle impostazioni del browser";
-                showToast("⚠️ Consenti accesso al microfono");
-            } else if (err.name === 'NotFoundError') {
-                sTitle.textContent = "❌ Nessun microfono";
-                sArtist.textContent = "Collega un microfono o cuffie con mic";
-                showToast("⚠️ Microfono non trovato");
-            } else {
-                sTitle.textContent = "⚠️ Errore: " + err.name;
-                sArtist.textContent = err.message;
-                showToast("⚠️ " + err.message);
-            }
-            
-            shazamBtn.classList.remove('listening');
+        // METODO 1: Cattura diretta dall'AudioContext (alta qualita)
+        var eqCapture = captureEQAudio();
+        if (eqCapture && eqCapture.stream.getAudioTracks().length > 0) {
+            audioStream = eqCapture.stream;
+            shazamCleanupFn = eqCapture.cleanup;
+            captureMethod = 'eq';
+            sArtist.textContent = 'Cattura audio diretta (alta qualita)';
+            console.log('Shazam: usando cattura AudioContext');
         }
-    });
 
-    async function recordAndIdentify(stream, duration) {
-        try {
-            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-            const chunks = [];
+        // METODO 2: Fallback - Microfono
+        if (!audioStream) {
+            try {
+                var micConfig = {
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: true
+                    },
+                    video: false
+                };
 
-            mediaRecorder.ondataavailable = e => {
-                if (e.data.size > 0) chunks.push(e.data);
-            };
-
-            mediaRecorder.onstop = async () => {
-                // NON spegniamo il microfono subito
-                const blob = new Blob(chunks, { type: 'audio/webm' });
-                
-                if (blob.size < 10000) {
-                    sTitle.textContent = "❌ Audio troppo silenzioso";
-                    sArtist.textContent = "Alza il volume dello schermo";
-                    showToast("⚠️ Audio non rilevato");
-                    shazamBtn.classList.remove('listening');
-                    return;
+                audioStream = await navigator.mediaDevices.getUserMedia(micConfig);
+                activeMicStream = audioStream;
+                shazamCleanupFn = function() {
+                    if (activeMicStream) {
+                        activeMicStream.getTracks().forEach(function(t) { try { t.stop(); } catch(e) {} });
+                        activeMicStream = null;
+                    }
+                };
+                captureMethod = 'mic';
+                sArtist.textContent = 'Microfono attivo - avvicina alle casse';
+                console.log('Shazam: usando microfono (fallback)');
+            } catch(micErr) {
+                console.error('Mic error:', micErr.name, micErr.message);
+                if (micErr.name === 'NotAllowedError') {
+                    sTitle.textContent = 'Permesso microfono negato';
+                    sArtist.textContent = 'Abilita il microfono nelle impostazioni del browser';
+                    showToast('Consenti accesso al microfono');
+                } else if (micErr.name === 'NotFoundError') {
+                    sTitle.textContent = 'Nessun microfono trovato';
+                    sArtist.textContent = 'Collega un microfono o usa cuffie con mic';
+                    showToast('Microfono non trovato');
+                } else if (micErr.name === 'NotReadableError') {
+                    sTitle.textContent = 'Microfono gia in uso';
+                    sArtist.textContent = 'Chiudi altre app che usano il microfono';
+                    showToast('Microfono occupato da un\'altra app');
+                } else {
+                    sTitle.textContent = 'Errore microfono: ' + micErr.name;
+                    sArtist.textContent = micErr.message;
+                    showToast('Errore: ' + micErr.message);
                 }
 
-                sTitle.textContent = "🔍 Analisi fingerprint...";
-                sArtist.textContent = "Ricerca in corso";
-
-                try {
-                    const formData = new FormData();
-                    formData.append('file', blob);
-                    formData.append('api_token', AUD_D_TOKEN);
-                    formData.append('return', 'apple_music,spotify');
-
-                    const response = await fetch('https://api.audd.io/', {
-                        method: 'POST',
-                        body: formData,
-                        timeout: 30000
+                // Mostra anche il bottone fallback upload
+                var existingUploadBtn = document.getElementById('shazam-upload-btn');
+                if (!existingUploadBtn) {
+                    var uploadBtn = document.createElement('button');
+                    uploadBtn.id = 'shazam-upload-btn';
+                    uploadBtn.className = 'btn';
+                    uploadBtn.style.cssText = 'margin-top:10px; width:100%; font-size:12px; padding:8px 12px; justify-content:center;';
+                    uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Carica file audio da identificare';
+                    uploadBtn.addEventListener('click', function(ev) {
+                        ev.stopPropagation();
+                        shazamFileInput.click();
                     });
-
-                    const data = await response.json();
-
-                    if (data.status === 'success' && data.result) {
-                        const r = data.result;
-                        sTitle.textContent = (r.title || "Brano").substring(0, 30);
-                        sArtist.textContent = (r.artist || "Sconosciuto").substring(0, 25);
-                        
-                        if (r.apple_music?.url || r.spotify?.url) {
-                            const url = r.apple_music?.url || r.spotify?.url;
-                            sArtist.innerHTML += ` <br><a href="${url}" target="_blank" style="color:var(--accent);font-size:11px;">🎵 Ascolta</a>`;
-                        }
-                        
-                        if (r.apple_music?.artwork?.url_400x400) {
-                            sImg.src = r.apple_music.artwork.url_400x400;
-                            sImg.style.display = 'block';
-                        }
-
-                        showToast("✅ " + r.title);
-                    } else {
-                        sTitle.textContent = "❌ Non riconosciuto";
-                        sArtist.textContent = "Riprova con audio più chiaro";
-                        showToast("⚠️ Brano non identificato");
-                    }
-                } catch (apiErr) {
-                    console.error("API error:", apiErr);
-                    sTitle.textContent = "⚠️ Errore API";
-                    sArtist.textContent = "Verifica connessione";
-                    showToast("⚠️ Errore rete");
+                    var resultContent = shazamResult.querySelector('div');
+                    if (resultContent) resultContent.appendChild(uploadBtn);
                 }
 
                 shazamBtn.classList.remove('listening');
-                
-                // Cleanup stream DOPO risposta
-                setTimeout(() => {
-                    stream.getTracks().forEach(t => {
-                        try { t.stop(); } catch(e) {}
-                    });
-                    if (activeMicStream === stream) activeMicStream = null;
-                }, 500);
-            };
+                if (shazamRecIndicator) shazamRecIndicator.classList.remove('active');
+                return;
+            }
+        }
 
-            mediaRecorder.start();
-            
-            // Auto-stop dopo durata
-            setTimeout(() => {
-                if (mediaRecorder.state === 'recording') {
-                    mediaRecorder.stop();
-                }
-            }, duration);
-
-            sTitle.textContent = "🎤 Ascolto in corso...";
-            sArtist.textContent = "Rimani fermo per " + Math.floor(duration / 1000) + "s";
-
-        } catch (err) {
-            console.error("Record error:", err);
-            sTitle.textContent = "❌ Errore registrazione";
-            sArtist.textContent = err.message;
+        if (!audioStream || audioStream.getAudioTracks().length === 0) {
+            sTitle.textContent = 'Nessun flusso audio disponibile';
+            sArtist.textContent = 'Impossibile catturare audio';
             shazamBtn.classList.remove('listening');
-            stream.getTracks().forEach(t => {
-                try { t.stop(); } catch(e) {}
-            });
+            if (shazamRecIndicator) shazamRecIndicator.classList.remove('active');
+            return;
         }
-    }
 
-    // Cleanup globale
-    window.addEventListener('beforeunload', () => {
-        if (activeMicStream) {
-            activeMicStream.getTracks().forEach(t => {
-                try { t.stop(); } catch(e) {}
-            });
-        }
+        // Avvia registrazione e identificazione
+        var duration = captureMethod === 'eq' ? 8000 : 15000;
+        await recordAndIdentify(audioStream, duration, captureMethod);
     });
 
-    // Chiudi risultato
-    const shazamClose = document.querySelector('.shazam-close');
-    if (shazamClose) {
-        shazamClose.addEventListener('click', function(e) {
+    async function recordAndIdentify(stream, duration, method) {
+        // FIX #1: Usa mimeType rilevato dal browser
+        var mimeType = getSupportedMimeType();
+        var recorderOptions = mimeType ? { mimeType: mimeType } : {};
+
+        var mediaRecorder;
+        try {
+            mediaRecorder = new MediaRecorder(stream, recorderOptions);
+        } catch(recErr) {
+            console.error('MediaRecorder creation error:', recErr);
+            // FIX #1: Secondo tentativo senza mimeType specificato
+            try {
+                mediaRecorder = new MediaRecorder(stream);
+            } catch(recErr2) {
+                console.error('MediaRecorder fallback error:', recErr2);
+                sTitle.textContent = 'Registrazione non supportata';
+                sArtist.textContent = 'Il tuo browser non supporta la registrazione audio';
+                showToast('Browser non compatibile con MediaRecorder');
+                cleanupShazam();
+                return;
+            }
+        }
+
+        shazamActiveMediaRecorder = mediaRecorder;
+        var chunks = [];
+        var recordStartTime = Date.now();
+
+        mediaRecorder.ondataavailable = function(e) {
+            if (e.data && e.data.size > 0) chunks.push(e.data);
+        };
+
+        mediaRecorder.onerror = function(e) {
+            console.error('MediaRecorder error:', e.error);
+            sTitle.textContent = 'Errore registrazione';
+            sArtist.textContent = e.error ? e.error.message : 'Errore sconosciuto';
+            cleanupShazam();
+        };
+
+        mediaRecorder.onstop = async function() {
+            shazamActiveMediaRecorder = null;
+
+            // Cleanup countdown
+            stopCountdown();
+
+            // Determina MIME type reale dal recorder
+            var blobType = mediaRecorder.mimeType || getMimeExtension(mimeType);
+            var blob = new Blob(chunks, { type: blobType });
+
+            // FIX #5: Soglia dimensione blob adattiva
+            var minSize = method === 'eq' ? 5000 : 10000;
+            if (blob.size < minSize) {
+                sTitle.textContent = 'Audio troppo silenzioso';
+                sArtist.textContent = method === 'mic'
+                    ? 'Alza il volume e avvicina il dispositivo alle casse'
+                    : 'Lo stream potrebbe non contenere audio';
+                showToast('Audio non sufficiente per l\'analisi');
+                cleanupShazam();
+                return;
+            }
+
+            sTitle.textContent = 'Analisi fingerprint...';
+            sArtist.textContent = 'Invio al server di riconoscimento';
+
+            // Invia all'API audD
+            try {
+                var formData = new FormData();
+                formData.append('file', blob, 'recording.' + (blobType.indexOf('ogg') >= 0 ? 'ogg' : blobType.indexOf('mp4') >= 0 ? 'mp4' : 'webm'));
+                formData.append('api_token', AUD_D_TOKEN);
+                formData.append('return', 'apple_music,spotify');
+
+                var controller = new AbortController();
+                var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
+
+                var response = await fetch('https://api.audd.io/', {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                var text = await response.text();
+                var data;
+                try { data = JSON.parse(text); } catch(parseErr) {
+                    sTitle.textContent = 'Errore risposta server';
+                    sArtist.textContent = 'Risposta non valida dal server';
+                    cleanupShazam();
+                    return;
+                }
+
+                // FIX #4: Gestione completa errori API
+                if (data.status === 'success' && data.result) {
+                    var r = data.result;
+                    sTitle.textContent = (r.title || 'Brano').substring(0, 40);
+                    sArtist.textContent = (r.artist || 'Sconosciuto').substring(0, 35);
+
+                    if (r.apple_music && r.apple_music.url) {
+                        sArtist.innerHTML += '<br><a href="' + r.apple_music.url + '" target="_blank" style="color:var(--accent);font-size:11px;">Ascolta su Apple Music</a>';
+                    } else if (r.spotify && r.spotify.external_urls && r.spotify.external_urls.spotify) {
+                        sArtist.innerHTML += '<br><a href="' + r.spotify.external_urls.spotify + '" target="_blank" style="color:var(--accent);font-size:11px;">Ascolta su Spotify</a>';
+                    } else if (r.song_link) {
+                        sArtist.innerHTML += '<br><a href="' + r.song_link + '" target="_blank" style="color:var(--accent);font-size:11px;">Risultato completo</a>';
+                    }
+
+                    if (r.apple_music && r.apple_music.artwork) {
+                        var artUrl = r.apple_music.artwork.url_400x400 || r.apple_music.artwork.url_100x100 || '';
+                        if (artUrl) { sImg.src = artUrl; sImg.style.display = 'block'; }
+                    } else if (r.spotify && r.spotify.album && r.spotify.album.images && r.spotify.album.images.length > 0) {
+                        sImg.src = r.spotify.album.images[0].url;
+                        sImg.style.display = 'block';
+                    }
+
+                    showToast('Trovato: ' + r.title);
+                } else if (data.status === 'error') {
+                    // FIX #4: Gestione errori API dettagliata
+                    var errMsg = data.error || {};
+                    if (errMsg.error_message) {
+                        sTitle.textContent = 'Errore API';
+                        sArtist.textContent = errMsg.error_message;
+                    } else if (errMsg.error_code === 1002) {
+                        sTitle.textContent = 'Token API non valido';
+                        sArtist.textContent = 'Il token di autenticazione e\' scaduto o non valido';
+                    } else if (errMsg.error_code === 1003) {
+                        sTitle.textContent = 'Credito esaurito';
+                        sArtist.textContent = 'Limite di richieste raggiunto per questo token';
+                    } else {
+                        sTitle.textContent = 'Non riconosciuto';
+                        sArtist.textContent = 'Riprova con audio piu chiaro e volume piu alto';
+                    }
+                    showToast('Brano non identificato');
+                } else {
+                    sTitle.textContent = 'Risposta inattesa';
+                    sArtist.textContent = 'Il server ha restituito una risposta non prevista';
+                    console.warn('Shazam API unexpected response:', data);
+                    showToast('Errore API');
+                }
+            } catch(apiErr) {
+                console.error('Shazam API error:', apiErr);
+                if (apiErr.name === 'AbortError') {
+                    sTitle.textContent = 'Timeout server';
+                    sArtist.textContent = 'Il server ha impiegato troppo tempo. Riprova.';
+                } else if (apiErr.name === 'TypeError' && apiErr.message.indexOf('fetch') >= 0) {
+                    sTitle.textContent = 'Errore di rete';
+                    sArtist.textContent = 'Verifica la connessione internet';
+                } else {
+                    sTitle.textContent = 'Errore API';
+                    sArtist.textContent = apiErr.message || 'Errore sconosciuto';
+                }
+                showToast('Errore durante l\'analisi');
+            }
+
+            // Cleanup finale
+            cleanupShazam();
+        };
+
+        // Avvia registrazione
+        try {
+            mediaRecorder.start(1000); // Chiamato ogni secondo per dati intermedi
+            sTitle.textContent = 'Registrazione in corso...';
+            sArtist.textContent = method === 'eq'
+                ? 'Ascolto diretto (' + Math.floor(duration/1000) + 's)'
+                : 'Avvicina alle casse (' + Math.floor(duration/1000) + 's)';
+            startCountdown(duration);
+        } catch(startErr) {
+            console.error('MediaRecorder start error:', startErr);
+            sTitle.textContent = 'Impossibile avviare la registrazione';
+            sArtist.textContent = startErr.message;
+            cleanupShazam();
+            return;
+        }
+
+        // Auto-stop dopo la durata specificata
+        shazamRecordingTimeout = setTimeout(function() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                try { mediaRecorder.stop(); } catch(e) { console.warn('Stop recorder error:', e); }
+            }
+        }, duration);
+    }
+
+    // FIX #12: Chiudi Shazam e ferma registrazione
+    var shazamCloseBtn = document.getElementById('shazam-close-btn');
+    if (shazamCloseBtn) {
+        shazamCloseBtn.addEventListener('click', function(e) {
             e.stopPropagation();
+            cleanupShazam();
             shazamResult.classList.remove('show');
-            shazamBtn.classList.remove('listening');
+            sTitle.textContent = 'Ascolto in corso...';
+            sArtist.textContent = 'Attendere 10 secondi';
         });
     }
-    // ================= END SHAZAM FIX =================
-    // Migliora scroll orizzontale equalizzatore su touch
-    const eqVis = document.getElementById('eq-visualizer');
-    if (eqVis) {
-        let isDown = false, startX, scrollLeft;
-        eqVis.addEventListener('touchstart', e => {
-            isDown = true;
-            startX = e.touches[0].pageX - eqVis.offsetLeft;
-            scrollLeft = eqVis.scrollLeft;
-        }, {passive: true});
-        eqVis.addEventListener('touchmove', e => {
-            if (!isDown) return;
-            e.preventDefault();
-            const x = e.touches[0].pageX - eqVis.offsetLeft;
-            const walk = (x - startX) * 1.5;
-            eqVis.scrollLeft = scrollLeft - walk;
-        }, {passive: false});
-        eqVis.addEventListener('touchend', () => { isDown = false; }, {passive: true});
-    }
-    // Fix layout video su resize/orientamento
-    function fixVideoLayout() {
-        const vp = unifiedPlayer.parentElement;
-        if (vp && window.innerWidth <= 1024) {
-            vp.style.maxHeight = window.innerWidth > 700 ? '45vh' : '40vh';
-        }
-    }
-    window.addEventListener('resize', fixVideoLayout);
-    window.addEventListener('orientationchange', () => setTimeout(fixVideoLayout, 300));
-    document.addEventListener('DOMContentLoaded', fixVideoLayout);
 
     // ================= FULLSCREEN NATIVO (CORRETTO) =================
-    const ctrlFullscreen = document.getElementById('ctrl-fullscreen');
-    const videoOverlay = document.getElementById('video-overlay');
-    const overlayPlayer = document.getElementById('overlay-player');
-    const overlayClose = document.getElementById('overlay-close');
+    var videoOverlay = document.getElementById('video-overlay');
+    var overlayPlayer = document.getElementById('overlay-player');
+    var overlayClose = document.getElementById('overlay-close');
 
     function isFullscreen() {
-        return !!(document.fullscreenElement || document.webkitFullscreenElement || 
+        return !!(document.fullscreenElement || document.webkitFullscreenElement ||
                   document.mozFullScreenElement || document.msFullscreenElement);
     }
 
     function exitFullscreen() {
-        const exit = document.exitFullscreen || document.webkitExitFullscreen || 
+        var exit = document.exitFullscreen || document.webkitExitFullscreen ||
                     document.mozCancelFullScreen || document.msExitFullscreen;
         return exit ? exit.call(document) : Promise.reject('API non supportata');
     }
 
-    // ATTIVA MODALITÀ OVERLAY
     function activateOverlayMode() {
-        if (!overlayPlayer) return;
+        if (!overlayPlayer || !videoOverlay) return;
         unifiedPlayer.pause();
-        overlayPlayer.src = unifiedPlayer.src;
+        overlayPlayer.src = unifiedPlayer.src || unifiedPlayer.currentSrc;
         overlayPlayer.currentTime = unifiedPlayer.currentTime;
         overlayPlayer.volume = unifiedPlayer.volume;
         videoOverlay.classList.add('active');
-        overlayPlayer.play().catch(()=>{});
+        overlayClose.style.display = 'block';
+        overlayPlayer.play().catch(function(){});
         if (ctrlFullscreen) {
             ctrlFullscreen.classList.add('active');
             ctrlFullscreen.innerHTML = '<i class="fas fa-compress"></i>';
@@ -2309,67 +2611,74 @@ audio.media-player::-webkit-media-controls-enclosure {
     }
 
     function requestFullscreen(el) {
-        const target = el.querySelector('video') || el;
-        const req = target.requestFullscreen || 
-                    target.webkitRequestFullscreen || 
-                    target.mozRequestFullScreen || 
+        var target = el.querySelector('video') || el;
+        var req = target.requestFullscreen ||
+                    target.webkitRequestFullscreen ||
+                    target.mozRequestFullScreen ||
                     target.msRequestFullscreen;
-        
-        if (!req) {
-            activateOverlayMode();
-            return Promise.resolve();
-        }
-        
-        return req.call(target).catch(err => {
+        if (!req) { activateOverlayMode(); return Promise.resolve(); }
+        return req.call(target).catch(function(err) {
             console.warn('Fullscreen API failed:', err);
             activateOverlayMode();
         });
     }
 
-    // DOPPIO CLICK = FULLSCREEN NATIVO
+    // Click singolo su fullscreen button
+    if (ctrlFullscreen) {
+        ctrlFullscreen.addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            if (isFullscreen()) {
+                exitFullscreen().catch(function(){});
+            } else if (videoOverlay && videoOverlay.classList.contains('active')) {
+                // Chiudi overlay
+                overlayClose.click();
+            } else {
+                activateOverlayMode();
+            }
+        });
+    }
+
+    // Doppio click = fullscreen nativo
     if (playerContainer) {
-        let clickCount = 0;
+        var clickCount = 0;
         playerContainer.addEventListener('click', function(e) {
             if (e.target.closest('.custom-controls, .ctrl-btn')) return;
-            
             clickCount++;
             if (clickCount === 1) {
-                setTimeout(() => { clickCount = 0; }, 300);
+                setTimeout(function() { clickCount = 0; }, 300);
                 return;
             }
-            
             clickCount = 0;
             e.preventDefault();
             e.stopPropagation();
-            
             if (isFullscreen()) {
-                exitFullscreen().catch(err => {
-                    console.warn('Exit fullscreen failed:', err);
-                });
+                exitFullscreen().catch(function(){});
             } else {
                 requestFullscreen(playerContainer);
             }
         });
     }
 
-    // SYNC OVERLAY PLAYER
+    // Sync overlay player
     if (overlayPlayer) {
-        overlayPlayer.addEventListener('pause', () => { unifiedPlayer.pause(); });
-        overlayPlayer.addEventListener('play', () => { unifiedPlayer.play().catch(()=>{}); });
-        overlayPlayer.addEventListener('timeupdate', () => {
+        overlayPlayer.addEventListener('pause', function() { unifiedPlayer.pause(); });
+        overlayPlayer.addEventListener('play', function() { unifiedPlayer.play().catch(function(){}); });
+        overlayPlayer.addEventListener('timeupdate', function() {
             if (Math.abs(overlayPlayer.currentTime - unifiedPlayer.currentTime) > 0.5) {
                 unifiedPlayer.currentTime = overlayPlayer.currentTime;
             }
         });
     }
 
-    // CHIUDI OVERLAY
+    // Chiudi overlay
     if (overlayClose) {
         overlayClose.addEventListener('click', function(e) {
             e.stopPropagation();
-            videoOverlay.classList.remove('active');
-            unifiedPlayer.play().catch(()=>{});
+            if (videoOverlay) videoOverlay.classList.remove('active');
             if (overlayPlayer) overlayPlayer.pause();
+            overlayClose.style.display = 'none';
+            unifiedPlayer.play().catch(function(){});
             if (ctrlFullscreen) {
                 ctrlFullscreen.classList.remove('active');
                 ctrlFullscreen.innerHTML = '<i class="fas fa-expand"></i>';
@@ -2379,35 +2688,37 @@ audio.media-player::-webkit-media-controls-enclosure {
 
     if (videoOverlay) {
         videoOverlay.addEventListener('click', function(e) {
-            if (e.target === videoOverlay) overlayClose.click();
+            if (e.target === videoOverlay && overlayClose) overlayClose.click();
         });
     }
 
-    // FULLSCREEN STATE LISTENER
+    // FIX #11: Fullscreen state change - non cancellare cssText
     function handleFullscreenChange() {
-        const isFS = isFullscreen();
-        
+        var isFS = isFullscreen();
         if (isFS && unifiedPlayer) {
-            unifiedPlayer.style.cssText = `
-                width: 100vw !important;
-                height: 100vh !important;
-                object-fit: contain !important;
-                aspect-ratio: auto !important;
-                display: block !important;
-                background: #000 !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            `;
+            unifiedPlayer.style.width = '100vw';
+            unifiedPlayer.style.height = '100vh';
+            unifiedPlayer.style.objectFit = 'contain';
+            unifiedPlayer.style.maxHeight = '100vh';
+            unifiedPlayer.style.minHeight = '0';
+            unifiedPlayer.style.margin = '0';
+            unifiedPlayer.style.padding = '0';
             if (overlayClose) overlayClose.style.display = 'none';
-        } else {
-            if (unifiedPlayer) unifiedPlayer.style.cssText = '';
+        } else if (unifiedPlayer) {
+            // FIX #11: Rimuovi SOLO le proprietà fullscreen, non tutto cssText
+            unifiedPlayer.style.removeProperty('width');
+            unifiedPlayer.style.removeProperty('height');
+            unifiedPlayer.style.removeProperty('object-fit');
+            unifiedPlayer.style.removeProperty('max-height');
+            unifiedPlayer.style.removeProperty('min-height');
+            unifiedPlayer.style.removeProperty('margin');
+            unifiedPlayer.style.removeProperty('padding');
             if (overlayClose) overlayClose.style.display = '';
         }
-        
         if (ctrlFullscreen) {
             ctrlFullscreen.classList.toggle('active', isFS);
-            ctrlFullscreen.innerHTML = isFS ? 
-                '<i class="fas fa-compress"></i>' : 
+            ctrlFullscreen.innerHTML = isFS ?
+                '<i class="fas fa-compress"></i>' :
                 '<i class="fas fa-expand"></i>';
         }
     }
@@ -2417,14 +2728,9 @@ audio.media-player::-webkit-media-controls-enclosure {
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
     document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 
-    // ESC key handler
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && isFullscreen()) {
-            exitFullscreen().catch(()=>{});
-        }
+        if (e.key === 'Escape' && isFullscreen()) exitFullscreen().catch(function(){});
     });
-
-    // ================= END FULLSCREEN FIX =================
   </script>
 </body>
 </html>
