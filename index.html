@@ -1003,7 +1003,7 @@ audio.media-player::-webkit-media-controls-enclosure {
   { name: 'MA-LO-MA | Deep Afro House', url: 'https://youtu.be/1epTGMPeN1I', type: 'youtube-link' },
   { name: 'Giada Brincè', url: 'https://youtu.be/CLvDJc_AhaM?list=RDCLvDJc_AhaM', type: 'youtube-link' },
   { name: 'SUNSET AFRO MUSIC', url: 'https://youtu.be/SVL72f8gj4c?list=RDSVL72f8gj4c', type: 'youtube-link' },
-  { name: 'Kenny G', url: 'https://youtu.be/90lrVUTASvQ?list=RD90lrVUTASvQ', type: 'youtube-link' },
+  { name: 'YouTube - Test', url: '', type: 'youtube-link' },
   { name: 'YouTube - Test', url: '', type: 'youtube-link' },
   { name: 'YouTube - Test', url: '', type: 'youtube-link' },
   { name: 'YouTube - Test', url: '', type: 'youtube-link' },
@@ -1169,7 +1169,18 @@ audio.media-player::-webkit-media-controls-enclosure {
 
     // ================= STREAM CONTROL =================
     function stopStream() {
-        if (currentHls) { try { currentHls.destroy(); } catch(e) {} currentHls = null; }
+        unifiedPlayer._trackEnded = true; // Previene eventi spuri durante lo stop
+        unifiedPlayer.removeAttribute('src');
+        unifiedPlayer.load();
+        statusText.textContent = 'Fermato';
+        statusDot.classList.remove('playing');
+        
+        // CORREZIONE: Rimossi i riferimenti a _hls e _currentHls (non definiti)
+        if (currentHls) { 
+            try { currentHls.destroy(); } catch(e) {} 
+            currentHls = null; 
+        }
+        
         unifiedPlayer.pause();
         unifiedPlayer.removeAttribute('src');
         unifiedPlayer.load();
@@ -1186,14 +1197,20 @@ audio.media-player::-webkit-media-controls-enclosure {
         currentChannelDisplay.textContent = name;
         statusText.textContent = 'Caricamento...';
         loadingInfo.style.display = 'none';
+        
         stopStream();
+        unifiedPlayer._trackEnded = false; // <-- AGGIUNGI QUESTA RIGA
+        
         await initAudioEQ();
-        if (type === 'youtube-link') { playYouTubeLink(name, url); }
-        else if (isM3U8(url)) {
+        if (type === 'youtube-link') { 
+            playYouTubeLink(name, url); 
+        } else if (isM3U8(url)) {
             if (window.Hls && Hls.isSupported()) { playHLS(name, url); }
             else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) { playStandard(name, url); }
             else { showToast('Formato stream non supportato'); statusText.textContent = 'Errore formato'; }
-        } else { playStandard(name, url); }
+        } else { 
+            playStandard(name, url); 
+        }
     }
 
     function playHLS(name, url) {
@@ -1235,14 +1252,14 @@ audio.media-player::-webkit-media-controls-enclosure {
         });
     }
 
-      function playStandard(name, url) {
+    function playStandard(name, url) {
         // FIX #9: Rimuovi listener precedente per evitare accumulo
         unifiedPlayer.removeEventListener('loadedmetadata', playStandard_onMeta);
         unifiedPlayer.removeEventListener('error', playStandard_onError);
 
         // Se stream precedente ha fallito CORS, resetta elemento video DOM
-        if (unifiedPlayer._eqStatus === 'failed') {
-          resetVideoElement();
+        if (unifiedPlayer._eqStatus === 'failed' || unifiedPlayer._eqStatus === 'cors_failed') {
+        resetVideoElement();
         }
 
         unifiedPlayer.pause();
@@ -1258,7 +1275,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         loadingInfo.style.display = 'none';
 
         if (audioContext && audioContext.state === 'suspended') {
-          audioContext.resume().catch(function () { });
+            audioContext.resume().catch(function(){});
         }
 
         // FIX #9: Funzioni nominate per poter rimuovere i listener
@@ -1267,110 +1284,117 @@ audio.media-player::-webkit-media-controls-enclosure {
 
         // Se i metadati sono gia' caricati, forza l'handler
         if (unifiedPlayer.readyState >= 1) {
-          playStandard_onMeta();
+            playStandard_onMeta();
         }
 
-        unifiedPlayer.play().then(function () {
-          statusText.textContent = 'In riproduzione';
-          statusDot.classList.add('playing');
-        }).catch(function (err) {
-          if (err.name === 'NotAllowedError') {
-            statusText.textContent = 'Premi Play per avviare';
-            showToast('Tocca Play per iniziare');
-          }
-          statusDot.classList.remove('playing');
+        unifiedPlayer.play().then(function() {
+            statusText.textContent = 'In riproduzione';
+            statusDot.classList.add('playing');
+        }).catch(function(err) {
+            if (err.name === 'NotAllowedError') {
+                statusText.textContent = 'Premi Play per avviare';
+                showToast('Tocca Play per iniziare');
+            }
+            statusDot.classList.remove('playing');
         });
-      }
+    }
 
-      // FIX #9: Handler nominati rimovibili
-      function playStandard_onMeta() {
+    // FIX #9: Handler nominati rimovibili
+    function playStandard_onMeta() {
         try {
-          if (!isCorsRestricted(unifiedPlayer.src)) {
-            // FIX #13: Non awaitare - loadedmetadata non e' un gesto utente
-            initAudioEQ().then(function (eqInit) {
-              if (eqInit) connectEQChain(unifiedPlayer);
-            }).catch(function () { });
-          }
-        } catch (e) { console.warn("EQ init error:", e.message); }
-      }
+            if (!isCorsRestricted(unifiedPlayer.src)) {
+                initAudioEQ().then(function(eqInit) {
+                    if (eqInit) connectEQChain(unifiedPlayer);
+                });
+            }
+        } catch(e) { console.warn("EQ init error:", e.message); }
+    }
 
-      function playStandard_onError() {
+    function playStandard_onError() {
         stopStream();
         showToast('Errore caricamento stream');
         statusText.textContent = 'Stream non disponibile';
         statusDot.classList.remove('playing');
-      }
+    }
 
-      function playYouTubeLink(name, url) {
-        loadingInfo.style.display = 'block';
-        unifiedPlayer.style.display = 'block';
-        window.open(url, '_blank');
-        setTimeout(function () {
+    function playYouTubeLink(name, url) {
+      loadingInfo.style.display = 'block';
+      unifiedPlayer.style.display = 'block';
+      window.open(url, '_blank');
+      setTimeout(function() {
           loadingInfo.style.display = 'none';
           statusText.textContent = 'Aperto su YouTube';
           statusDot.classList.add('playing');
           playerInfo.textContent = name + ' - Apri su YouTube';
           showToast('Video YouTube aperto nel browser');
-        }, 500);
-      }
+      }, 500);
+    }
 
-      // ================= PLAYER CONTROLS =================
-      mediaPlayButton.addEventListener('click', async function () {
+    // ================= PLAYER CONTROLS =================
+    mediaPlayButton.addEventListener('click', async function() {
         if (unifiedPlayer.src || unifiedPlayer.currentSrc) {
-          await initAudioEQ();
-          // FIX #13: Resume qui - click e' un gesto utente diretto
-          if (audioContext && audioContext.state === 'suspended') {
-            await audioContext.resume().catch(function () { });
-          }
-          connectEQChain(unifiedPlayer);
-          unifiedPlayer.play().catch(function () { });
-          statusDot.classList.add('playing');
+            await initAudioEQ();
+            connectEQChain(unifiedPlayer);
+            unifiedPlayer.play().catch(function(){});
+            statusDot.classList.add('playing');
         } else { showToast('Seleziona un canale'); }
-      });
-      mediaStopButton.addEventListener('click', function () {
+    });
+    mediaStopButton.addEventListener('click', function() {
         unifiedPlayer.pause();
         statusDot.classList.remove('playing');
-      });
-      mediaNextButton.addEventListener('click', function () {
-        var visible = Array.from(document.querySelectorAll('.channel')).filter(function (ch) { return ch.style.display !== 'none'; });
-        var active = document.querySelector('.channel.active');
-        var idx = active ? visible.indexOf(active) : -1;
-        if (idx + 1 < visible.length) { visible[idx + 1].click(); }
-      });
+    });
+    mediaNextButton.addEventListener('click', function() {
+        unifiedPlayer._trackEnded = false; 
+        var channels = document.querySelectorAll('.channel');
+        var visibleChannels = [];
+        channels.forEach(function(ch) {
+            if (ch.style.display !== 'none' && ch.offsetHeight > 0) visibleChannels.push(ch);
+        });
+        if (visibleChannels.length === 0) return;
+        
+        var activeIndex = -1;
+        visibleChannels.forEach(function(ch, i) {
+            // CORREZIONE: cambia 'active-channel' in 'active'
+            if (ch.classList.contains('active')) activeIndex = i; 
+        });
+        
+        var nextIndex = (activeIndex + 1) % visibleChannels.length;
+        visibleChannels[nextIndex].click();
+    });
 
-      // ================= VOICE SEARCH =================
-      voiceSearchBtn.addEventListener('click', function () {
-        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) { showToast('Ricerca vocale non supportata'); return; }
-        if (isListening) { isListening = false; voiceSearchBtn.classList.remove('listening'); return; }
-        var recognition = new SpeechRecognition();
-        recognition.lang = 'it-IT';
-        isListening = true;
-        voiceSearchBtn.classList.add('listening');
-        showToast('Ascoltando...');
-        recognition.onresult = function (event) {
+    // ================= VOICE SEARCH =================
+    voiceSearchBtn.addEventListener('click', function() {
+      var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) { showToast('Ricerca vocale non supportata'); return; }
+      if (isListening) { isListening = false; voiceSearchBtn.classList.remove('listening'); return; }
+      var recognition = new SpeechRecognition();
+      recognition.lang = 'it-IT';
+      isListening = true;
+      voiceSearchBtn.classList.add('listening');
+      showToast('Ascoltando...');
+      recognition.onresult = function(event) {
           var transcript = event.results[0][0].transcript.toLowerCase();
           searchInput.value = transcript;
           searchInput.dispatchEvent(new Event('input'));
-        };
-        recognition.onend = function () { isListening = false; voiceSearchBtn.classList.remove('listening'); };
-        recognition.onerror = function (e) {
+      };
+      recognition.onend = function() { isListening = false; voiceSearchBtn.classList.remove('listening'); };
+      recognition.onerror = function(e) {
           console.warn('Speech error:', e.error);
           isListening = false;
           voiceSearchBtn.classList.remove('listening');
           if (e.error === 'no-speech') showToast('Nessun discorso rilevato');
           else if (e.error === 'not-allowed') showToast('Microfono non autorizzato');
           else showToast('Errore ricerca vocale: ' + e.error);
-        };
-        recognition.start();
-      });
+      };
+      recognition.start();
+    });
 
-      // ================= EQUALIZER INTERACTION =================
-      var eqUpdatePending = false;
-      function processEQInteraction(e) {
-        if (eqUpdatePending) return;
-        eqUpdatePending = true;
-        requestAnimationFrame(function () {
+    // ================= EQUALIZER INTERACTION =================
+    var eqUpdatePending = false;
+    function processEQInteraction(e) {
+      if (eqUpdatePending) return;
+      eqUpdatePending = true;
+      requestAnimationFrame(function() {
           var container = e.currentTarget || (e.target && e.target.closest ? e.target.closest('.eq-bar-container') : null);
           if (!container || !container.dataset) { eqUpdatePending = false; return; }
           var band = parseInt(container.dataset.band);
@@ -1392,130 +1416,130 @@ audio.media-player::-webkit-media-controls-enclosure {
             if (audioContext && audioContext.state === 'running' && eqFilters[band]) {
               eqFilters[band].gain.value = gain;
             }
-          } catch (err) { console.warn('EQ gain update error:', err); }
+          } catch(err) { console.warn('EQ gain update error:', err); }
           eqUpdatePending = false;
-        });
-      }
-      eqBarContainers.forEach(function (c) {
-        c.addEventListener('touchstart', processEQInteraction, { passive: true });
-        c.addEventListener('touchmove', processEQInteraction, { passive: true });
-        c.addEventListener('mousedown', processEQInteraction);
       });
+    }
+    eqBarContainers.forEach(function(c) {
+      c.addEventListener('touchstart', processEQInteraction, { passive: true });
+      c.addEventListener('touchmove', processEQInteraction, { passive: true });
+      c.addEventListener('mousedown', processEQInteraction);
+    });
 
-      function updateEqualizer() {
-        eqBars.forEach(function (bar, index) {
-          var value = eqValues[index] + 12;
-          var percentage = (value / 24) * 100;
-          percentage = Math.max(5, Math.min(100, percentage));
-          bar.style.height = percentage + '%';
-          if (percentage > 40) bar.classList.add('active');
-          else bar.classList.remove('active');
+    function updateEqualizer() {
+        eqBars.forEach(function(bar, index) {
+            var value = eqValues[index] + 12;
+            var percentage = (value / 24) * 100;
+            percentage = Math.max(5, Math.min(100, percentage));
+            bar.style.height = percentage + '%';
+            if (percentage > 40) bar.classList.add('active');
+            else bar.classList.remove('active');
         });
         try {
-          if (!audioContext) {
-            initAudioEQ().catch(function (e) { console.error("Cannot init AudioContext:", e.message); });
-            return;
-          }
-          if (audioContext.state !== 'running') {
-            if (audioContext.state === 'suspended') {
-              audioContext.resume().catch(function () { });
+            if (!audioContext) {
+                initAudioEQ().catch(function(e) { console.error("Cannot init AudioContext:", e.message); });
+                return;
             }
-            return;
-          }
-          if (!eqFilters || eqFilters.length === 0) return;
-          for (var i = 0; i < eqValues.length; i++) {
-            if (eqFilters[i] && eqFilters[i].gain) {
-              var clamped = Math.max(-12, Math.min(12, eqValues[i]));
-              eqFilters[i].gain.value = clamped;
+            if (audioContext.state !== 'running') {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().catch(function() {});
+                }
+                return;
             }
-          }
-        } catch (e) { console.error('EQ audio update error:', e.message); }
-      }
+            if (!eqFilters || eqFilters.length === 0) return;
+            for (var i = 0; i < eqValues.length; i++) {
+                if (eqFilters[i] && eqFilters[i].gain) {
+                    var clamped = Math.max(-12, Math.min(12, eqValues[i]));
+                    eqFilters[i].gain.value = clamped;
+                }
+            }
+        } catch(e) { console.error('EQ audio update error:', e.message); }
+    }
 
-      eqResetBtn.addEventListener('click', function () {
-        eqValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    eqResetBtn.addEventListener('click', function() {
+        eqValues = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
         updateEqualizer();
         if (eqPresetSelect) eqPresetSelect.value = "";
         showToast('Equalizzatore ripristinato');
-      });
+    });
 
-      // ================= PRESET SYSTEM =================
-      var defaultPresets = {
-        flat: { label: "Flat", values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], builtin: true },
-        bass: { label: "Bass Boost", values: [6, 6, 5, 5, 4, 2, 1, 0, -1, -2, -3, -4, -5, -5, -6], builtin: true },
-        treble: { label: "Treble", values: [-6, -5, -4, -4, -2, -1, 1, 2, 3, 4, 5, 5, 6, 6, 6], builtin: true },
-        vocal: { label: "Vocal", values: [-5, -4, -2, 2, 4, 6, 6, 4, 2, -1, -2, -4, -6, -6, -6], builtin: true },
-        rock: { label: "Rock", values: [4, 5, 6, 4, 2, 0, -1, 1, 3, 4, 5, 4, 2, 1, 0], builtin: true },
-        pop: { label: "Pop", values: [3, 4, 5, 4, 2, 0, 1, 3, 4, 5, 4, 2, 1, 0, -1], builtin: true },
-        jazz: { label: "Jazz", values: [2, 4, 5, 6, 4, 2, 0, 1, 2, 4, 5, 4, 2, 1, 0], builtin: true },
-        classical: { label: "Classical", values: [1, 2, 4, 5, 6, 4, 2, 1, 0, -2, -4, -5, -6, -6, -6], builtin: true },
-        electronic: { label: "Electronic", values: [5, 4, 3, 2, 0, -1, 2, 4, 5, 6, 5, 4, 3, 2, 1], builtin: true },
-        dance: { label: "Dance", values: [6, 5, 4, 2, 1, -1, 2, 4, 5, 6, 5, 4, 2, 1, 0], builtin: true },
-        podcast: { label: "Podcast", values: [-6, -5, -3, 3, 5, 6, 5, 4, 1, -1, -4, -6, -6, -6, -6], builtin: true },
-        live: { label: "Live", values: [3, 4, 5, 4, 2, 1, 2, 4, 5, 6, 6, 5, 4, 2, 1], builtin: true },
-        hiphop: { label: "Hip Hop", values: [6, 6, 5, 4, 3, 1, 0, 1, 2, 4, 5, 4, 3, 2, 1], builtin: true },
-        metal: { label: "Metal", values: [4, 5, 6, 6, 5, 3, 2, 3, 4, 5, 6, 5, 4, 3, 2], builtin: true },
-        ambient: { label: "Ambient", values: [3, 2, 1, 0, -1, -2, -4, -2, -1, -2, -4, -5, -4, -2, -1], builtin: true },
-        country: { label: "Country", values: [2, 3, 4, 3, 2, 0, 1, 3, 4, 3, 2, 0, -1, -3, -4], builtin: true },
-        rnb: { label: "R&B Soul", values: [5, 5, 4, 2, 1, 0, 1, 2, 4, 5, 4, 3, 2, 1, 0], builtin: true },
-        gaming: { label: "Gaming", values: [3, 4, 5, 4, 2, 1, 2, 4, 5, 6, 5, 5, 4, 2, 2], builtin: true },
-        cinema: { label: "Cinema", values: [4, 5, 6, 5, 3, 2, 3, 5, 6, 6, 5, 4, 3, 2, 1], builtin: true },
-        night: { label: "Night Mode", values: [2, 2, 3, 3, 4, 4, 4, 4, 4, 3, 3, 2, 2, 2, 2], builtin: true },
-        loudness: { label: "Loudness", values: [6, 5, 5, 4, 4, 3, 4, 5, 6, 5, 5, 4, 4, 3, 2], builtin: true },
-        acoustic: { label: "Acoustic", values: [1, 2, 4, 5, 6, 6, 5, 3, 1, 0, -2, -4, -5, -6, -6], builtin: true },
-        edm: { label: "EDM", values: [6, 5, 5, 4, 2, 1, 1, 3, 5, 6, 6, 5, 4, 3, 2], builtin: true },
-        reggae: { label: "Reggae", values: [5, 5, 6, 6, 5, 3, 2, 1, -1, -3, -5, -6, -6, -6, -6], builtin: true },
-        blues: { label: "Blues", values: [3, 4, 5, 6, 6, 5, 4, 2, 1, -2, -4, -6, -6, -6, -6], builtin: true },
-        folk: { label: "Folk", values: [1, 2, 4, 5, 6, 5, 4, 2, 1, 0, -2, -4, -5, -6, -6], builtin: true },
-        meditation: { label: "Meditation", values: [2, 1, 0, -1, -2, -1, 0, -1, -2, -4, -2, -1, 0, 1, 2], builtin: true },
-        radio: { label: "Radio Vintage", values: [-6, -5, -4, -2, 3, 5, 6, 5, 3, -2, -4, -6, -6, -6, -6], builtin: true },
-        headphone: { label: "Headphone", values: [4, 5, 6, 5, 3, 2, 1, 1, 2, 4, 5, 5, 5, 4, 3], builtin: true },
-        speaker: { label: "Speaker", values: [5, 6, 6, 5, 3, 2, 0, -2, -4, -5, -6, -6, -6, -6, -6], builtin: true },
-        car: { label: "Car Audio", values: [6, 6, 5, 4, 3, 2, 0, -2, -4, -5, -6, -6, -6, -6, -6], builtin: true }
-      };
+    // ================= PRESET SYSTEM =================
+    var defaultPresets = {
+        flat:      { label:"Flat", values:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], builtin:true },
+        bass:      { label:"Bass Boost", values:[6,6,5,5,4,2,1,0,-1,-2,-3,-4,-5,-5,-6], builtin:true },
+        treble:    { label:"Treble", values:[-6,-5,-4,-4,-2,-1,1,2,3,4,5,5,6,6,6], builtin:true },
+        vocal:     { label:"Vocal", values:[-5,-4,-2,2,4,6,6,4,2,-1,-2,-4,-6,-6,-6], builtin:true },
+        rock:      { label:"Rock", values:[4,5,6,4,2,0,-1,1,3,4,5,4,2,1,0], builtin:true },
+        pop:       { label:"Pop", values:[3,4,5,4,2,0,1,3,4,5,4,2,1,0,-1], builtin:true },
+        jazz:      { label:"Jazz", values:[2,4,5,6,4,2,0,1,2,4,5,4,2,1,0], builtin:true },
+        classical: { label:"Classical", values:[1,2,4,5,6,4,2,1,0,-2,-4,-5,-6,-6,-6], builtin:true },
+        electronic:{ label:"Electronic", values:[5,4,3,2,0,-1,2,4,5,6,5,4,3,2,1], builtin:true },
+        dance:     { label:"Dance", values:[6,5,4,2,1,-1,2,4,5,6,5,4,2,1,0], builtin:true },
+        podcast:   { label:"Podcast", values:[-6,-5,-3,3,5,6,5,4,1,-1,-4,-6,-6,-6,-6], builtin:true },
+        live:      { label:"Live", values:[3,4,5,4,2,1,2,4,5,6,6,5,4,2,1], builtin:true },
+        hiphop:    { label:"Hip Hop", values:[6,6,5,4,3,1,0,1,2,4,5,4,3,2,1], builtin:true },
+        metal:     { label:"Metal", values:[4,5,6,6,5,3,2,3,4,5,6,5,4,3,2], builtin:true },
+        ambient:   { label:"Ambient", values:[3,2,1,0,-1,-2,-4,-2,-1,-2,-4,-5,-4,-2,-1], builtin:true },
+        country:   { label:"Country", values:[2,3,4,3,2,0,1,3,4,3,2,0,-1,-3,-4], builtin:true },
+        rnb:       { label:"R&B Soul", values:[5,5,4,2,1,0,1,2,4,5,4,3,2,1,0], builtin:true },
+        gaming:    { label:"Gaming", values:[3,4,5,4,2,1,2,4,5,6,5,5,4,2,2], builtin:true },
+        cinema:    { label:"Cinema", values:[4,5,6,5,3,2,3,5,6,6,5,4,3,2,1], builtin:true },
+        night:     { label:"Night Mode", values:[2,2,3,3,4,4,4,4,4,3,3,2,2,2,2], builtin:true },
+        loudness:  { label:"Loudness", values:[6,5,5,4,4,3,4,5,6,5,5,4,4,3,2], builtin:true },
+        acoustic:  { label:"Acoustic", values:[1,2,4,5,6,6,5,3,1,0,-2,-4,-5,-6,-6], builtin:true },
+        edm:       { label:"EDM", values:[6,5,5,4,2,1,1,3,5,6,6,5,4,3,2], builtin:true },
+        reggae:    { label:"Reggae", values:[5,5,6,6,5,3,2,1,-1,-3,-5,-6,-6,-6,-6], builtin:true },
+        blues:     { label:"Blues", values:[3,4,5,6,6,5,4,2,1,-2,-4,-6,-6,-6,-6], builtin:true },
+        folk:      { label:"Folk", values:[1,2,4,5,6,5,4,2,1,0,-2,-4,-5,-6,-6], builtin:true },
+        meditation:{ label:"Meditation", values:[2,1,0,-1,-2,-1,0,-1,-2,-4,-2,-1,0,1,2], builtin:true },
+        radio:     { label:"Radio Vintage", values:[-6,-5,-4,-2,3,5,6,5,3,-2,-4,-6,-6,-6,-6], builtin:true },
+        headphone: { label:"Headphone", values:[4,5,6,5,3,2,1,1,2,4,5,5,5,4,3], builtin:true },
+        speaker:   { label:"Speaker", values:[5,6,6,5,3,2,0,-2,-4,-5,-6,-6,-6,-6,-6], builtin:true },
+        car:       { label:"Car Audio", values:[6,6,5,4,3,2,0,-2,-4,-5,-6,-6,-6,-6,-6], builtin:true }
+    };
 
-      function getAllPresets() {
+    function getAllPresets() {
         var userPresets = loadFromLocalStorage(STORAGE_PRESETS, {});
         var all = {};
         for (var k in defaultPresets) all[k] = defaultPresets[k];
         for (var k in userPresets) all[k] = userPresets[k];
         return all;
-      }
+    }
 
-      function populatePresetSelect() {
+    function populatePresetSelect() {
         if (!eqPresetSelect) return;
         eqPresetSelect.innerHTML = '<option value="">PRESET...</option>';
         var presets = getAllPresets();
         var keys = Object.keys(presets);
-        keys.sort(function (a, b) {
-          if (presets[a].builtin && !presets[b].builtin) return -1;
-          if (!presets[a].builtin && presets[b].builtin) return 1;
-          return presets[a].label.localeCompare(presets[b].label);
+        keys.sort(function(a,b) {
+            if (presets[a].builtin && !presets[b].builtin) return -1;
+            if (!presets[a].builtin && presets[b].builtin) return 1;
+            return presets[a].label.localeCompare(presets[b].label);
         });
-        keys.forEach(function (key) {
-          var opt = document.createElement('option');
-          opt.value = key;
-          opt.textContent = presets[key].label + (presets[key].builtin ? '' : ' (custom)');
-          eqPresetSelect.appendChild(opt);
+        keys.forEach(function(key) {
+            var opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = presets[key].label + (presets[key].builtin ? '' : ' (custom)');
+            eqPresetSelect.appendChild(opt);
         });
-      }
+    }
 
-      function applyPreset(key) {
+    function applyPreset(key) {
         var presets = getAllPresets();
         if (!key || !presets[key]) return;
         var p = presets[key];
         if (audioContext && bassBoost) {
-          if (['bass', 'hiphop', 'edm', 'dance'].indexOf(key) >= 0) bassBoost.gain.value = 6;
-          else if (['flat', 'vocal', 'podcast'].indexOf(key) >= 0) bassBoost.gain.value = 0;
-          else bassBoost.gain.value = 2;
+            if (['bass','hiphop','edm','dance'].indexOf(key) >= 0) bassBoost.gain.value = 6;
+            else if (['flat','vocal','podcast'].indexOf(key) >= 0) bassBoost.gain.value = 0;
+            else bassBoost.gain.value = 2;
         }
         eqValues = p.values.slice();
         updateEqualizer();
         if (eqPresetSelect) eqPresetSelect.value = key;
         showToast('Preset applicato: ' + p.label);
-      }
+    }
 
-      function saveCurrentAsPreset(name) {
+    function saveCurrentAsPreset(name) {
         if (!name) { name = prompt('Nome preset:'); if (!name) return; }
         var key = 'user_' + Date.now();
         var userPresets = loadFromLocalStorage(STORAGE_PRESETS, {});
@@ -1524,9 +1548,9 @@ audio.media-player::-webkit-media-controls-enclosure {
         populatePresetSelect();
         eqPresetSelect.value = key;
         showToast('Preset "' + name + '" salvato');
-      }
+    }
 
-      function deleteSelectedPreset() {
+    function deleteSelectedPreset() {
         var key = eqPresetSelect.value;
         if (!key) { showToast('Nessun preset selezionato'); return; }
         var presets = getAllPresets();
@@ -1538,25 +1562,25 @@ audio.media-player::-webkit-media-controls-enclosure {
         populatePresetSelect();
         eqPresetSelect.value = "";
         showToast('Preset eliminato');
-      }
+    }
 
-      if (eqPresetSelect) {
-        eqPresetSelect.addEventListener('change', function (e) { applyPreset(e.target.value); });
+    if (eqPresetSelect) {
+        eqPresetSelect.addEventListener('change', function(e) { applyPreset(e.target.value); });
         populatePresetSelect();
-      }
-      if (eqPresetSaveBtn) eqPresetSaveBtn.addEventListener('click', function () {
+    }
+    if (eqPresetSaveBtn) eqPresetSaveBtn.addEventListener('click', function() {
         var name = prompt('Nome del nuovo preset:');
         if (name) saveCurrentAsPreset(name);
-      });
-      if (eqPresetDeleteBtn) eqPresetDeleteBtn.addEventListener('click', deleteSelectedPreset);
+    });
+    if (eqPresetDeleteBtn) eqPresetDeleteBtn.addEventListener('click', deleteSelectedPreset);
 
-      // ================= SEARCH =================
-      var debouncedSearch = debounce(renderChannels, 150);
-      searchInput.addEventListener('input', debouncedSearch);
-      resetSearchBtn.addEventListener('click', function () { searchInput.value = ''; renderChannels(); });
+    // ================= SEARCH =================
+    var debouncedSearch = debounce(renderChannels, 150);
+    searchInput.addEventListener('input', debouncedSearch);
+    resetSearchBtn.addEventListener('click', function() { searchInput.value = ''; renderChannels(); });
 
-      // ================= CORS BLACKLIST =================
-      var CORS_BLACKLIST = [
+    // ================= CORS BLACKLIST =================
+    var CORS_BLACKLIST = [
         '.streaming.rs', '.nsv', 'shoutcast', 'icecast',
         'ice.infomaniak.ch', 'radio.co', 'openstream.co',
         'radioparadise.com', 'streamtheworld.com', 'msvdn.net',
@@ -1568,15 +1592,15 @@ audio.media-player::-webkit-media-controls-enclosure {
         'electroradio.fm', 'sharp-stream.com', 'cdnstream1.com',
         'exclusive.radio', 'streamingmedia.it', 'live365', 'derstream.net',
         'streaming.radiostreamlive.com', 'hotmixradio.fr', 'italianradio'
-      ];
-      function isCorsRestricted(url) {
+    ];
+    function isCorsRestricted(url) {
         if (!url) return false;
         var u = url.toLowerCase().split('?')[0];
-        return CORS_BLACKLIST.some(function (pattern) { return u.indexOf(pattern) >= 0; });
-      }
+        return CORS_BLACKLIST.some(function(pattern) { return u.indexOf(pattern) >= 0; });
+    }
 
-      // ================= RESET VIDEO ELEMENT =================
-      function resetVideoElement() {
+    // ================= RESET VIDEO ELEMENT =================
+    function resetVideoElement() {
         var container = unifiedPlayer.parentElement;
         if (!container) return;
         var oldPlayer = unifiedPlayer;
@@ -1585,6 +1609,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         newPlayer.className = 'media-player';
         newPlayer.playsInline = true;
         newPlayer._eqStatus = undefined;
+        newPlayer._trackEnded = false;
         container.replaceChild(newPlayer, oldPlayer);
         unifiedPlayer = newPlayer;
         audioSource = null;
@@ -1598,181 +1623,227 @@ audio.media-player::-webkit-media-controls-enclosure {
         ctrlVolume = document.getElementById('ctrl-volume');
         ctrlFullscreen = document.getElementById('ctrl-fullscreen');
         // Riassegna listener base
-        unifiedPlayer.addEventListener('play', function () {
-          statusText.textContent = 'In riproduzione';
-          statusDot.classList.add('playing');
+        // ================= PLAYER EVENT LISTENERS =================
+        unifiedPlayer._trackEnded = false;
+
+        unifiedPlayer.addEventListener('play', function() {
+            statusText.textContent = 'In riproduzione';
+            statusDot.classList.add('playing');
         });
-        unifiedPlayer.addEventListener('pause', function () {
-          if (statusText.textContent !== 'Fermato' && statusText.textContent !== 'Premi Play per avviare') {
-            statusText.textContent = 'In pausa';
+
+        unifiedPlayer.addEventListener('pause', function() {
+            if (statusText.textContent !== 'Fermato' && statusText.textContent !== 'Premi Play per avviare') {
+                statusText.textContent = 'In pausa';
+                statusDot.classList.remove('playing');
+            }
+        });
+
+        unifiedPlayer.addEventListener('ended', function() {
+            if (unifiedPlayer._trackEnded) return;
+            unifiedPlayer._trackEnded = true;
+            statusText.textContent = 'Fine brano - Avanzamento automatico';
             statusDot.classList.remove('playing');
-          }
+            setTimeout(function() {
+                mediaNextButton.click();
+            }, 300);
         });
-        unifiedPlayer.addEventListener('ended', function () {
-          setTimeout(function () { mediaNextButton.click(); }, 200);
+
+        unifiedPlayer.addEventListener('timeupdate', function() {
+            if (unifiedPlayer._trackEnded) return;
+            if (unifiedPlayer.duration && !isNaN(unifiedPlayer.duration) && isFinite(unifiedPlayer.duration)) {
+                if (unifiedPlayer.currentTime >= unifiedPlayer.duration - 0.5) {
+                    if (!unifiedPlayer._trackEnded) {
+                        unifiedPlayer._trackEnded = true;
+                        statusText.textContent = 'Fine brano - Avanzamento automatico';
+                        statusDot.classList.remove('playing');
+                        setTimeout(function() {
+                            mediaNextButton.click();
+                        }, 300);
+                    }
+                }
+            }
         });
         // Riassegna custom controls
         setupCustomControls();
-      }
+    }
 
-      // ================= AUDIO EQ INIT =================
-      // FIX #13: Non chiamare resume() qui - i nodi Web Audio possono essere
-      // creati anche con AudioContext sospeso. Il resume avverra' al primo
-      // gesto utente diretto (click su play o canale).
-      async function initAudioEQ() {
-        if (audioContext) {
-          // Se gia' esiste, tenta resume silenzioso (non solleva errore se fallisce)
-          if (audioContext.state === 'suspended') {
-            try { await audioContext.resume(); } catch (e) { }
-          }
-          return true;
-        }
+    // ================= AUDIO EQ INIT =================
+    async function initAudioEQ() {
+        if (audioContext) return true;
         var Ctor = window.AudioContext || window.webkitAudioContext;
         if (!Ctor) return false;
         try {
-          audioContext = new Ctor();
-          // NON chiamare resume qui: potrebbe non essere un gesto utente
-          // I filtri e i nodi vengono creati comunque, funzioneranno
-          // dopo il resume al primo play
-          if (!preamp) { preamp = audioContext.createGain(); preamp.gain.value = 0.85; }
-          if (!bassBoost) { bassBoost = audioContext.createBiquadFilter(); bassBoost.type = "lowshelf"; bassBoost.frequency.value = 80; bassBoost.gain.value = 0; }
-          if (!presenceBoost) { presenceBoost = audioContext.createBiquadFilter(); presenceBoost.type = "highshelf"; presenceBoost.frequency.value = 4500; presenceBoost.gain.value = 2; }
-          if (eqFilters.length === 0) {
-            EQ_FREQUENCIES.forEach(function (f) {
-              var filt = audioContext.createBiquadFilter();
-              filt.type = "peaking";
-              filt.frequency.value = f;
-              filt.Q.value = 1.4;
-              filt.gain.value = 0;
-              eqFilters.push(filt);
-            });
-          }
-          return true;
-        } catch (e) { console.error("Init EQ failed:", e.message); return false; }
-      }
+            audioContext = new Ctor();
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+            }
+            if (!preamp) { preamp = audioContext.createGain(); preamp.gain.value = 0.85; }
+            if (!bassBoost) { bassBoost = audioContext.createBiquadFilter(); bassBoost.type = "lowshelf"; bassBoost.frequency.value = 80; bassBoost.gain.value = 0; }
+            if (!presenceBoost) { presenceBoost = audioContext.createBiquadFilter(); presenceBoost.type = "highshelf"; presenceBoost.frequency.value = 4500; presenceBoost.gain.value = 2; }
+            if (eqFilters.length === 0) {
+                EQ_FREQUENCIES.forEach(function(f) {
+                    var filt = audioContext.createBiquadFilter();
+                    filt.type = "peaking";
+                    filt.frequency.value = f;
+                    filt.Q.value = 1.4;
+                    filt.gain.value = 0;
+                    eqFilters.push(filt);
+                });
+            }
+            return true;
+        } catch(e) { console.error("Init EQ failed:", e.message); return false; }
+    }
 
-      function connectEQChain(mediaElement) {
+    function connectEQChain(mediaElement) {
         if (isCorsRestricted(mediaElement.src)) return false;
         if (!audioContext || eqFilters.length === 0) return false;
         if (mediaElement._eqStatus === 'failed') return false;
         try {
-          if (!audioSource || audioSource._mediaElement !== mediaElement) {
-            if (audioSource) { try { audioSource.disconnect(); } catch (e) { } }
-            audioSource = audioContext.createMediaElementSource(mediaElement);
-            audioSource._mediaElement = mediaElement;
-          }
-          try { preamp.disconnect(); } catch (e) { }
-          try { bassBoost.disconnect(); } catch (e) { }
-          try { presenceBoost.disconnect(); } catch (e) { }
-          eqFilters.forEach(function (f) { try { f.disconnect(); } catch (e) { } });
+            if (!audioSource || audioSource._mediaElement !== mediaElement) {
+                if (audioSource) { try { audioSource.disconnect(); } catch(e) {} }
+                audioSource = audioContext.createMediaElementSource(mediaElement);
+                audioSource._mediaElement = mediaElement;
+            }
+            try { preamp.disconnect(); } catch(e) {}
+            try { bassBoost.disconnect(); } catch(e) {}
+            try { presenceBoost.disconnect(); } catch(e) {}
+            eqFilters.forEach(function(f) { try { f.disconnect(); } catch(e) {} });
 
-          audioSource.connect(preamp);
-          preamp.connect(bassBoost);
-          bassBoost.connect(presenceBoost);
-          var last = presenceBoost;
-          eqFilters.forEach(function (f) { last.connect(f); last = f; });
-          last.connect(audioContext.destination);
+            audioSource.connect(preamp);
+            preamp.connect(bassBoost);
+            bassBoost.connect(presenceBoost);
+            var last = presenceBoost;
+            eqFilters.forEach(function(f) { last.connect(f); last = f; });
+            last.connect(audioContext.destination);
 
-          mediaElement._eqStatus = 'active';
-          return true;
-        } catch (e) {
-          console.warn('EQ chain failed:', e.message);
-          mediaElement._eqStatus = 'failed';
-          return false;
+            mediaElement._eqStatus = 'active';
+            return true;
+        } catch(e) {
+            console.warn('EQ chain failed:', e.message);
+            mediaElement._eqStatus = 'failed';
+            return false;
         }
-      }
+    }
 
-      // ================= PLAYER EVENT LISTENERS =================
-      unifiedPlayer.addEventListener('play', function () {
+    // ================= PLAYER EVENT LISTENERS =================
+    unifiedPlayer._trackEnded = false;
+
+    unifiedPlayer.addEventListener('play', function() {
+        unifiedPlayer._trackEnded = false;
         statusText.textContent = 'In riproduzione';
         statusDot.classList.add('playing');
-      });
-      unifiedPlayer.addEventListener('pause', function () {
+    });
+
+    unifiedPlayer.addEventListener('pause', function() {
         if (statusText.textContent !== 'Fermato' && statusText.textContent !== 'Premi Play per avviare') {
-          statusText.textContent = 'In pausa';
-          statusDot.classList.remove('playing');
+            statusText.textContent = 'In pausa';
+            statusDot.classList.remove('playing');
         }
-      });
+    });
 
-      // ================= CUSTOM CONTROLS =================
-      var playerContainer = document.getElementById('player-container');
-      var customControls = document.getElementById('custom-controls');
-      var ctrlPlayPause = document.getElementById('ctrl-play-pause');
-      var ctrlStop = document.getElementById('ctrl-stop');
-      var progressBar = document.getElementById('progress-bar');
-      var progressContainer = document.getElementById('progress-container');
-      var timeDisplay = document.getElementById('time-display');
-      var volumeSlider = document.getElementById('volume-slider');
-      var ctrlVolume = document.getElementById('ctrl-volume');
-      var ctrlFullscreen = document.getElementById('ctrl-fullscreen');
+    unifiedPlayer.addEventListener('ended', function() {
+        if (unifiedPlayer._trackEnded) return;
+        unifiedPlayer._trackEnded = true;
+        statusText.textContent = 'Fine brano - Avanzamento automatico';
+        statusDot.classList.remove('playing');
+        setTimeout(function() {
+            mediaNextButton.click();
+        }, 300);
+    });
 
-      function setupCustomControls() {
+    unifiedPlayer.addEventListener('timeupdate', function() {
+        if (unifiedPlayer._trackEnded) return;
+        if (unifiedPlayer.duration && !isNaN(unifiedPlayer.duration) && isFinite(unifiedPlayer.duration)) {
+            if (unifiedPlayer.currentTime >= unifiedPlayer.duration - 0.5) {
+                unifiedPlayer._trackEnded = true;
+                statusText.textContent = 'Fine brano - Avanzamento automatico';
+                statusDot.classList.remove('playing');
+                setTimeout(function() {
+                    mediaNextButton.click();
+                }, 300);
+            }
+        }
+    });
+
+    // ================= CUSTOM CONTROLS =================
+    var playerContainer = document.getElementById('player-container');
+    var customControls = document.getElementById('custom-controls');
+    var ctrlPlayPause = document.getElementById('ctrl-play-pause');
+    var ctrlStop = document.getElementById('ctrl-stop');
+    var progressBar = document.getElementById('progress-bar');
+    var progressContainer = document.getElementById('progress-container');
+    var timeDisplay = document.getElementById('time-display');
+    var volumeSlider = document.getElementById('volume-slider');
+    var ctrlVolume = document.getElementById('ctrl-volume');
+    var ctrlFullscreen = document.getElementById('ctrl-fullscreen');
+
+    function setupCustomControls() {
         // Play/Pause
         function updatePlayPauseIcon() {
-          if (!ctrlPlayPause) return;
-          ctrlPlayPause.innerHTML = unifiedPlayer.paused ?
-            '<i class="fas fa-play"></i>' : '<i class="fas fa-pause"></i>';
+            if (!ctrlPlayPause) return;
+            ctrlPlayPause.innerHTML = unifiedPlayer.paused ?
+                '<i class="fas fa-play"></i>' : '<i class="fas fa-pause"></i>';
         }
 
         if (ctrlPlayPause) {
-          ctrlPlayPause.onclick = function () {
-            if (unifiedPlayer.paused) unifiedPlayer.play(); else unifiedPlayer.pause();
-          };
+            ctrlPlayPause.onclick = function() {
+                if (unifiedPlayer.paused) unifiedPlayer.play(); else unifiedPlayer.pause();
+            };
         }
         if (ctrlStop) {
-          ctrlStop.onclick = function () {
-            unifiedPlayer.pause();
-            unifiedPlayer.currentTime = 0;
-            updatePlayPauseIcon();
-          };
+            ctrlStop.onclick = function() {
+                unifiedPlayer.pause();
+                unifiedPlayer.currentTime = 0;
+                updatePlayPauseIcon();
+            };
         }
 
         // Progress
-        unifiedPlayer.addEventListener('timeupdate', function () {
-          if (unifiedPlayer.duration && progressBar && timeDisplay) {
-            var pct = (unifiedPlayer.currentTime / unifiedPlayer.duration) * 100;
-            progressBar.style.width = pct + '%';
-            timeDisplay.textContent = formatTime(unifiedPlayer.currentTime) + ' / ' + formatTime(unifiedPlayer.duration);
-          }
+        unifiedPlayer.addEventListener('timeupdate', function() {
+            if (unifiedPlayer.duration && progressBar && timeDisplay) {
+                var pct = (unifiedPlayer.currentTime / unifiedPlayer.duration) * 100;
+                progressBar.style.width = pct + '%';
+                timeDisplay.textContent = formatTime(unifiedPlayer.currentTime) + ' / ' + formatTime(unifiedPlayer.duration);
+            }
         });
 
         if (progressContainer) {
-          progressContainer.addEventListener('click', function (e) {
-            if (unifiedPlayer.duration) {
-              var rect = progressContainer.getBoundingClientRect();
-              var pos = (e.clientX - rect.left) / rect.width;
-              unifiedPlayer.currentTime = pos * unifiedPlayer.duration;
-            }
-          });
+            progressContainer.addEventListener('click', function(e) {
+                if (unifiedPlayer.duration) {
+                    var rect = progressContainer.getBoundingClientRect();
+                    var pos = (e.clientX - rect.left) / rect.width;
+                    unifiedPlayer.currentTime = pos * unifiedPlayer.duration;
+                }
+            });
         }
 
         // Volume
         if (volumeSlider) {
-          volumeSlider.addEventListener('input', function () {
-            unifiedPlayer.volume = this.value;
-            updateVolumeIcon();
-          });
+            volumeSlider.addEventListener('input', function() {
+                unifiedPlayer.volume = this.value;
+                updateVolumeIcon();
+            });
         }
         if (ctrlVolume) {
-          ctrlVolume.addEventListener('click', function () {
-            if (unifiedPlayer.volume > 0) {
-              unifiedPlayer.dataset.prevVolume = unifiedPlayer.volume;
-              unifiedPlayer.volume = 0;
-              volumeSlider.value = 0;
-            } else {
-              unifiedPlayer.volume = parseFloat(unifiedPlayer.dataset.prevVolume) || 1;
-              volumeSlider.value = unifiedPlayer.volume;
-            }
-            updateVolumeIcon();
-          });
+            ctrlVolume.addEventListener('click', function() {
+                if (unifiedPlayer.volume > 0) {
+                    unifiedPlayer.dataset.prevVolume = unifiedPlayer.volume;
+                    unifiedPlayer.volume = 0;
+                    volumeSlider.value = 0;
+                } else {
+                    unifiedPlayer.volume = parseFloat(unifiedPlayer.dataset.prevVolume) || 1;
+                    volumeSlider.value = unifiedPlayer.volume;
+                }
+                updateVolumeIcon();
+            });
         }
 
         function updateVolumeIcon() {
-          if (!ctrlVolume) return;
-          var icon = 'fa-volume-high';
-          if (unifiedPlayer.volume === 0) icon = 'fa-volume-xmark';
-          else if (unifiedPlayer.volume < 0.5) icon = 'fa-volume-low';
-          ctrlVolume.innerHTML = '<i class="fas ' + icon + '"></i>';
+            if (!ctrlVolume) return;
+            var icon = 'fa-volume-high';
+            if (unifiedPlayer.volume === 0) icon = 'fa-volume-xmark';
+            else if (unifiedPlayer.volume < 0.5) icon = 'fa-volume-low';
+            ctrlVolume.innerHTML = '<i class="fas ' + icon + '"></i>';
         }
 
         unifiedPlayer.addEventListener('play', updatePlayPauseIcon);
@@ -1780,115 +1851,115 @@ audio.media-player::-webkit-media-controls-enclosure {
 
         // Mouse visibility controls
         if (playerContainer && customControls) {
-          playerContainer.addEventListener('mousemove', function () {
-            customControls.classList.add('visible');
-            clearTimeout(playerContainer._ctrlTimeout);
-            playerContainer._ctrlTimeout = setTimeout(function () {
-              if (!unifiedPlayer.paused) customControls.classList.remove('visible');
-            }, 2000);
-          });
-          playerContainer.addEventListener('mouseleave', function () {
-            if (!unifiedPlayer.paused) customControls.classList.remove('visible');
-          });
+            playerContainer.addEventListener('mousemove', function() {
+                customControls.classList.add('visible');
+                clearTimeout(playerContainer._ctrlTimeout);
+                playerContainer._ctrlTimeout = setTimeout(function() {
+                    if (!unifiedPlayer.paused) customControls.classList.remove('visible');
+                }, 2000);
+            });
+            playerContainer.addEventListener('mouseleave', function() {
+                if (!unifiedPlayer.paused) customControls.classList.remove('visible');
+            });
         }
-      }
+    }
 
-      function formatTime(seconds) {
+    function formatTime(seconds) {
         if (isNaN(seconds)) return '0:00';
         var mins = Math.floor(seconds / 60);
         var secs = Math.floor(seconds % 60);
         return mins + ':' + (secs < 10 ? '0' : '') + secs;
-      }
+    }
 
-      setupCustomControls();
+    setupCustomControls();
 
-      // ================= THEME ENGINE =================
-      var userThemes = {};
-      try { userThemes = JSON.parse(localStorage.getItem('tunex_user_themes') || '{}'); } catch (e) { }
+    // ================= THEME ENGINE =================
+    var userThemes = {};
+    try { userThemes = JSON.parse(localStorage.getItem('tunex_user_themes') || '{}'); } catch(e) {}
 
-      var themes = {
-        tech_minimal: { label: "Tech Minimal", primary: "#e8e8e8", dark: "#b0b0b0", light: "#ffffff", sec: "#1a1a1a", ter: "#262626", acc: "#0066ff", bg: "linear-gradient(135deg, #1a1a1a 0%, #262626 50%, #1f1f1f 100%)", meta: "#e8e8e8" },
-        grid_tech: { label: "Grid Tech", primary: "#00d4ff", dark: "#00a8cc", light: "#33e0ff", sec: "#0d1b2a", ter: "#1a2a3a", acc: "#ffffff", bg: "linear-gradient(135deg, #0d1b2a 0%, #1a3a5a 50%, #1a2a3a 100%)", meta: "#00d4ff" },
-        matrix: { label: "Matrix Code", primary: "#00ff00", dark: "#00cc00", light: "#33ff33", sec: "#000000", ter: "#0a0a0a", acc: "#ffff00", bg: "linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #050505 100%)", meta: "#00ff00" },
-        hologram: { label: "Hologram", primary: "#00f7ff", dark: "#00ccff", light: "#66ffff", sec: "#0a1a2a", ter: "#1a3a5a", acc: "#ff00ff", bg: "linear-gradient(135deg, #0a1a2a 0%, #1a4a7a 50%, #1a3a5a 100%)", meta: "#00f7ff" },
-        quantum: { label: "Quantum Field", primary: "#00ffaa", dark: "#00cc88", light: "#33ffbb", sec: "#0a2a20", ter: "#1a5a4a", acc: "#ff0080", bg: "linear-gradient(135deg, #0a2a20 0%, #1a6f5f 50%, #1a5a4a 100%)", meta: "#00ffaa" },
-        hyperspace: { label: "Hyperspace", primary: "#7c3aed", dark: "#6d28d9", light: "#a78bfa", sec: "#0f0a2a", ter: "#2a1a5a", acc: "#00ffff", bg: "linear-gradient(135deg, #0f0a2a 0%, #3a1a7f 50%, #2a1a5a 100%)", meta: "#7c3aed" },
-        steel_blue: { label: "Steel Blue", primary: "#4a7c9e", dark: "#2c5282", light: "#7ba3c0", sec: "#0f1f2f", ter: "#1a3a4f", acc: "#b8cfe0", bg: "linear-gradient(135deg, #0f1f2f 0%, #1a4a6f 50%, #1a3a4f 100%)", meta: "#4a7c9e" },
-        titanium: { label: "Titanium", primary: "#6b8aa6", dark: "#4a6a86", light: "#8fa3b8", sec: "#0d1a2a", ter: "#1a2a3a", acc: "#c0d8e8", bg: "linear-gradient(135deg, #0d1a2a 0%, #1a4a6a 50%, #1a2a3a 100%)", meta: "#6b8aa6" },
-        gunmetal: { label: "Gunmetal", primary: "#505a6e", dark: "#3a4a5e", light: "#707a8e", sec: "#0a1019", ter: "#151a25", acc: "#a0b0c8", bg: "linear-gradient(135deg, #0a1019 0%, #1a3a5a 50%, #151a25 100%)", meta: "#505a6e" },
-        arctic_steel: { label: "Arctic Steel", primary: "#5ba3c7", dark: "#3a7a9f", light: "#7bc0e0", sec: "#0a1a2f", ter: "#15304f", acc: "#d0e8f8", bg: "linear-gradient(135deg, #0a1a2f 0%, #1a5a7f 50%, #15304f 100%)", meta: "#5ba3c7" },
-        dark_charcoal: { label: "Charcoal Dark", primary: "#a8a8a8", dark: "#696969", light: "#c0c0c0", sec: "#1a1a1a", ter: "#2a2a2a", acc: "#87ceeb", bg: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1f1f1f 100%)", meta: "#a8a8a8" },
-        dark_slate: { label: "Slate Dark", primary: "#708090", dark: "#475569", light: "#8fa1b0", sec: "#0f1419", ter: "#1a2432", acc: "#94b3d9", bg: "linear-gradient(135deg, #0f1419 0%, #1a4a6a 50%, #1a2432 100%)", meta: "#708090" },
-        dark_purple: { label: "Dark Purple", primary: "#6b5b95", dark: "#4a3a75", light: "#8b7bb5", sec: "#0f0a1a", ter: "#1f0a3a", acc: "#b8a8d8", bg: "linear-gradient(135deg, #0f0a1a 0%, #2a1a4a 50%, #1f0a3a 100%)", meta: "#6b5b95" },
-        dark_teal: { label: "Dark Teal", primary: "#2d6a6a", dark: "#1a4a4a", light: "#4d8a8a", sec: "#0a1a1a", ter: "#152a2a", acc: "#6dbfbf", bg: "linear-gradient(135deg, #0a1a1a 0%, #1a5a5a 50%, #152a2a 100%)", meta: "#2d6a6a" },
-        dark_amber: { label: "Dark Amber", primary: "#8b6f47", dark: "#6b5537", light: "#ab8f67", sec: "#1a1410", ter: "#2a1f10", acc: "#d4af37", bg: "linear-gradient(135deg, #1a1410 0%, #3a2f1f 50%, #2a1f10 100%)", meta: "#8b6f47" },
-        cyberpunk_blue: { label: "Cyberpunk Blue", primary: "#00bfff", dark: "#0099cc", light: "#33d4ff", sec: "#0a0f2f", ter: "#1a1f4f", acc: "#ff00ff", bg: "linear-gradient(135deg, #0a0f2f 0%, #1a2f5f 50%, #1a1f4f 100%)", meta: "#00bfff" },
-        cyberpunk_purple: { label: "Cyberpunk Purple", primary: "#b020d9", dark: "#8b1aa3", light: "#d060f9", sec: "#1a0a3f", ter: "#3a1a7f", acc: "#00ffff", bg: "linear-gradient(135deg, #1a0a3f 0%, #4a1a9f 50%, #3a1a7f 100%)", meta: "#b020d9" },
-        cyberpunk_red: { label: "Cyberpunk Red", primary: "#ff0055", dark: "#cc0044", light: "#ff3377", sec: "#1a0a0f", ter: "#3a0a1f", acc: "#00ffff", bg: "linear-gradient(135deg, #1a0a0f 0%, #4a0a2f 50%, #3a0a1f 100%)", meta: "#ff0055" },
-        void_minimal: { label: "Void Minimal", primary: "#808080", dark: "#404040", light: "#a0a0a0", sec: "#0a0a0a", ter: "#141414", acc: "#00ffff", bg: "linear-gradient(135deg, #0a0a0a 0%, #141414 50%, #0f0f0f 100%)", meta: "#808080" },
-        abyss: { label: "Abyss", primary: "#505050", dark: "#282828", light: "#707070", sec: "#050505", ter: "#0f0f0f", acc: "#00ff88", bg: "linear-gradient(135deg, #050505 0%, #0f0f0f 50%, #0a0a0a 100%)", meta: "#505050" }
-      };
+    var themes = {
+      tech_minimal:    { label: "Tech Minimal",     primary: "#e8e8e8", dark: "#b0b0b0", light: "#ffffff", sec: "#1a1a1a", ter: "#262626", acc: "#0066ff", bg: "linear-gradient(135deg, #1a1a1a 0%, #262626 50%, #1f1f1f 100%)", meta: "#e8e8e8" },
+      grid_tech:       { label: "Grid Tech",         primary: "#00d4ff", dark: "#00a8cc", light: "#33e0ff", sec: "#0d1b2a", ter: "#1a2a3a", acc: "#ffffff", bg: "linear-gradient(135deg, #0d1b2a 0%, #1a3a5a 50%, #1a2a3a 100%)", meta: "#00d4ff" },
+      matrix:          { label: "Matrix Code",        primary: "#00ff00", dark: "#00cc00", light: "#33ff33", sec: "#000000", ter: "#0a0a0a", acc: "#ffff00", bg: "linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #050505 100%)", meta: "#00ff00" },
+      hologram:        { label: "Hologram",           primary: "#00f7ff", dark: "#00ccff", light: "#66ffff", sec: "#0a1a2a", ter: "#1a3a5a", acc: "#ff00ff", bg: "linear-gradient(135deg, #0a1a2a 0%, #1a4a7a 50%, #1a3a5a 100%)", meta: "#00f7ff" },
+      quantum:         { label: "Quantum Field",      primary: "#00ffaa", dark: "#00cc88", light: "#33ffbb", sec: "#0a2a20", ter: "#1a5a4a", acc: "#ff0080", bg: "linear-gradient(135deg, #0a2a20 0%, #1a6f5f 50%, #1a5a4a 100%)", meta: "#00ffaa" },
+      hyperspace:      { label: "Hyperspace",         primary: "#7c3aed", dark: "#6d28d9", light: "#a78bfa", sec: "#0f0a2a", ter: "#2a1a5a", acc: "#00ffff", bg: "linear-gradient(135deg, #0f0a2a 0%, #3a1a7f 50%, #2a1a5a 100%)", meta: "#7c3aed" },
+      steel_blue:      { label: "Steel Blue",         primary: "#4a7c9e", dark: "#2c5282", light: "#7ba3c0", sec: "#0f1f2f", ter: "#1a3a4f", acc: "#b8cfe0", bg: "linear-gradient(135deg, #0f1f2f 0%, #1a4a6f 50%, #1a3a4f 100%)", meta: "#4a7c9e" },
+      titanium:        { label: "Titanium",           primary: "#6b8aa6", dark: "#4a6a86", light: "#8fa3b8", sec: "#0d1a2a", ter: "#1a2a3a", acc: "#c0d8e8", bg: "linear-gradient(135deg, #0d1a2a 0%, #1a4a6a 50%, #1a2a3a 100%)", meta: "#6b8aa6" },
+      gunmetal:        { label: "Gunmetal",           primary: "#505a6e", dark: "#3a4a5e", light: "#707a8e", sec: "#0a1019", ter: "#151a25", acc: "#a0b0c8", bg: "linear-gradient(135deg, #0a1019 0%, #1a3a5a 50%, #151a25 100%)", meta: "#505a6e" },
+      arctic_steel:    { label: "Arctic Steel",       primary: "#5ba3c7", dark: "#3a7a9f", light: "#7bc0e0", sec: "#0a1a2f", ter: "#15304f", acc: "#d0e8f8", bg: "linear-gradient(135deg, #0a1a2f 0%, #1a5a7f 50%, #15304f 100%)", meta: "#5ba3c7" },
+      dark_charcoal:   { label: "Charcoal Dark",      primary: "#a8a8a8", dark: "#696969", light: "#c0c0c0", sec: "#1a1a1a", ter: "#2a2a2a", acc: "#87ceeb", bg: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1f1f1f 100%)", meta: "#a8a8a8" },
+      dark_slate:      { label: "Slate Dark",         primary: "#708090", dark: "#475569", light: "#8fa1b0", sec: "#0f1419", ter: "#1a2432", acc: "#94b3d9", bg: "linear-gradient(135deg, #0f1419 0%, #1a4a6a 50%, #1a2432 100%)", meta: "#708090" },
+      dark_purple:     { label: "Dark Purple",        primary: "#6b5b95", dark: "#4a3a75", light: "#8b7bb5", sec: "#0f0a1a", ter: "#1f0a3a", acc: "#b8a8d8", bg: "linear-gradient(135deg, #0f0a1a 0%, #2a1a4a 50%, #1f0a3a 100%)", meta: "#6b5b95" },
+      dark_teal:       { label: "Dark Teal",          primary: "#2d6a6a", dark: "#1a4a4a", light: "#4d8a8a", sec: "#0a1a1a", ter: "#152a2a", acc: "#6dbfbf", bg: "linear-gradient(135deg, #0a1a1a 0%, #1a5a5a 50%, #152a2a 100%)", meta: "#2d6a6a" },
+      dark_amber:      { label: "Dark Amber",         primary: "#8b6f47", dark: "#6b5537", light: "#ab8f67", sec: "#1a1410", ter: "#2a1f10", acc: "#d4af37", bg: "linear-gradient(135deg, #1a1410 0%, #3a2f1f 50%, #2a1f10 100%)", meta: "#8b6f47" },
+      cyberpunk_blue:  { label: "Cyberpunk Blue",     primary: "#00bfff", dark: "#0099cc", light: "#33d4ff", sec: "#0a0f2f", ter: "#1a1f4f", acc: "#ff00ff", bg: "linear-gradient(135deg, #0a0f2f 0%, #1a2f5f 50%, #1a1f4f 100%)", meta: "#00bfff" },
+      cyberpunk_purple:{ label: "Cyberpunk Purple",   primary: "#b020d9", dark: "#8b1aa3", light: "#d060f9", sec: "#1a0a3f", ter: "#3a1a7f", acc: "#00ffff", bg: "linear-gradient(135deg, #1a0a3f 0%, #4a1a9f 50%, #3a1a7f 100%)", meta: "#b020d9" },
+      cyberpunk_red:   { label: "Cyberpunk Red",      primary: "#ff0055", dark: "#cc0044", light: "#ff3377", sec: "#1a0a0f", ter: "#3a0a1f", acc: "#00ffff", bg: "linear-gradient(135deg, #1a0a0f 0%, #4a0a2f 50%, #3a0a1f 100%)", meta: "#ff0055" },
+      void_minimal:    { label: "Void Minimal",       primary: "#808080", dark: "#404040", light: "#a0a0a0", sec: "#0a0a0a", ter: "#141414", acc: "#00ffff", bg: "linear-gradient(135deg, #0a0a0a 0%, #141414 50%, #0f0f0f 100%)", meta: "#808080" },
+      abyss:           { label: "Abyss",              primary: "#505050", dark: "#282828", light: "#707070", sec: "#050505", ter: "#0f0f0f", acc: "#00ff88", bg: "linear-gradient(135deg, #050505 0%, #0f0f0f 50%, #0a0a0a 100%)", meta: "#505050" }
+    };
 
-      var themeBtn = document.getElementById('theme-btn');
-      var themeMenu = document.getElementById('theme-dropdown');
-      var metaThemeColor = document.getElementById('meta-theme-color');
-      var cpVars = [
-        { key: '--primary', label: 'Primary', def: '#6407de' },
-        { key: '--primary-dark', label: 'Dark', def: '#980332' },
-        { key: '--primary-light', label: 'Light', def: '#ff3366' },
-        { key: '--secondary', label: 'Secondary', def: '#1a2e2c' },
-        { key: '--tertiary', label: 'Tertiary', def: '#16213e' },
-        { key: '--accent', label: 'Accent', def: '#00ff33' },
-        { key: 'meta', label: 'Barra Browser', def: '#6407de', isMeta: true }
-      ];
+    var themeBtn = document.getElementById('theme-btn');
+    var themeMenu = document.getElementById('theme-dropdown');
+    var metaThemeColor = document.getElementById('meta-theme-color');
+    var cpVars = [
+      { key: '--primary', label: 'Primary', def: '#6407de' },
+      { key: '--primary-dark', label: 'Dark', def: '#980332' },
+      { key: '--primary-light', label: 'Light', def: '#ff3366' },
+      { key: '--secondary', label: 'Secondary', def: '#1a2e2c' },
+      { key: '--tertiary', label: 'Tertiary', def: '#16213e' },
+      { key: '--accent', label: 'Accent', def: '#00ff33' },
+      { key: 'meta', label: 'Barra Browser', def: '#6407de', isMeta: true }
+    ];
 
-      function buildThemeMenu() {
-        themeMenu.innerHTML = '';
-        Object.keys(themes).forEach(function (key) {
-          var t = themes[key];
-          var opt = document.createElement('div');
-          opt.className = 'theme-option';
-          opt.dataset.theme = key;
-          opt.innerHTML = '<span class="theme-dot" style="background:' + t.primary + '"></span> ' + t.label;
-          opt.addEventListener('click', function () { applyTheme(key); });
-          themeMenu.appendChild(opt);
-        });
-        var customOpt = document.createElement('div');
-        customOpt.className = 'theme-option';
-        customOpt.textContent = 'Personalizza...';
-        customOpt.style.cssText = 'border-top:1px solid var(--border); margin-top:6px; padding-top:8px;';
-        customOpt.addEventListener('click', function () { editorPanel.style.display = 'block'; editorOverlay.style.display = 'block'; });
-        themeMenu.appendChild(customOpt);
-      }
-
-      function applyTheme(key) {
-        if (!themes[key]) return;
+    function buildThemeMenu() {
+      themeMenu.innerHTML = '';
+      Object.keys(themes).forEach(function(key) {
         var t = themes[key];
-        var r = document.documentElement.style;
-        r.setProperty('--primary', t.primary);
-        r.setProperty('--primary-dark', t.dark);
-        r.setProperty('--primary-light', t.light);
-        r.setProperty('--secondary', t.sec);
-        r.setProperty('--tertiary', t.ter);
-        r.setProperty('--accent', t.acc);
-        document.body.style.background = t.bg;
-        metaThemeColor.content = t.meta;
-        localStorage.setItem('tunex_active_theme', key);
-        document.querySelectorAll('.theme-option').forEach(function (el) { el.classList.toggle('active', el.dataset.theme === key); });
-        themeMenu.classList.remove('open');
-        showToast('Tema applicato');
-      }
+        var opt = document.createElement('div');
+        opt.className = 'theme-option';
+        opt.dataset.theme = key;
+        opt.innerHTML = '<span class="theme-dot" style="background:' + t.primary + '"></span> ' + t.label;
+        opt.addEventListener('click', function() { applyTheme(key); });
+        themeMenu.appendChild(opt);
+      });
+      var customOpt = document.createElement('div');
+      customOpt.className = 'theme-option';
+      customOpt.textContent = 'Personalizza...';
+      customOpt.style.cssText = 'border-top:1px solid var(--border); margin-top:6px; padding-top:8px;';
+      customOpt.addEventListener('click', function() { editorPanel.style.display = 'block'; editorOverlay.style.display = 'block'; });
+      themeMenu.appendChild(customOpt);
+    }
 
-      // COLOR PICKER UI
-      var editorOverlay = document.createElement('div');
-      editorOverlay.id = 'cp-overlay';
-      editorOverlay.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:599; backdrop-filter:blur(4px);';
-      document.body.appendChild(editorOverlay);
+    function applyTheme(key) {
+      if (!themes[key]) return;
+      var t = themes[key];
+      var r = document.documentElement.style;
+      r.setProperty('--primary', t.primary);
+      r.setProperty('--primary-dark', t.dark);
+      r.setProperty('--primary-light', t.light);
+      r.setProperty('--secondary', t.sec);
+      r.setProperty('--tertiary', t.ter);
+      r.setProperty('--accent', t.acc);
+      document.body.style.background = t.bg;
+      metaThemeColor.content = t.meta;
+      localStorage.setItem('tunex_active_theme', key);
+      document.querySelectorAll('.theme-option').forEach(function(el) { el.classList.toggle('active', el.dataset.theme === key); });
+      themeMenu.classList.remove('open');
+      showToast('Tema applicato');
+    }
 
-      var editorPanel = document.createElement('div');
-      editorPanel.id = 'cp-panel';
-      editorPanel.style.cssText = 'display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--tertiary); border:1px solid var(--border); border-radius:12px; padding:16px; z-index:600; min-width:260px; box-shadow:0 12px 32px rgba(0,0,0,0.7);';
-      editorPanel.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">' +
+    // COLOR PICKER UI
+    var editorOverlay = document.createElement('div');
+    editorOverlay.id = 'cp-overlay';
+    editorOverlay.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:599; backdrop-filter:blur(4px);';
+    document.body.appendChild(editorOverlay);
+
+    var editorPanel = document.createElement('div');
+    editorPanel.id = 'cp-panel';
+    editorPanel.style.cssText = 'display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--tertiary); border:1px solid var(--border); border-radius:12px; padding:16px; z-index:600; min-width:260px; box-shadow:0 12px 32px rgba(0,0,0,0.7);';
+    editorPanel.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">' +
         '<span style="font-size:14px; font-weight:700; color:var(--text);">Editor Colori</span>' +
         '<button id="cp-close" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:18px;">&times;</button>' +
         '</div>' +
@@ -1898,129 +1969,129 @@ audio.media-player::-webkit-media-controls-enclosure {
         '<button id="cp-save" class="btn" style="flex:1; font-size:11px; padding:8px;">Salva & Applica</button>' +
         '<button id="cp-reset" class="btn secondary" style="flex:1; font-size:11px; padding:8px;">Default</button>' +
         '</div>';
-      document.body.appendChild(editorPanel);
+    document.body.appendChild(editorPanel);
 
-      var cpGrid = document.getElementById('cp-grid');
-      cpVars.forEach(function (v) {
-        var row = document.createElement('div');
-        row.style.cssText = 'display:flex; align-items:center; gap:8px;';
-        row.innerHTML = '<label style="font-size:11px; width:95px; color:var(--text-secondary);">' + v.label + '</label>' +
-          '<input type="color" data-key="' + v.key + '" data-is-meta="' + (v.isMeta || 0) + '" value="' + v.def + '" style="width:32px; height:26px; border:none; cursor:pointer; background:none; padding:0;">' +
+    var cpGrid = document.getElementById('cp-grid');
+    cpVars.forEach(function(v) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex; align-items:center; gap:8px;';
+      row.innerHTML = '<label style="font-size:11px; width:95px; color:var(--text-secondary);">' + v.label + '</label>' +
+          '<input type="color" data-key="' + v.key + '" data-is-meta="' + (v.isMeta||0) + '" value="' + v.def + '" style="width:32px; height:26px; border:none; cursor:pointer; background:none; padding:0;">' +
           '<span class="cp-hex" style="font-size:10px; color:var(--text-secondary); font-family:monospace;">' + v.def + '</span>';
-        cpGrid.appendChild(row);
+      cpGrid.appendChild(row);
+    });
+
+    cpGrid.querySelectorAll('input[type="color"]').forEach(function(inp) {
+      inp.addEventListener('input', function(e) {
+        var val = e.target.value;
+        e.target.nextElementSibling.textContent = val;
+        if (e.target.dataset.isMeta === '1') metaThemeColor.content = val;
+        else document.documentElement.style.setProperty(e.target.dataset.key, val);
       });
+    });
 
-      cpGrid.querySelectorAll('input[type="color"]').forEach(function (inp) {
-        inp.addEventListener('input', function (e) {
-          var val = e.target.value;
-          e.target.nextElementSibling.textContent = val;
-          if (e.target.dataset.isMeta === '1') metaThemeColor.content = val;
-          else document.documentElement.style.setProperty(e.target.dataset.key, val);
-        });
+    document.getElementById('cp-close').onclick = function() { editorPanel.style.display = 'none'; editorOverlay.style.display = 'none'; };
+    editorOverlay.onclick = document.getElementById('cp-close').onclick;
+
+    document.getElementById('cp-save').onclick = function() {
+      var nameInp = document.getElementById('cp-name');
+      var name = nameInp.value.trim();
+      if (!name) { name = prompt('Inserisci nome tema:', 'Tema Personalizzato'); if (!name) return; }
+      var themeKey = 'custom_' + Date.now();
+      function getVal(k) { return document.querySelector('input[data-key="' + k + '"]').value; }
+      var newTheme = {
+        label: name, primary: getVal('--primary'), dark: getVal('--primary-dark'),
+        light: getVal('--primary-light'), sec: getVal('--secondary'), ter: getVal('--tertiary'),
+        acc: getVal('--accent'), bg: 'linear-gradient(135deg, ' + getVal('--secondary') + ', ' + getVal('--tertiary') + ')',
+        meta: getVal('meta')
+      };
+      userThemes[themeKey] = newTheme;
+      localStorage.setItem('tunex_user_themes', JSON.stringify(userThemes));
+      themes[themeKey] = newTheme;
+      buildThemeMenu();
+      applyTheme(themeKey);
+      editorPanel.style.display = 'none';
+      editorOverlay.style.display = 'none';
+      nameInp.value = '';
+      showToast('Tema "' + name + '" salvato!');
+    };
+
+    document.getElementById('cp-reset').onclick = function() {
+      cpVars.forEach(function(v) {
+        var inp = cpGrid.querySelector('input[data-key="' + v.key + '"]');
+        inp.value = v.def;
+        inp.dispatchEvent(new Event('input'));
       });
+    };
 
-      document.getElementById('cp-close').onclick = function () { editorPanel.style.display = 'none'; editorOverlay.style.display = 'none'; };
-      editorOverlay.onclick = document.getElementById('cp-close').onclick;
+    themeBtn.addEventListener('click', function(e) { e.stopPropagation(); themeMenu.classList.toggle('open'); });
+    document.addEventListener('click', function(e) { if (!themeBtn.contains(e.target) && !themeMenu.contains(e.target)) themeMenu.classList.remove('open'); });
 
-      document.getElementById('cp-save').onclick = function () {
-        var nameInp = document.getElementById('cp-name');
-        var name = nameInp.value.trim();
-        if (!name) { name = prompt('Inserisci nome tema:', 'Tema Personalizzato'); if (!name) return; }
-        var themeKey = 'custom_' + Date.now();
-        function getVal(k) { return document.querySelector('input[data-key="' + k + '"]').value; }
-        var newTheme = {
-          label: name, primary: getVal('--primary'), dark: getVal('--primary-dark'),
-          light: getVal('--primary-light'), sec: getVal('--secondary'), ter: getVal('--tertiary'),
-          acc: getVal('--accent'), bg: 'linear-gradient(135deg, ' + getVal('--secondary') + ', ' + getVal('--tertiary') + ')',
-          meta: getVal('meta')
-        };
-        userThemes[themeKey] = newTheme;
-        localStorage.setItem('tunex_user_themes', JSON.stringify(userThemes));
-        themes[themeKey] = newTheme;
-        buildThemeMenu();
-        applyTheme(themeKey);
-        editorPanel.style.display = 'none';
-        editorOverlay.style.display = 'none';
-        nameInp.value = '';
-        showToast('Tema "' + name + '" salvato!');
-      };
-
-      document.getElementById('cp-reset').onclick = function () {
-        cpVars.forEach(function (v) {
-          var inp = cpGrid.querySelector('input[data-key="' + v.key + '"]');
-          inp.value = v.def;
-          inp.dispatchEvent(new Event('input'));
-        });
-      };
-
-      themeBtn.addEventListener('click', function (e) { e.stopPropagation(); themeMenu.classList.toggle('open'); });
-      document.addEventListener('click', function (e) { if (!themeBtn.contains(e.target) && !themeMenu.contains(e.target)) themeMenu.classList.remove('open'); });
-
-      // ================= EQUALIZER TOUCH SCROLL =================
-      var eqVis = document.getElementById('eq-visualizer');
-      if (eqVis) {
-        var isDown = false, startX, scrollLeft;
-        eqVis.addEventListener('touchstart', function (e) {
+    // ================= EQUALIZER TOUCH SCROLL =================
+    var eqVis = document.getElementById('eq-visualizer');
+    if (eqVis) {
+      var isDown = false, startX, scrollLeft;
+      eqVis.addEventListener('touchstart', function(e) {
           isDown = true; startX = e.touches[0].pageX - eqVis.offsetLeft; scrollLeft = eqVis.scrollLeft;
-        }, { passive: true });
-        eqVis.addEventListener('touchmove', function (e) {
+      }, {passive: true});
+      eqVis.addEventListener('touchmove', function(e) {
           if (!isDown) return; e.preventDefault();
           var x = e.touches[0].pageX - eqVis.offsetLeft;
           eqVis.scrollLeft = scrollLeft - (x - startX) * 1.5;
-        }, { passive: false });
-        eqVis.addEventListener('touchend', function () { isDown = false; }, { passive: true });
-      }
+      }, {passive: false});
+      eqVis.addEventListener('touchend', function() { isDown = false; }, {passive: true});
+    }
 
-      // ================= VIDEO LAYOUT FIX =================
-      function fixVideoLayout() {
-        var vp = unifiedPlayer ? unifiedPlayer.parentElement : null;
-        if (vp && window.innerWidth <= 1024) {
-          vp.style.maxHeight = window.innerWidth > 700 ? '45vh' : '40vh';
-        }
+    // ================= VIDEO LAYOUT FIX =================
+    function fixVideoLayout() {
+      var vp = unifiedPlayer ? unifiedPlayer.parentElement : null;
+      if (vp && window.innerWidth <= 1024) {
+        vp.style.maxHeight = window.innerWidth > 700 ? '45vh' : '40vh';
       }
-      window.addEventListener('resize', fixVideoLayout);
-      window.addEventListener('orientationchange', function () { setTimeout(fixVideoLayout, 300); });
+    }
+    window.addEventListener('resize', fixVideoLayout);
+    window.addEventListener('orientationchange', function() { setTimeout(fixVideoLayout, 300); });
 
-      // INIT
-      // FIX #8: Un solo beforeunload listener
-      window.addEventListener('beforeunload', function () {
-        if (audioContext) { try { audioContext.close(); } catch (e) { } }
-        localBlobURLs.forEach(function (url) { try { URL.revokeObjectURL(url); } catch (e) { } });
+    // INIT
+    // FIX #8: Un solo beforeunload listener
+    window.addEventListener('beforeunload', function() {
+        if (audioContext) { try { audioContext.close(); } catch(e) {} }
+        localBlobURLs.forEach(function(url) { try { URL.revokeObjectURL(url); } catch(e) {} });
         if (activeMicStream) {
-          activeMicStream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) { } });
+            activeMicStream.getTracks().forEach(function(t) { try { t.stop(); } catch(e) {} });
         }
-      });
+    });
 
-      document.addEventListener('DOMContentLoaded', function () {
-        buildThemeMenu();
-        var saved = localStorage.getItem('tunex_active_theme');
-        if (saved && themes[saved]) applyTheme(saved);
-        else if (themes['hyperspace']) applyTheme('hyperspace');
-        populatePresetSelect();
-        eqValues = defaultPresets.flat.values.slice();
-        updateEqualizer();
-        renderChannels();
-        fixVideoLayout();
-      });
+    document.addEventListener('DOMContentLoaded', function() {
+      buildThemeMenu();
+      var saved = localStorage.getItem('tunex_active_theme');
+      if (saved && themes[saved]) applyTheme(saved);
+      else if (themes['hyperspace']) applyTheme('hyperspace');
+      populatePresetSelect();
+      eqValues = defaultPresets.flat.values.slice();
+      updateEqualizer();
+      renderChannels();
+      fixVideoLayout();
+    });
 
-      window.addEventListener('load', function () {
+    window.addEventListener('load', function() {
         if (unifiedPlayer) unifiedPlayer._eqStatus = undefined;
-      });
+    });
 
-      // ================= SHAZAM RISCITTO (FIX PRINCIPALE) =================
-      var shazamBtn = document.getElementById('shazam-btn');
-      var shazamResult = document.getElementById('shazam-result');
-      var sTitle = document.getElementById('s-title');
-      var sArtist = document.getElementById('s-artist');
-      var sImg = document.getElementById('s-img');
-      var shazamRecIndicator = document.getElementById('shazam-rec-indicator');
-      var shazamRecTimer = document.getElementById('shazam-rec-timer');
-      var AUD_D_TOKEN = '2aa7bc785cad68eb78089f19df2188a1';
+    // ================= SHAZAM RISCITTO (FIX PRINCIPALE) =================
+    var shazamBtn = document.getElementById('shazam-btn');
+    var shazamResult = document.getElementById('shazam-result');
+    var sTitle = document.getElementById('s-title');
+    var sArtist = document.getElementById('s-artist');
+    var sImg = document.getElementById('s-img');
+    var shazamRecIndicator = document.getElementById('shazam-rec-indicator');
+    var shazamRecTimer = document.getElementById('shazam-rec-timer');
+    var AUD_D_TOKEN = '2aa7bc785cad68eb78089f19df2188a1';
 
-      var activeMicStream = null;
-      var shazamCleanupFn = null;
-      var shazamActiveMediaRecorder = null;
-      var shazamRecordingTimeout = null;
+    var activeMicStream = null;
+    var shazamCleanupFn = null;
+    var shazamActiveMediaRecorder = null;
+    var shazamRecordingTimeout = null;
 
     // FIX #1: Rileva mimeType supportato dal browser per MediaRecorder
     function getSupportedMimeType() {
