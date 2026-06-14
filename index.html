@@ -29,6 +29,7 @@ body {
   display: flex;
   overflow: hidden;
   -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   transition: background 0.3s ease, color 0.2s ease;
 }
 
@@ -547,7 +548,7 @@ audio.media-player::-webkit-media-controls-enclosure {
 @media (max-width: 700px) {
   body { flex-direction: column; height: 100dvh; overflow: hidden; }
   .main-container { order: 2; width: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .sidebar { width: 100%; height: auto; min-height: auto; order: 1; border-right: none; border-bottom: 2px solid var(--border); }
+  .sidebar { width: 100%; height: auto; order: 1; border-right: none; border-bottom: 2px solid var(--border); }
   video.media-player, audio.media-player { height: auto; min-height: 200px; aspect-ratio: 16/9; }
   .channel-name-display { font-size: 18px; }
   .sidebar-tab { font-size: 11px; padding: 10px 4px; }
@@ -596,12 +597,25 @@ audio.media-player::-webkit-media-controls-enclosure {
   .player-section { padding: 8px; }
   .eq-label { font-size: 6px !important; }
 }
+
+/* Fallback scrollbar per Safari/Webkit */
+.equalizer-visualizer::-webkit-scrollbar {
+    height: 6px;
+}
+.equalizer-visualizer::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.2);
+    border-radius: 3px;
+}
+.equalizer-visualizer::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
+}
   </style>
 </head>
 <body>
   <div class="sidebar">
     <div class="sidebar-header">
-      <img src="images/logo.png" id="logo" class="tunex-logo">
+      <img src="images/logo.png" id="logo" class="tunex-logo" alt="TuneX Logo">
     </div>
     <div class="sidebar-tabs">
       <button class="sidebar-tab active" data-tab="all"><i class="fas fa-list"></i> Tutti</button>
@@ -611,7 +625,7 @@ audio.media-player::-webkit-media-controls-enclosure {
     <div class="sidebar-actions">
       <button class="sidebar-btn" id="open-files-btn"><i class="fas fa-folder-open"></i> File</button>
       <button class="sidebar-btn danger" id="clear-local-btn"><i class="fas fa-trash"></i> Pulisci</button>
-      <input id="file-input" type="file" accept="audio/*,video/*" multiple style="display:none" />
+      <input id="file-input" type="file" accept="audio/*,video/*" multiple style="display:none" aria-label="Carica file multimediali" />
     </div>
     <div class="channel-container" id="channel-list"></div>
   </div>
@@ -656,7 +670,7 @@ audio.media-player::-webkit-media-controls-enclosure {
                   <i class="fas fa-volume-high"></i>
                 </button>
                 <div class="volume-container">
-                  <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.05" value="1">
+                  <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.05" value="1" aria-label="Controllo volume">
                 </div>
                 <!-- FIX #6: Aggiunto bottone fullscreen mancante -->
                 <button class="ctrl-btn fullscreen" id="ctrl-fullscreen" title="Fullscreen">
@@ -702,7 +716,7 @@ audio.media-player::-webkit-media-controls-enclosure {
           </div>
           <div class="eq-controls">
             <button class="eq-reset-btn" id="eq-reset"><i class="fas fa-undo"></i> RESET</button>
-            <select id="eq-preset-select" class="eq-preset-select">
+            <select id="eq-preset-select" class="eq-preset-select" aria-label="Seleziona preset equalizzatore">
               <option value="">PRESET...</option>
             </select>
             <button class="eq-preset-btn" id="eq-preset-save" title="Salva preset corrente"><i class="fas fa-save"></i></button>
@@ -724,7 +738,7 @@ audio.media-player::-webkit-media-controls-enclosure {
   <div id="shazam-result">
     <span class="shazam-close" id="shazam-close-btn">&times;</span>
     <div style="display:flex; gap:12px; align-items:center;">
-      <img id="s-img" class="shazam-artwork" src="" style="display:none">
+      <img id="s-img" class="shazam-artwork" src="" alt="Copertina brano" style="display:none">
       <div>
         <div id="s-title" class="shazam-title">Ascolto in corso...</div>
         <div id="s-artist" class="shazam-artist">Attendere 10 secondi</div>
@@ -1003,8 +1017,12 @@ audio.media-player::-webkit-media-controls-enclosure {
   { name: 'MA-LO-MA | Deep Afro House', url: 'https://youtu.be/1epTGMPeN1I', type: 'youtube-link' },
   { name: 'Giada Brincè', url: 'https://youtu.be/CLvDJc_AhaM?list=RDCLvDJc_AhaM', type: 'youtube-link' },
   { name: 'SUNSET AFRO MUSIC', url: 'https://youtu.be/SVL72f8gj4c?list=RDSVL72f8gj4c', type: 'youtube-link' },
-  { name: 'YouTube - Test', url: '', type: 'youtube-link' },
-  { name: 'YouTube - Test', url: '', type: 'youtube-link' },
+  { name: 'CAFE ROMA LOUNGE', url: 'https://stream.laut.fm/cafe-roma-lounge', genre: 'LOUNGE', type: 'streaming' },
+  { name: 'RADIO JAZEEN LOUNGE', url: 'https://sf2.streamfacil.es:9026/stream', type: 'youtube-link' },
+  { name: 'RADIO IBIZA', url: 'https://kisskiss.fluidstream.eu/ibiza.aac?FLID=8&type=.aac', type: 'youtube-link' },
+  { name: 'DEEJAY 30 SONG', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/radiodeejay30songs/radiodeejay30songs/play1.m3u8', type: 'youtube-link' },
+  { name: 'JOY FUNKY MOTOWN', url: 'https://www.youtube.com/watch?v=G_l4hDhfWbU&list=RDG_l4hDhfWbU&start_radio=1', type: 'youtube-link' },
+  { name: 'YouTuDeep Lounge Society', url: 'https://www.youtube.com/watch?v=cP1kxO0THYo&list=RDStQkFP6zTek&index=26', type: 'youtube-link' },
   { name: 'YouTube - Test', url: '', type: 'youtube-link' },
   { name: 'YouTube - Test', url: '', type: 'youtube-link' },
   { name: 'YouTube - Test', url: '', type: 'youtube-link' },
@@ -1223,7 +1241,9 @@ audio.media-player::-webkit-media-controls-enclosure {
         currentHls.on(Hls.Events.MANIFEST_PARSED, async function() {
             try {
                 await initAudioEQ();
-                connectEQChain(unifiedPlayer);
+                if (!isCorsRestricted(url)) {
+                    connectEQChain(unifiedPlayer);
+                }
                 await unifiedPlayer.play();
                 statusText.textContent = 'In riproduzione';
                 statusDot.classList.add('playing');
@@ -1251,15 +1271,23 @@ audio.media-player::-webkit-media-controls-enclosure {
             }
         });
     }
-
     function playStandard(name, url) {
-        // FIX #9: Rimuovi listener precedente per evitare accumulo
         unifiedPlayer.removeEventListener('loadedmetadata', playStandard_onMeta);
         unifiedPlayer.removeEventListener('error', playStandard_onError);
-
-        // Se stream precedente ha fallito CORS, resetta elemento video DOM
-        if (unifiedPlayer._eqStatus === 'failed' || unifiedPlayer._eqStatus === 'cors_failed') {
-        resetVideoElement();
+        
+        // ✅ CORREZIONE CRITICA: Reset elemento video quando si passa da EQ attivo a stream senza CORS
+        var isRestricted = isCorsRestricted(url);
+        var hasActiveEQ = (unifiedPlayer._eqStatus === 'active' || audioSource !== null);
+        
+        if (isRestricted && hasActiveEQ) {
+            console.log('🔄 Reset elemento video: passaggio da EQ attivo a stream senza CORS');
+            if (audioSource) {
+                try { audioSource.disconnect(); } catch(e) {}
+                audioSource = null;
+            }
+            resetVideoElement();
+        } else if (unifiedPlayer._eqStatus === 'failed' || unifiedPlayer._eqStatus === 'cors_failed') {
+            resetVideoElement();
         }
 
         unifiedPlayer.pause();
@@ -1302,7 +1330,8 @@ audio.media-player::-webkit-media-controls-enclosure {
     // FIX #9: Handler nominati rimovibili
     function playStandard_onMeta() {
         try {
-            if (!isCorsRestricted(unifiedPlayer.src)) {
+            var currentSrc = unifiedPlayer.currentSrc || unifiedPlayer.src;
+            if (currentSrc && !isCorsRestricted(currentSrc)) {
                 initAudioEQ().then(function(eqInit) {
                     if (eqInit) connectEQChain(unifiedPlayer);
                 });
@@ -1334,7 +1363,10 @@ audio.media-player::-webkit-media-controls-enclosure {
     mediaPlayButton.addEventListener('click', async function() {
         if (unifiedPlayer.src || unifiedPlayer.currentSrc) {
             await initAudioEQ();
-            connectEQChain(unifiedPlayer);
+            var currentSrc = unifiedPlayer.currentSrc || unifiedPlayer.src;
+            if (currentSrc && !isCorsRestricted(currentSrc)) {
+                connectEQChain(unifiedPlayer);
+            }
             unifiedPlayer.play().catch(function(){});
             statusDot.classList.add('playing');
         } else { showToast('Seleziona un canale'); }
@@ -1963,7 +1995,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         '<span style="font-size:14px; font-weight:700; color:var(--text);">Editor Colori</span>' +
         '<button id="cp-close" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:18px;">&times;</button>' +
         '</div>' +
-        '<input id="cp-name" type="text" placeholder="Nome tema" style="width:100%; padding:7px; margin-bottom:10px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:12px; outline:none;">' +
+        '<input id="cp-name" type="text" placeholder="Nome tema" aria-label="Nome nuovo tema" style="width:100%; padding:7px; margin-bottom:10px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:12px; outline:none;">' +
         '<div id="cp-grid" style="display:grid; gap:6px; margin-bottom:12px;"></div>' +
         '<div style="display:flex; gap:8px;">' +
         '<button id="cp-save" class="btn" style="flex:1; font-size:11px; padding:8px;">Salva & Applica</button>' +
@@ -1973,12 +2005,13 @@ audio.media-player::-webkit-media-controls-enclosure {
 
     var cpGrid = document.getElementById('cp-grid');
     cpVars.forEach(function(v) {
-      var row = document.createElement('div');
-      row.style.cssText = 'display:flex; align-items:center; gap:8px;';
-      row.innerHTML = '<label style="font-size:11px; width:95px; color:var(--text-secondary);">' + v.label + '</label>' +
-          '<input type="color" data-key="' + v.key + '" data-is-meta="' + (v.isMeta||0) + '" value="' + v.def + '" style="width:32px; height:26px; border:none; cursor:pointer; background:none; padding:0;">' +
-          '<span class="cp-hex" style="font-size:10px; color:var(--text-secondary); font-family:monospace;">' + v.def + '</span>';
-      cpGrid.appendChild(row);
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; gap:8px;';
+        // AGGIUNTO aria-label nell'input color
+        row.innerHTML = '<label style="font-size:11px; width:95px; color:var(--text-secondary);">' + v.label + '</label>' +
+        '<input type="color" aria-label="Colore ' + v.label + '" data-key="' + v.key + '" data-is-meta="' + (v.isMeta||0) + '" value="' + v.def + '" style="width:32px; height:26px; border:none; cursor:pointer; background:none; padding:0;">' +
+        '<span class="cp-hex" style="font-size:10px; color:var(--text-secondary); font-family:monospace;">' + v.def + '</span>';
+        cpGrid.appendChild(row);
     });
 
     cpGrid.querySelectorAll('input[type="color"]').forEach(function(inp) {
@@ -2236,6 +2269,7 @@ audio.media-player::-webkit-media-controls-enclosure {
     shazamFileInput.type = 'file';
     shazamFileInput.accept = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac,.aac,.wma,.webm';
     shazamFileInput.style.display = 'none';
+    shazamFileInput.setAttribute('aria-label', 'Carica file audio per Shazam'); // <-- AGGIUNGI
     document.body.appendChild(shazamFileInput);
 
     shazamFileInput.addEventListener('change', async function(e) {
