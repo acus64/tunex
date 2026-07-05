@@ -527,6 +527,33 @@ audio.media-player::-webkit-media-controls-enclosure {
 }
 #overlay-close:hover { background: rgba(255,255,255,0.4); transform: scale(1.1); }
 
+/* ================= FULLSCREEN NATIVO FIX ================= */
+#player-container:fullscreen,
+#player-container:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  background: #000 !important;
+}
+
+#player-container:fullscreen #unified-player,
+#player-container:-webkit-full-screen #unified-player {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100vh !important;
+  object-fit: contain !important;
+  z-index: 1;
+}
+
+#player-container:fullscreen #youtube-screensaver,
+#player-container:-webkit-full-screen #youtube-screensaver {
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 10 !important; /* Forza YouTube sopra il video nero */
+}
+
 /* ================= RESPONSIVE - TABLET (701-1024px) ================= */
 @media (min-width: 701px) and (max-width: 1024px) {
   body { overflow: auto !important; }
@@ -610,6 +637,60 @@ audio.media-player::-webkit-media-controls-enclosure {
     background: var(--primary);
     border-radius: 3px;
 }
+
+/* ================= ASSISTENTE VOCALE CONTINUO ================= */
+.voice-cmd-btn {
+    background: linear-gradient(135deg, #00ccff, #0088cc) !important;
+    position: relative;
+}
+.voice-cmd-btn.active {
+    animation: pulse-voice 1.5s infinite;
+    box-shadow: 0 0 20px rgba(0,204,255,0.5);
+}
+.voice-cmd-btn.active::after {
+    content: '';
+    position: absolute;
+    top: -3px; right: -3px;
+    width: 10px; height: 10px;
+    background: #ff3366;
+    border-radius: 50%;
+    animation: rec-blink 1s infinite;
+}
+@keyframes pulse-voice {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.05); }
+}
+
+.voice-cmd-feedback {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.85);
+    border: 1px solid var(--accent, #00ff88);
+    border-radius: 12px;
+    padding: 10px 20px;
+    color: #fff;
+    font-size: 14px;
+    z-index: 9999;
+    display: none;
+    text-align: center;
+    max-width: 90vw;
+    backdrop-filter: blur(10px);
+}
+.voice-cmd-feedback.show {
+    display: block;
+    animation: fadeInUp 0.3s ease;
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ================= SWIPE VOLUME ================= */
+@media (max-width: 700px) {
+    .btn { flex: 1 1 30% !important; min-width: 90px !important; }
+}
   </style>
 </head>
 <body>
@@ -649,40 +730,47 @@ audio.media-player::-webkit-media-controls-enclosure {
           </div>
         </div>
 
-        <div class="media-player-container" id="player-container">
-          <video id="unified-player" class="media-player"></video>
-          <div class="custom-controls" id="custom-controls">
+       <div class="media-player-container" id="player-container">
+        <video id="unified-player" class="media-player"></video>
+        
+        <!-- NUOVO: Screensaver YouTube per i soli flussi audio -->
+        <div id="youtube-screensaver" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; background: #000;">
+            <iframe id="yt-iframe" width="100%" height="100%" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        </div>
+
+        <div class="custom-controls" id="custom-controls">
             <div class="progress-container" id="progress-container">
-              <div class="progress-bar" id="progress-bar"></div>
+            <div class="progress-bar" id="progress-bar"></div>
             </div>
             <div class="controls-row">
-              <div class="controls-left">
+            <div class="controls-left">
                 <button class="ctrl-btn play-pause" id="ctrl-play-pause">
-                  <i class="fas fa-play"></i>
+                <i class="fas fa-play"></i>
                 </button>
                 <button class="ctrl-btn" id="ctrl-stop">
-                  <i class="fas fa-stop"></i>
+                <i class="fas fa-stop"></i>
                 </button>
                 <span class="time-display" id="time-display">0:00 / 0:00</span>
-              </div>
-              <div class="controls-right">
+            </div>
+            <div class="controls-right">
                 <button class="ctrl-btn" id="ctrl-volume">
-                  <i class="fas fa-volume-high"></i>
+                <i class="fas fa-volume-high"></i>
                 </button>
                 <div class="volume-container">
-                  <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.05" value="1" aria-label="Controllo volume">
+                <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.05" value="1" aria-label="Controllo volume">
                 </div>
                 <!-- FIX #6: Aggiunto bottone fullscreen mancante -->
                 <button class="ctrl-btn fullscreen" id="ctrl-fullscreen" title="Fullscreen">
-                  <i class="fas fa-expand"></i>
+                <i class="fas fa-expand"></i>
                 </button>
-              </div>
             </div>
-          </div>
-          <div id="loading-info" class="loading-info">
+            </div>
+        </div>
+        
+        <div id="loading-info" class="loading-info">
             <div class="spinner"></div>
             <p>Caricamento video...</p>
-          </div>
+        </div>
         </div>
 
         <div class="main-controls" id="main-controls">
@@ -691,6 +779,9 @@ audio.media-player::-webkit-media-controls-enclosure {
           <button id="media-next" class="btn secondary"><i class="fas fa-step-forward"></i> Next</button>
           <button id="voice-search" class="btn voice-btn"><i class="fas fa-microphone"></i> Voice</button>
           <button id="shazam-btn" class="btn secondary" title="Identifica brano"><i class="fas fa-music"></i> Shazam</button>
+          <button id="voice-cmd-btn" class="btn voice-cmd-btn" title="Assistente vocale continuo">
+            <i class="fas fa-microphone"></i> Voice AI
+          </button>
         </div>
 
         <div class="player-info" id="player-info"></div>
@@ -787,7 +878,15 @@ audio.media-player::-webkit-media-controls-enclosure {
   { name: 'NAXI ROCK', url: 'https://naxidigital-rock128ssl.streaming.rs:8182/;?n=1c1cf8f29719d430b3c9', genre: 'ROCK', type: 'streaming' }, 
   { name: 'NAXI GOLD', url: 'https://naxidigital-gold128ssl.streaming.rs:8062/;?n=8ce6bea50ae871ff3b61', genre: 'Unknown', type: 'streaming' }, 
   { name: 'NAXI LOUNGE', url: 'https://naxidigital-lounge128ssl.streaming.rs:8252/;?n=6f850e5af041e18b1670', genre: 'LOUNGE', type: 'streaming' }, 
-  { name: 'NAXI FRESH', url: 'https://naxidigital-fresh128ssl.streaming.rs:8212/;?n=917043011fe892735261', genre: 'Unknown', type: 'streaming' }, 
+  { name: 'NAXI FRESH', url: 'https://naxidigital-fresh128ssl.streaming.rs:8212/;?n=917043011fe892735261', genre: 'Unknown', type: 'streaming' },
+  { name: 'Radio Jazeen Lounge', url: 'https://sf2.streamfacil.es:9026/stream', type: 'lounge' },
+  { name: 'Radio Kiss Kiss Soft', url: 'https://kk.fluidstream.eu/kk_soft.mp3', type: 'soft lounge easy' },
+  { name: 'Oldies Internet Radio', url: 'https://panel.retrolandigital.com/listen/oldies_internet_radio/listen', type: 'pop rock' }, 
+  { name: '80 LOVE', url: 'https://regiocast.streamabc.net/regc-80s80slove9615256-mp3-192-7318866', type: 'ESAY LOVE' }, 
+  { name: 'Relax International EASY', url: 'https://stream.relaxfm.ee/international', type: 'EASY' }, 
+  { name: 'TMM NEW WAVE', url: 'https://msmn3.co/proxy/x1mp33/stream', type: 'youtube-link' }, 
+  { name: 'NEW WAVE AND POST PUNK', url: 'https://stream.zeno.fm/vfw7n359sc9uv', type: 'youtube-link' },
+  { name: 'RADIO COLLECTION NEW WAVE', url: 'https://listen.radioking.com/radio/251653/stream/296545', type: 'youtube-link' },
   { name: 'CLASSIC ROCK UK', url: 'https://radio.hearme.fm:8270/stream?n=22fe06579c8442ff1439', genre: 'ROCK', type: 'streaming' }, 
   { name: 'AFRO HOUSE SPAIN', url: 'https://itsshort.info/listen/afroradio/radio.mp3?n=3285a7f797eb357d4927', genre: 'AFRO HOUSE', type: 'streaming' }, 
   { name: 'SPLASH LOVE', url: 'https://radio2.vip-radios.fm:18012/stream-64kAAC-HitsLove?n=1d9efabb17e4da664301', genre: 'EASY', type: 'streaming' }, 
@@ -1209,28 +1308,114 @@ audio.media-player::-webkit-media-controls-enclosure {
 
     function isM3U8(url) { return url.toLowerCase().indexOf('.m3u8') >= 0; }
 
-    async function playChannel(element, name, url, type) {
-        document.querySelectorAll('.channel').forEach(function(ch) { ch.classList.remove('active'); });
-        element.classList.add('active');
-        currentChannelDisplay.textContent = name;
-        statusText.textContent = 'Caricamento...';
-        loadingInfo.style.display = 'none';
-        
-        stopStream();
-        unifiedPlayer._trackEnded = false; // <-- AGGIUNGI QUESTA RIGA
-        
-        await initAudioEQ();
-        if (type === 'youtube-link') { 
-            playYouTubeLink(name, url); 
-        } else if (isM3U8(url)) {
-            if (window.Hls && Hls.isSupported()) { playHLS(name, url); }
-            else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) { playStandard(name, url); }
-            else { showToast('Formato stream non supportato'); statusText.textContent = 'Errore formato'; }
-        } else { 
-            playStandard(name, url); 
-        }
-    }
+        // Variabili globali per lo screensaver
+        const SCREENSAVER_YT_ID = "2xBem-GCvwE"; 
+        const ytIframe = document.getElementById('yt-iframe');
+        const ytScreensaver = document.getElementById('youtube-screensaver');
 
+        // Funzione per mostrare/nascondere lo screensaver
+        function toggleScreensaver(isAudioOnly) {
+        const screensaverUrl = isAudioOnly 
+            ? `https://www.youtube.com/embed/${SCREENSAVER_YT_ID}?autoplay=1&mute=1&loop=1&playlist=${SCREENSAVER_YT_ID}&controls=0`
+            : '';
+
+        if (ytIframe) ytIframe.src = screensaverUrl;
+        if (ytScreensaver) ytScreensaver.style.display = isAudioOnly ? 'block' : 'none';
+        }
+
+        // Funzione playChannel aggiornata
+        async function playChannel(element, name, url, type) {
+            document.querySelectorAll('.channel').forEach(function(ch) { ch.classList.remove('active'); });
+            element.classList.add('active');
+            currentChannelDisplay.textContent = name;
+            statusText.textContent = 'Caricamento...';
+            loadingInfo.style.display = 'none';
+            
+            stopStream();
+            unifiedPlayer._trackEnded = false; 
+            
+            await initAudioEQ();
+
+            // Resetta lo screensaver quando cambi canale
+            toggleScreensaver(false);
+
+            if (type === 'youtube-link') { 
+                playYouTubeLink(name, url); 
+            } else if (isM3U8(url)) {
+                if (window.Hls && Hls.isSupported()) { playHLS(name, url); }
+                else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) { playStandard(name, url); }
+                else { showToast('Formato stream non supportato'); statusText.textContent = 'Errore formato'; }
+            } else { 
+                playStandard(name, url); 
+            }
+
+            // Rilevamento infallibile per i flussi NON HLS (.mp3, .aac, ecc.)
+            // Se il flusso non ha dimensioni video, è solo audio e attiva YouTube
+            unifiedPlayer.onloadedmetadata = function() {
+                if (unifiedPlayer.videoWidth === 0 || unifiedPlayer.videoHeight === 0) {
+                    toggleScreensaver(true);
+                } else {
+                    toggleScreensaver(false);
+                }
+            };
+        }
+
+        // Funzione playHLS aggiornata con rilevamento audio
+        function playHLS(name, url) {
+            if (currentHls) { currentHls.destroy(); currentHls = null; }
+            currentHls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60, startLevel: -1, debug: false });
+            currentHls.loadSource(url);
+            currentHls.attachMedia(unifiedPlayer);
+            unifiedPlayer.style.display = 'block';
+            loadingInfo.style.display = 'none';
+            
+            currentHls.on(Hls.Events.MANIFEST_PARSED, async function(event, data) {
+                // --- RILEVAMENTO AUDIO/VIDEO INFALLIBILE ---
+                let isAudioOnly = true;
+                if (data.levels && data.levels.length > 0) {
+                    data.levels.forEach(level => {
+                        if (level.videoCodec || level.height > 0) {
+                            isAudioOnly = false; // Ha un codec video, è una TV!
+                        }
+                    });
+                }
+                toggleScreensaver(isAudioOnly);
+                // -------------------------------------------
+
+                try {
+                    await initAudioEQ();
+                    if (!isCorsRestricted(url)) {
+                        connectEQChain(unifiedPlayer);
+                    }
+                    await unifiedPlayer.play();
+                    statusText.textContent = 'In riproduzione';
+                    statusDot.classList.add('playing');
+                } catch(err) {
+                    if (err.name === 'NotAllowedError') {
+                        statusText.textContent = 'Premi Play per avviare';
+                        showToast('Tocca Play per iniziare');
+                    }
+                    statusDot.classList.remove('playing');
+                }
+            });
+            
+            currentHls.on(Hls.Events.ERROR, function(event, data) {
+                if (data.fatal) {
+                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR && data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
+                        console.warn("HLS CORS fallback: tentativo playback diretto");
+                        stopStream();
+                        playStandard(name, url);
+                        return;
+                    }
+                    switch (data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR: currentHls.startLoad(); break;
+                        case Hls.ErrorTypes.MEDIA_ERROR: currentHls.recoverMediaError(); break;
+                        default: stopStream(); showToast('Errore stream: canale non disponibile');
+                    }
+                }
+            });
+        }
+     
     function playHLS(name, url) {
         if (currentHls) { currentHls.destroy(); currentHls = null; }
         currentHls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60, startLevel: -1, debug: false });
@@ -1619,8 +1804,8 @@ audio.media-player::-webkit-media-controls-enclosure {
         'revma.com', 'xdevel.com', 'mediastreaming.it', 'aswifi.it',
         'unitedradio.it', 'broadcast.radio', 'rblive.it', 'amagi.tv',
         'nrjaudio.fm', 'radioca.st', 'laut.fm', 'broadcast.miami',
-        'itsshort.info', 'hearme.fm', 'vip-radios.fm',
-        'radiodelfino.com', 'crossradio.com.br',
+        'itsshort.info', 'hearme.fm', 'vip-radios.fm', 'listen',
+        'radiodelfino.com', 'crossradio.com.br', 'stream',
         'electroradio.fm', 'sharp-stream.com', 'cdnstream1.com',
         'exclusive.radio', 'streamingmedia.it', 'live365', 'derstream.net',
         'streaming.radiostreamlive.com', 'hotmixradio.fr', 'italianradio'
@@ -2705,12 +2890,12 @@ audio.media-player::-webkit-media-controls-enclosure {
 
     function isFullscreen() {
         return !!(document.fullscreenElement || document.webkitFullscreenElement ||
-                  document.mozFullScreenElement || document.msFullscreenElement);
+                document.mozFullScreenElement || document.msFullscreenElement);
     }
 
     function exitFullscreen() {
         var exit = document.exitFullscreen || document.webkitExitFullscreen ||
-                    document.mozCancelFullScreen || document.msExitFullscreen;
+                document.mozCancelFullScreen || document.msExitFullscreen;
         return exit ? exit.call(document) : Promise.reject('API non supportata');
     }
 
@@ -2729,20 +2914,20 @@ audio.media-player::-webkit-media-controls-enclosure {
         }
     }
 
+    // CORREZIONE: Fullscreen sul container, non sul video interno
     function requestFullscreen(el) {
-        var target = el.querySelector('video') || el;
-        var req = target.requestFullscreen ||
-                    target.webkitRequestFullscreen ||
-                    target.mozRequestFullScreen ||
-                    target.msRequestFullscreen;
+        var req = el.requestFullscreen ||
+                el.webkitRequestFullscreen ||
+                el.mozRequestFullScreen ||
+                el.msRequestFullscreen;
         if (!req) { activateOverlayMode(); return Promise.resolve(); }
-        return req.call(target).catch(function(err) {
+        return req.call(el).catch(function(err) {
             console.warn('Fullscreen API failed:', err);
             activateOverlayMode();
         });
     }
 
-    // Click singolo su fullscreen button
+    // Click singolo sul bottone fullscreen → overlay mode
     if (ctrlFullscreen) {
         ctrlFullscreen.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -2750,7 +2935,6 @@ audio.media-player::-webkit-media-controls-enclosure {
             if (isFullscreen()) {
                 exitFullscreen().catch(function(){});
             } else if (videoOverlay && videoOverlay.classList.contains('active')) {
-                // Chiudi overlay
                 overlayClose.click();
             } else {
                 activateOverlayMode();
@@ -2758,23 +2942,37 @@ audio.media-player::-webkit-media-controls-enclosure {
         });
     }
 
-    // Doppio click = fullscreen nativo
+    // CORREZIONE: Doppio click sul player-container → fullscreen nativo
     if (playerContainer) {
+        var clickTimeout = null;
         var clickCount = 0;
+        
         playerContainer.addEventListener('click', function(e) {
-            if (e.target.closest('.custom-controls, .ctrl-btn')) return;
+            // Ignora click sui controlli
+            if (e.target.closest('.custom-controls') || e.target.closest('.ctrl-btn')) return;
+            
             clickCount++;
+            
             if (clickCount === 1) {
-                setTimeout(function() { clickCount = 0; }, 300);
-                return;
-            }
-            clickCount = 0;
-            e.preventDefault();
-            e.stopPropagation();
-            if (isFullscreen()) {
-                exitFullscreen().catch(function(){});
-            } else {
-                requestFullscreen(playerContainer);
+                clickTimeout = setTimeout(function() {
+                    // Click singolo → play/pause
+                    if (unifiedPlayer.paused) {
+                        unifiedPlayer.play().catch(function(){});
+                    } else {
+                        unifiedPlayer.pause();
+                    }
+                    clickCount = 0;
+                }, 300);
+            } else if (clickCount === 2) {
+                // Doppio click → fullscreen nativo
+                clearTimeout(clickTimeout);
+                clickCount = 0;
+                
+                if (isFullscreen()) {
+                    exitFullscreen().catch(function(){});
+                } else {
+                    requestFullscreen(playerContainer);
+                }
             }
         });
     }
@@ -2811,29 +3009,51 @@ audio.media-player::-webkit-media-controls-enclosure {
         });
     }
 
-    // FIX #11: Fullscreen state change - non cancellare cssText
+    // CORREZIONE: Gestione fullscreen con screensaver YouTube
     function handleFullscreenChange() {
         var isFS = isFullscreen();
-        if (isFS && unifiedPlayer) {
-            unifiedPlayer.style.width = '100vw';
-            unifiedPlayer.style.height = '100vh';
-            unifiedPlayer.style.objectFit = 'contain';
-            unifiedPlayer.style.maxHeight = '100vh';
-            unifiedPlayer.style.minHeight = '0';
-            unifiedPlayer.style.margin = '0';
-            unifiedPlayer.style.padding = '0';
+        var ytScreensaver = document.getElementById('youtube-screensaver');
+        var ytIframe = document.getElementById('yt-iframe');
+
+        if (isFS) {
+            if (unifiedPlayer) {
+                unifiedPlayer.style.width = '100vw';
+                unifiedPlayer.style.height = '100vh';
+                unifiedPlayer.style.objectFit = 'contain';
+                unifiedPlayer.style.maxHeight = '100vh';
+                unifiedPlayer.style.minHeight = '0';
+                unifiedPlayer.style.margin = '0';
+                unifiedPlayer.style.padding = '0';
+            }
+            if (ytScreensaver && ytScreensaver.style.display !== 'none') {
+                ytScreensaver.style.width = '100vw';
+                ytScreensaver.style.height = '100vh';
+                ytScreensaver.style.position = 'fixed';
+                ytScreensaver.style.top = '0';
+                ytScreensaver.style.left = '0';
+                ytScreensaver.style.zIndex = '9999';
+            }
+            if (ytIframe) {
+                ytIframe.style.width = '100%';
+                ytIframe.style.height = '100%';
+            }
             if (overlayClose) overlayClose.style.display = 'none';
-        } else if (unifiedPlayer) {
-            // FIX #11: Rimuovi SOLO le proprietà fullscreen, non tutto cssText
-            unifiedPlayer.style.removeProperty('width');
-            unifiedPlayer.style.removeProperty('height');
-            unifiedPlayer.style.removeProperty('object-fit');
-            unifiedPlayer.style.removeProperty('max-height');
-            unifiedPlayer.style.removeProperty('min-height');
-            unifiedPlayer.style.removeProperty('margin');
-            unifiedPlayer.style.removeProperty('padding');
+        } else {
+            if (unifiedPlayer) {
+                ['width','height','object-fit','max-height','min-height','margin','padding'].forEach(function(p) {
+                    unifiedPlayer.style.removeProperty(p);
+                });
+            }
+            if (ytScreensaver) {
+                ytScreensaver.style.cssText = 'display:' + (ytScreensaver.style.display === 'none' ? 'none' : 'block') +
+                    ';position:absolute;top:0;left:0;width:100%;height:100%;z-index:5;pointer-events:none;background:#000;';
+            }
+            if (ytIframe) {
+                ytIframe.style.cssText = 'width:100%;height:100%;border:none;';
+            }
             if (overlayClose) overlayClose.style.display = '';
         }
+
         if (ctrlFullscreen) {
             ctrlFullscreen.classList.toggle('active', isFS);
             ctrlFullscreen.innerHTML = isFS ?
@@ -2850,6 +3070,268 @@ audio.media-player::-webkit-media-controls-enclosure {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && isFullscreen()) exitFullscreen().catch(function(){});
     });
+
+    // ================= ASSISTENTE VOCALE CONTINUO =================
+    var voiceCmdBtn = document.getElementById('voice-cmd-btn');
+    var voiceCmdActive = false;
+    var voiceCmdRecognition = null;
+    var voiceCmdRestartTimer = null;
+
+    var voiceFeedback = document.createElement('div');
+    voiceFeedback.className = 'voice-cmd-feedback';
+    document.body.appendChild(voiceFeedback);
+
+    function showVoiceFeedback(text, duration) {
+        voiceFeedback.textContent = text;
+        voiceFeedback.classList.add('show');
+        clearTimeout(voiceFeedback._t);
+        voiceFeedback._t = setTimeout(function() {
+            voiceFeedback.classList.remove('show');
+        }, duration || 2500);
+    }
+
+    function executeVoiceCommand(transcript) {
+        var t = transcript.toLowerCase().trim();
+        console.log('[VoiceCmd]', t);
+
+        // VOLUME
+        if (/volume su|alza|più forte|piu forte|aumenta/.test(t)) {
+            var v = Math.min(1, unifiedPlayer.volume + 0.15);
+            unifiedPlayer.volume = v;
+            if (volumeSlider) volumeSlider.value = v;
+            updateVolumeIcon();
+            showVoiceFeedback('🔊 Volume: ' + Math.round(v * 100) + '%');
+            return true;
+        }
+        if (/volume giù|volume giu|abbassa|più piano|piu piano/.test(t)) {
+            var v2 = Math.max(0, unifiedPlayer.volume - 0.15);
+            unifiedPlayer.volume = v2;
+            if (volumeSlider) volumeSlider.value = v2;
+            updateVolumeIcon();
+            showVoiceFeedback('🔉 Volume: ' + Math.round(v2 * 100) + '%');
+            return true;
+        }
+        if (/^(muto|silenzio|mute)$/.test(t)) {
+            unifiedPlayer.volume = 0;
+            if (volumeSlider) volumeSlider.value = 0;
+            updateVolumeIcon();
+            showVoiceFeedback('🔇 Muto');
+            return true;
+        }
+        if (/volume massimo/.test(t)) {
+            unifiedPlayer.volume = 1;
+            if (volumeSlider) volumeSlider.value = 1;
+            updateVolumeIcon();
+            showVoiceFeedback('🔊 Volume massimo');
+            return true;
+        }
+
+        // CANALE SUCCESSIVO / PRECEDENTE
+        if (/prossimo|successivo|avanti|next/.test(t)) {
+            var nextBtn = document.getElementById('media-next');
+            if (nextBtn) nextBtn.click();
+            showVoiceFeedback('⏭️ Canale successivo');
+            return true;
+        }
+        if (/precedente|indietro|back/.test(t)) {
+            var channels = document.querySelectorAll('.channel');
+            var visible = [];
+            channels.forEach(function(ch) {
+                if (ch.offsetHeight > 0) visible.push(ch);
+            });
+            var activeIdx = -1;
+            visible.forEach(function(ch, i) {
+                if (ch.classList.contains('active')) activeIdx = i;
+            });
+            if (activeIdx > 0) visible[activeIdx - 1].click();
+            showVoiceFeedback('⏮️ Canale precedente');
+            return true;
+        }
+
+        // PLAY / PAUSA
+        if (/^(stop|ferma|pausa|pause)$/.test(t)) {
+            unifiedPlayer.pause();
+            showVoiceFeedback('⏸️ Pausa');
+            return true;
+        }
+        if (/^(play|riprendi|avvia|continua)$/.test(t)) {
+            unifiedPlayer.play().catch(function(){});
+            showVoiceFeedback('▶️ Riproduzione');
+            return true;
+        }
+
+        // RESET RICERCA
+        if (/^(reset|cancella|pulisci|azzera)$/.test(t)) {
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            }
+            showVoiceFeedback('🗑️ Ricerca cancellata');
+            return true;
+        }
+
+        // RICERCA GENERICA (fallback)
+        var query = t.replace(/^(cerca|trova|metti|apri|vai su|sintonizza)\s+/i, '').trim();
+        if (query.length > 1) {
+            if (searchInput) {
+                searchInput.value = query;
+                searchInput.dispatchEvent(new Event('input'));
+            }
+            showVoiceFeedback('🔍 Cerco: "' + query + '"');
+            return true;
+        }
+        return false;
+    }
+
+    function initVoiceCommand() {
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            showVoiceFeedback('❌ Riconoscimento vocale non supportato');
+            return false;
+        }
+        voiceCmdRecognition = new SpeechRecognition();
+        voiceCmdRecognition.lang = 'it-IT';
+        voiceCmdRecognition.continuous = true;
+        voiceCmdRecognition.interimResults = false;
+        voiceCmdRecognition.maxAlternatives = 1;
+
+        voiceCmdRecognition.onresult = function(event) {
+            var last = event.results.length - 1;
+            var transcript = event.results[last][0].transcript;
+            executeVoiceCommand(transcript);
+        };
+        voiceCmdRecognition.onerror = function(e) {
+            if (e.error === 'no-speech' || e.error === 'aborted') return;
+            if (e.error === 'not-allowed') {
+                showVoiceFeedback('🎤 Microfono non autorizzato');
+                stopVoiceCommand();
+                return;
+            }
+            if (voiceCmdActive) {
+                clearTimeout(voiceCmdRestartTimer);
+                voiceCmdRestartTimer = setTimeout(startVoiceRecognition, 1000);
+            }
+        };
+        voiceCmdRecognition.onend = function() {
+            if (voiceCmdActive) {
+                clearTimeout(voiceCmdRestartTimer);
+                voiceCmdRestartTimer = setTimeout(startVoiceRecognition, 300);
+            }
+        };
+        return true;
+    }
+
+    function startVoiceRecognition() {
+        if (!voiceCmdRecognition) return;
+        try { voiceCmdRecognition.start(); } catch(e) {}
+    }
+
+    function startVoiceCommand() {
+        if (!voiceCmdRecognition && !initVoiceCommand()) return;
+        voiceCmdActive = true;
+        voiceCmdBtn.classList.add('active');
+        startVoiceRecognition();
+        showVoiceFeedback('🎤 Assistente attivo - parla pure');
+    }
+
+    function stopVoiceCommand() {
+        voiceCmdActive = false;
+        voiceCmdBtn.classList.remove('active');
+        clearTimeout(voiceCmdRestartTimer);
+        if (voiceCmdRecognition) {
+            try { voiceCmdRecognition.stop(); } catch(e) {}
+        }
+        showVoiceFeedback('🎤 Assistente disattivato');
+    }
+
+    if (voiceCmdBtn) {
+        voiceCmdBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (voiceCmdActive) stopVoiceCommand();
+            else startVoiceCommand();
+        });
+    }
+
+    // ================= SWIPE LATERALE VOLUME =================
+    var volumeSwipeZone = null;
+    var swipeStartY = 0;
+    var swipeStartVolume = 1;
+    var swipeIndicator = null;
+
+    function initVolumeSwipe() {
+        volumeSwipeZone = document.createElement('div');
+        volumeSwipeZone.id = 'volume-swipe-zone';
+        volumeSwipeZone.style.cssText = 'position:fixed;top:0;right:0;width:40px;height:100vh;z-index:9998;background:transparent;touch-action:none;';
+        document.body.appendChild(volumeSwipeZone);
+
+        swipeIndicator = document.createElement('div');
+        swipeIndicator.id = 'swipe-vol-indicator';
+        swipeIndicator.style.cssText = 'position:fixed;right:50px;top:50%;transform:translateY(-50%);width:8px;height:200px;background:rgba(0,0,0,0.8);border-radius:4px;display:none;z-index:9999;border:1px solid var(--accent,#00ff88);overflow:hidden;';
+        swipeIndicator.innerHTML = '<div id="swipe-vol-level" style="position:absolute;bottom:0;width:100%;background:linear-gradient(to top,#00ff88,#00ccff);transition:height 0.1s;"></div>';
+        document.body.appendChild(swipeIndicator);
+
+        volumeSwipeZone.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            swipeStartY = e.touches[0].clientY;
+            swipeStartVolume = unifiedPlayer.volume;
+            swipeIndicator.style.display = 'block';
+            updateSwipeIndicator(unifiedPlayer.volume);
+        }, {passive: false});
+
+        volumeSwipeZone.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            var currentY = e.touches[0].clientY;
+            var delta = (swipeStartY - currentY) / window.innerHeight;
+            var newVol = Math.max(0, Math.min(1, swipeStartVolume + delta * 2));
+            unifiedPlayer.volume = newVol;
+            if (volumeSlider) volumeSlider.value = newVol;
+            updateVolumeIcon();
+            updateSwipeIndicator(newVol);
+        }, {passive: false});
+
+        volumeSwipeZone.addEventListener('touchend', function() {
+            swipeIndicator.style.display = 'none';
+            showToast('🔊 Volume: ' + Math.round(unifiedPlayer.volume * 100) + '%');
+        });
+
+        // Supporto mouse desktop
+        var mouseDown = false;
+        volumeSwipeZone.addEventListener('mousedown', function(e) {
+            mouseDown = true;
+            swipeStartY = e.clientY;
+            swipeStartVolume = unifiedPlayer.volume;
+            swipeIndicator.style.display = 'block';
+            updateSwipeIndicator(unifiedPlayer.volume);
+        });
+        document.addEventListener('mousemove', function(e) {
+            if (!mouseDown) return;
+            var delta = (swipeStartY - e.clientY) / window.innerHeight;
+            var newVol = Math.max(0, Math.min(1, swipeStartVolume + delta * 2));
+            unifiedPlayer.volume = newVol;
+            if (volumeSlider) volumeSlider.value = newVol;
+            updateVolumeIcon();
+            updateSwipeIndicator(newVol);
+        });
+        document.addEventListener('mouseup', function() {
+            if (mouseDown) {
+                mouseDown = false;
+                swipeIndicator.style.display = 'none';
+                showToast('🔊 Volume: ' + Math.round(unifiedPlayer.volume * 100) + '%');
+            }
+        });
+    }
+
+    function updateSwipeIndicator(vol) {
+        var level = document.getElementById('swipe-vol-level');
+        if (level) level.style.height = (vol * 100) + '%';
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initVolumeSwipe);
+    } else {
+        initVolumeSwipe();
+    }
   </script>
 </body>
 </html>
