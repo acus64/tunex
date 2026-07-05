@@ -3071,13 +3071,13 @@ audio.media-player::-webkit-media-controls-enclosure {
         if (e.key === 'Escape' && isFullscreen()) exitFullscreen().catch(function(){});
     });
 
-    // ================= ASSISTENTE VOCALE CON WAKE WORD =================
+    // ================= ASSISTENTE VOCALE CONTINUO =================
     var voiceCmdBtn = document.getElementById('voice-cmd-btn');
     var voiceCmdActive = false;
     var voiceCmdRecognition = null;
     var voiceCmdRestartTimer = null;
-    var voiceCmdState = 'sleep'; // 'sleep' o 'listening'
-    var voiceCmdListeningTimeout = null;
+    var isExecutingCommand = false;
+    var commandCooldownTimer = null;
 
     var voiceFeedback = document.createElement('div');
     voiceFeedback.className = 'voice-cmd-feedback';
@@ -3092,7 +3092,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         }, duration || 2500);
     }
 
-    // Comandi vocali (solo dopo wake word)
     function executeVoiceCommand(transcript) {
         var t = transcript.toLowerCase().trim();
         console.log('[VoiceCmd]', t);
@@ -3151,13 +3150,13 @@ audio.media-player::-webkit-media-controls-enclosure {
             return true;
         }
 
-        // PLAY / PAUSA
+        // PLAY / PAUSA - AGGIUNTO "esegui"
         if (/^(stop|ferma|pausa|pause)$/.test(t)) {
             unifiedPlayer.pause();
             showVoiceFeedback('⏸️ Pausa');
             return true;
         }
-        if (/^(play|riprendi|avvia|continua)$/.test(t)) {
+        if (/^(play|riprendi|avvia|continua|esegui|start)$/.test(t)) {
             unifiedPlayer.play().catch(function(){});
             showVoiceFeedback('▶️ Riproduzione');
             return true;
@@ -3187,12 +3186,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         return false;
     }
 
-    // Controlla se il testo contiene il wake word
-    function containsWakeWord(text) {
-        var t = text.toLowerCase();
-        return /hey tunex|tunex|hey tune|tune x/.test(t);
-    }
-
     function initVoiceCommand() {
         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
@@ -3206,44 +3199,30 @@ audio.media-player::-webkit-media-controls-enclosure {
         voiceCmdRecognition.maxAlternatives = 1;
 
         voiceCmdRecognition.onresult = function(event) {
+            // CORREZIONE: Ignora risultati durante esecuzione comando o cooldown
+            if (isExecutingCommand) {
+                console.log('[VoiceCmd] Ignorato durante esecuzione/cooldown');
+                return;
+            }
+
             var last = event.results.length - 1;
             var transcript = event.results[last][0].transcript;
-            console.log('[VoiceCmd] Stato:', voiceCmdState, 'Testo:', transcript);
-
-            if (voiceCmdState === 'sleep') {
-                // Cerca wake word
-                if (containsWakeWord(transcript)) {
-                    console.log('[VoiceCmd] Wake word rilevata!');
-                    voiceCmdState = 'listening';
-                    showVoiceFeedback('🎤 Dimmi...', 3000);
-                    
-                    // Timeout: torna a sleep dopo 5 secondi
-                    clearTimeout(voiceCmdListeningTimeout);
-                    voiceCmdListeningTimeout = setTimeout(function() {
-                        if (voiceCmdState === 'listening') {
-                            voiceCmdState = 'sleep';
-                            console.log('[VoiceCmd] Timeout - torno a sleep');
-                            updateVoiceBtnState();
-                        }
-                    }, 5000);
-                    
-                    updateVoiceBtnState();
-                }
-            } else if (voiceCmdState === 'listening') {
-                // Esegui comando
-                var executed = executeVoiceCommand(transcript);
-                if (executed) {
-                    // Comando eseguito, torna a sleep
-                    voiceCmdState = 'sleep';
-                    clearTimeout(voiceCmdListeningTimeout);
-                    updateVoiceBtnState();
-                }
-                // Se non eseguito, resta in listening (aspetta comando valido)
-            }
+            
+            // CORREZIONE: Attiva flag esecuzione e avvia cooldown
+            isExecutingCommand = true;
+            console.log('[VoiceCmd] Eseguo:', transcript);
+            
+            executeVoiceCommand(transcript);
+            
+            // CORREZIONE: Reset dopo 2.5 secondi per evitare loop di feedback
+            clearTimeout(commandCooldownTimer);
+            commandCooldownTimer = setTimeout(function() {
+                isExecutingCommand = false;
+                console.log('[VoiceCmd] Cooldown terminato, pronto per nuovi comandi');
+            }, 2500);
         };
 
         voiceCmdRecognition.onerror = function(e) {
-            console.warn('[VoiceCmd] Error:', e.error);
             if (e.error === 'no-speech' || e.error === 'aborted') return;
             if (e.error === 'not-allowed') {
                 showVoiceFeedback('🎤 Microfono non autorizzato');
@@ -3271,38 +3250,25 @@ audio.media-player::-webkit-media-controls-enclosure {
         try { voiceCmdRecognition.start(); } catch(e) {}
     }
 
-    function updateVoiceBtnState() {
-        if (!voiceCmdBtn) return;
-        if (voiceCmdState === 'listening') {
-            voiceCmdBtn.style.background = 'linear-gradient(135deg, #ff6b6b, #ff3355)';
-            voiceCmdBtn.innerHTML = '<i class="fas fa-microphone-alt"></i> In ascolto...';
-        } else {
-            voiceCmdBtn.style.background = '';
-            voiceCmdBtn.innerHTML = '<i class="fas fa-microphone"></i> Voice AI';
-        }
-    }
-
     function startVoiceCommand() {
         if (!voiceCmdRecognition && !initVoiceCommand()) return;
         voiceCmdActive = true;
-        voiceCmdState = 'sleep';
+        isExecutingCommand = false;
         voiceCmdBtn.classList.add('active');
         startVoiceRecognition();
-        showVoiceFeedback('🎤 Di\' "Hey TuneX" per attivare');
-        updateVoiceBtnState();
+        showVoiceFeedback('🎤 Assistente attivo - parla pure');
     }
 
     function stopVoiceCommand() {
         voiceCmdActive = false;
-        voiceCmdState = 'sleep';
         voiceCmdBtn.classList.remove('active');
         clearTimeout(voiceCmdRestartTimer);
-        clearTimeout(voiceCmdListeningTimeout);
+        clearTimeout(commandCooldownTimer);
+        isExecutingCommand = false;
         if (voiceCmdRecognition) {
             try { voiceCmdRecognition.stop(); } catch(e) {}
         }
         showVoiceFeedback('🎤 Assistente disattivato');
-        updateVoiceBtnState();
     }
 
     if (voiceCmdBtn) {
