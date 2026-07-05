@@ -3071,20 +3071,20 @@ audio.media-player::-webkit-media-controls-enclosure {
         if (e.key === 'Escape' && isFullscreen()) exitFullscreen().catch(function(){});
     });
 
-    // ================= ASSISTENTE VOCALE CONTINUO (CON FILTRO) =================
+    // ================= ASSISTENTE VOCALE - MODALITÀ CLICK-TO-ACTIVATE =================
     var voiceCmdBtn = document.getElementById('voice-cmd-btn');
-    var voiceCmdActive = false;
     var voiceCmdRecognition = null;
-    var voiceCmdRestartTimer = null;
-    var voiceCmdCooldownUntil = 0; // Timestamp fino al quale ignorare input
+    var voiceCmdListening = false;
+    var voiceCmdStopTimer = null;
+    var voiceCmdCooldownUntil = 0;
 
-    // Lista parole chiave OBBLIGATORIE - se non c'è almeno una, il comando viene scartato
+    // Parole chiave OBBLIGATORIE - senza queste il comando viene scartato
     var VOICE_KEYWORDS = [
         'volume', 'prossimo', 'precedente', 'successivo', 'indietro',
         'play', 'stop', 'pausa', 'pause', 'ferma', 'riprendi', 'avvia',
         'continua', 'esegui', 'cerca', 'trova', 'metti', 'reset',
         'cancella', 'pulisci', 'muto', 'silenzio', 'massimo',
-        'canale', 'avanti', 'alza', 'abbassa'
+        'canale', 'avanti', 'alza', 'abbassa', 'schermo'
     ];
 
     var voiceFeedback = document.createElement('div');
@@ -3100,7 +3100,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         }, duration || 2500);
     }
 
-    // FILTRO: verifica se il testo contiene almeno una parola chiave
     function containsKeyword(text) {
         var t = text.toLowerCase();
         for (var i = 0; i < VOICE_KEYWORDS.length; i++) {
@@ -3189,7 +3188,17 @@ audio.media-player::-webkit-media-controls-enclosure {
             return true;
         }
 
-        // RICERCA GENERICA (solo se inizia con parole chiave di ricerca)
+        // FULLSCREEN
+        if (/schermo intero|fullscreen/.test(t)) {
+            if (playerContainer) {
+                if (isFullscreen()) exitFullscreen().catch(function(){});
+                else requestFullscreen(playerContainer);
+            }
+            showVoiceFeedback('🖥️ Schermo intero');
+            return true;
+        }
+
+        // RICERCA GENERICA (solo se inizia con parole chiave)
         if (/^(cerca|trova|metti|apri|vai su|sintonizza)\s+/.test(t)) {
             var query = t.replace(/^(cerca|trova|metti|apri|vai su|sintonizza)\s+/i, '').trim();
             if (query.length > 1) {
@@ -3205,112 +3214,121 @@ audio.media-player::-webkit-media-controls-enclosure {
         return false;
     }
 
-    function initVoiceCommand() {
+    function initVoiceRecognition() {
         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            showVoiceFeedback('❌ Riconoscimento vocale non supportato');
-            return false;
-        }
-        voiceCmdRecognition = new SpeechRecognition();
-        voiceCmdRecognition.lang = 'it-IT';
-        voiceCmdRecognition.continuous = true;
-        voiceCmdRecognition.interimResults = false;
-        voiceCmdRecognition.maxAlternatives = 1;
-
-        voiceCmdRecognition.onresult = function(event) {
-            // BLOCCO 1: Cooldown attivo? Ignoro tutto
+        if (!SpeechRecognition) return null;
+        
+        var rec = new SpeechRecognition();
+        rec.lang = 'it-IT';
+        rec.continuous = false;          // ❌ NO continuous mode
+        rec.interimResults = false;      // Solo risultati finali
+        rec.maxAlternatives = 1;
+        
+        rec.onresult = function(event) {
             var now = Date.now();
-            if (now < voiceCmdCooldownUntil) {
-                console.log('[VoiceCmd] In cooldown, ignoro');
-                return;
-            }
-
+            if (now < voiceCmdCooldownUntil) return;
+            
             var last = event.results.length - 1;
             var transcript = event.results[last][0].transcript;
             
-            // BLOCCO 2: Testo vuoto o troppo corto? Ignoro
-            if (!transcript || transcript.trim().length < 3) {
-                return;
-            }
-
-            // BLOCCO 3: FILTRO PAROLE CHIAVE - se non contiene nessuna keyword, scarto
+            if (!transcript || transcript.trim().length < 3) return;
             if (!containsKeyword(transcript)) {
                 console.log('[VoiceCmd] Scartato (no keyword):', transcript);
                 return;
             }
-
-            console.log('[VoiceCmd] Elaboro:', transcript);
             
-            // Eseguo il comando
             var executed = executeVoiceCommand(transcript);
-            
-            // BLOCCO 4: Cooldown di 4 secondi dopo ogni comando (evita loop audio)
             if (executed) {
-                voiceCmdCooldownUntil = Date.now() + 4000;
-                console.log('[VoiceCmd] Cooldown 4s attivato');
+                voiceCmdCooldownUntil = Date.now() + 2000;
+                stopVoiceListening();
             }
         };
-
-        voiceCmdRecognition.onerror = function(e) {
-            // Ignora errori normali in continuous mode
-            if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'audio-capture') return;
+        
+        rec.onerror = function(e) {
+            console.warn('[VoiceCmd] Error:', e.error);
             if (e.error === 'not-allowed') {
                 showVoiceFeedback('🎤 Microfono non autorizzato');
-                stopVoiceCommand();
+            }
+            stopVoiceListening();
+        };
+        
+        rec.onend = function() {
+            stopVoiceListening();
+        };
+        
+        return rec;
+    }
+
+    function startVoiceListening() {
+        if (voiceCmdListening) return;
+        
+        var now = Date.now();
+        if (now < voiceCmdCooldownUntil) {
+            showVoiceFeedback('⏳ Attendi...');
+            return;
+        }
+        
+        if (!voiceCmdRecognition) {
+            voiceCmdRecognition = initVoiceRecognition();
+            if (!voiceCmdRecognition) {
+                showVoiceFeedback('❌ Riconoscimento non supportato');
                 return;
             }
-            if (e.error === 'network') {
-                console.warn('[VoiceCmd] Errore rete, retry...');
-            }
-            if (voiceCmdActive) {
-                clearTimeout(voiceCmdRestartTimer);
-                voiceCmdRestartTimer = setTimeout(startVoiceRecognition, 1500);
-            }
-        };
-
-        voiceCmdRecognition.onend = function() {
-            if (voiceCmdActive) {
-                clearTimeout(voiceCmdRestartTimer);
-                voiceCmdRestartTimer = setTimeout(startVoiceRecognition, 500);
-            }
-        };
-
-        return true;
+        }
+        
+        try {
+            voiceCmdRecognition.start();
+            voiceCmdListening = true;
+            voiceCmdBtn.classList.add('active');
+            showVoiceFeedback('🎤 Parla ora (5s)...');
+            
+            // Auto-stop dopo 5 secondi
+            clearTimeout(voiceCmdStopTimer);
+            voiceCmdStopTimer = setTimeout(function() {
+                if (voiceCmdListening) {
+                    stopVoiceListening();
+                    showVoiceFeedback('🎤 Tempo scaduto');
+                }
+            }, 5000);
+        } catch(e) {
+            console.warn('[VoiceCmd] Start error:', e);
+            stopVoiceListening();
+        }
     }
 
-    function startVoiceRecognition() {
-        if (!voiceCmdRecognition) return;
-        try { voiceCmdRecognition.start(); } catch(e) {}
-    }
-
-    function startVoiceCommand() {
-        if (!voiceCmdRecognition && !initVoiceCommand()) return;
-        voiceCmdActive = true;
-        voiceCmdCooldownUntil = 0;
-        voiceCmdBtn.classList.add('active');
-        startVoiceRecognition();
-        showVoiceFeedback('🎤 Assistente attivo');
-    }
-
-    function stopVoiceCommand() {
-        voiceCmdActive = false;
+    function stopVoiceListening() {
+        voiceCmdListening = false;
         voiceCmdBtn.classList.remove('active');
-        voiceCmdCooldownUntil = 0;
-        clearTimeout(voiceCmdRestartTimer);
+        clearTimeout(voiceCmdStopTimer);
+        
         if (voiceCmdRecognition) {
             try { voiceCmdRecognition.stop(); } catch(e) {}
+            try { voiceCmdRecognition.abort(); } catch(e) {}
         }
-        showVoiceFeedback('🎤 Assistente disattivato');
+        
+        // Ricrea l'istanza per il prossimo uso (evita stati corrotti)
+        voiceCmdRecognition = null;
     }
 
+    // Click sul pulsante → avvia ascolto one-shot
     if (voiceCmdBtn) {
         voiceCmdBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            if (voiceCmdActive) stopVoiceCommand();
-            else startVoiceCommand();
+            
+            if (voiceCmdListening) {
+                stopVoiceListening();
+                showVoiceFeedback('🎤 Annullato');
+            } else {
+                startVoiceListening();
+            }
         });
     }
+
+    // Cleanup alla chiusura pagina
+    window.addEventListener('beforeunload', function() {
+        stopVoiceListening();
+    });
 
     // ================= SWIPE LATERALE VOLUME =================
     var volumeSwipeZone = null;
