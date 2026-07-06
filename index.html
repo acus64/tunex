@@ -3071,28 +3071,21 @@ audio.media-player::-webkit-media-controls-enclosure {
         if (e.key === 'Escape' && isFullscreen()) exitFullscreen().catch(function(){});
     });
 
-// ================= ASSISTENTE VOCALE - PRO EDITION =================
+// ================= ASSISTENTE VOCALE - VERSIONE DEFINITIVA =================
 (function() {
     'use strict';
     
-    // --- CONFIGURAZIONE ---
     var CFG = {
-        LISTEN_WINDOW_MS: 8000,      // Finestra di ascolto dopo click (8s)
-        COOLDOWN_MS: 3500,           // Silenzio dopo comando eseguito (3.5s)
-        MIN_TRANSCRIPT_LEN: 3,       // Lunghezza minima testo
+        LISTEN_WINDOW_MS: 8000,
+        COOLDOWN_MS: 3500,
+        MIN_TRANSCRIPT_LEN: 3,
         SPEECH_LANG: 'it-IT',
-        AUTO_RESTART_DELAY: 400      // Delay restart dopo errore
+        AUTO_RESTART_DELAY: 400
     };
     
-    // --- STATO ---
-    var STATE = {
-        IDLE: 'idle',
-        GATE_OPEN: 'gate_open',
-        PROCESSING: 'processing',
-        COOLDOWN: 'cooldown'
-    };
-    
+    var STATE = { IDLE: 'idle', GATE_OPEN: 'gate_open', PROCESSING: 'processing', COOLDOWN: 'cooldown' };
     var state = STATE.IDLE;
+    
     var voiceCmdBtn = document.getElementById('voice-cmd-btn');
     var recognition = null;
     var gateTimer = null;
@@ -3100,16 +3093,15 @@ audio.media-player::-webkit-media-controls-enclosure {
     var gateOpenedAt = 0;
     var isSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
     
-    // --- KEYWORDS (filtro anti-rumore) ---
     var KEYWORDS = [
         'volume','prossimo','precedente','successivo','indietro',
         'play','stop','pausa','pause','ferma','riprendi','avvia',
         'continua','esegui','cerca','trova','metti','reset',
         'cancella','pulisci','muto','silenzio','massimo',
-        'canale','avanti','alza','abbassa','schermo'
+        'canale','avanti','alza','abbassa','schermo',
+        'radio','marte','delfino','deejay','capital','m2o','rtl'
     ];
     
-    // --- FEEDBACK VISIVO ---
     var voiceFeedback = document.createElement('div');
     voiceFeedback.className = 'voice-cmd-feedback';
     voiceFeedback.setAttribute('aria-live', 'polite');
@@ -3125,7 +3117,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         }, duration || 2500);
     }
     
-    // --- FILTRO KEYWORD ---
     function containsKeyword(text) {
         var t = text.toLowerCase();
         for (var i = 0; i < KEYWORDS.length; i++) {
@@ -3134,9 +3125,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         return false;
     }
     
-    // --- ESECUZIONE COMANDI ---
     function executeCommand(transcript) {
-        if (!unifiedPlayer) return false;
         var t = transcript.toLowerCase().trim();
         console.log('[VoiceAI] Comando:', t);
         
@@ -3167,7 +3156,7 @@ audio.media-player::-webkit-media-controls-enclosure {
             return true;
         }
         // VOLUME MASSIMO
-        if (/volume\s*(al\s*)?massimo|alza\s*(al\s*)?massimo/.test(t)) {
+        if (/volume\s*(al\s*)?massimo/.test(t)) {
             unifiedPlayer.volume = 1;
             if (volumeSlider) volumeSlider.value = 1;
             if (typeof updateVolumeIcon === 'function') updateVolumeIcon();
@@ -3185,13 +3174,9 @@ audio.media-player::-webkit-media-controls-enclosure {
         if (/precedente|indietro|back/.test(t)) {
             var channels = document.querySelectorAll('.channel');
             var visible = [];
-            channels.forEach(function(ch) {
-                if (ch.offsetHeight > 0) visible.push(ch);
-            });
+            channels.forEach(function(ch) { if (ch.offsetHeight > 0) visible.push(ch); });
             var activeIdx = -1;
-            visible.forEach(function(ch, i) {
-                if (ch.classList.contains('active')) activeIdx = i;
-            });
+            visible.forEach(function(ch, i) { if (ch.classList.contains('active')) activeIdx = i; });
             if (activeIdx > 0) visible[activeIdx - 1].click();
             showFeedback('⏮️ Canale precedente');
             return true;
@@ -3229,10 +3214,10 @@ audio.media-player::-webkit-media-controls-enclosure {
             showFeedback('🖥️ Schermo intero');
             return true;
         }
-        // RICERCA GENERICA
-        var searchMatch = t.match(/^(cerca|trova|metti|apri|vai\s*su|sintonizza)\s+(.+)$/);
-        if (searchMatch && searchMatch[2] && searchMatch[2].length > 1) {
-            var query = searchMatch[2].trim();
+        
+        // RICERCA GENERICA (fallback) - include nomi canali
+        var query = t.replace(/^(cerca|trova|metti|apri|vai\s*su|sintonizza|sintonizzati\s*su|metti\s*su|canale|radio)\s+/i, '').trim();
+        if (query.length > 2) {
             if (searchInput) {
                 searchInput.value = query;
                 searchInput.dispatchEvent(new Event('input'));
@@ -3244,7 +3229,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         return false;
     }
     
-    // --- GESTIONE COOLDOWN ---
     function enterCooldown() {
         state = STATE.COOLDOWN;
         clearTimeout(cooldownTimer);
@@ -3253,7 +3237,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         }, CFG.COOLDOWN_MS);
     }
     
-    // --- INIZIALIZZAZIONE SPEECH RECOGNITION (una sola volta) ---
     function initRecognition() {
         if (recognition) return recognition;
         if (!isSupported) return null;
@@ -3261,19 +3244,15 @@ audio.media-player::-webkit-media-controls-enclosure {
         var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognitionCtor();
         recognition.lang = CFG.SPEECH_LANG;
-        recognition.continuous = true;        // ✅ CRITICO: true per stabilità Android
+        recognition.continuous = true;
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
         
         recognition.onresult = function(event) {
-            // Ignora se gate chiuso o in cooldown
             if (state !== STATE.GATE_OPEN) {
                 console.log('[VoiceAI] Ignorato (state=' + state + ')');
                 return;
             }
-            
-            // Ignora se in cooldown
-            if (Date.now() < gateOpenedAt + CFG.COOLDOWN_MS - CFG.COOLDOWN_MS) return;
             
             var transcript = '';
             for (var i = event.resultIndex; i < event.results.length; i++) {
@@ -3283,29 +3262,27 @@ audio.media-player::-webkit-media-controls-enclosure {
                 }
             }
             if (!transcript) {
-                // Fallback: usa l'ultimo risultato
                 var last = event.results.length - 1;
                 transcript = event.results[last][0].transcript;
             }
             
             if (!transcript || transcript.trim().length < CFG.MIN_TRANSCRIPT_LEN) return;
             
-            // Filtro keyword
+            console.log('[VoiceAI] Rilevato:', transcript);
+            
+            // Filtro keyword (include nomi canali)
             if (!containsKeyword(transcript)) {
                 console.log('[VoiceAI] Scartato (no keyword):', transcript);
                 return;
             }
             
-            // Processing
             state = STATE.PROCESSING;
             var executed = executeCommand(transcript);
             
             if (executed) {
-                // Chiudi gate e entra in cooldown
                 closeGate();
                 enterCooldown();
             } else {
-                // Comando non riconosciuto, resta in gate open
                 state = STATE.GATE_OPEN;
                 showFeedback('❓ Non capito: "' + transcript.substring(0, 30) + '"');
             }
@@ -3313,25 +3290,18 @@ audio.media-player::-webkit-media-controls-enclosure {
         
         recognition.onerror = function(e) {
             console.warn('[VoiceAI] Error:', e.error);
-            // Errori normali in continuous mode - ignora
-            if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'audio-capture') {
-                return;
-            }
+            if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'audio-capture') return;
             if (e.error === 'not-allowed') {
                 showFeedback('🎤 Microfono non autorizzato');
                 closeGate();
                 return;
             }
-            if (e.error === 'network') {
-                showFeedback('🌐 Errore di rete');
-            }
-            // Ricrea istanza su errori gravi
+            if (e.error === 'network') showFeedback('🌐 Errore di rete');
             recognition = null;
         };
         
         recognition.onend = function() {
-            console.log('[VoiceAI] Recognition ended (state=' + state + ')');
-            // Se il gate è ancora aperto, riavvia automaticamente
+            console.log('[VoiceAI] Ended (state=' + state + ')');
             if (state === STATE.GATE_OPEN) {
                 setTimeout(function() {
                     if (state === STATE.GATE_OPEN && recognition) {
@@ -3344,7 +3314,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         return recognition;
     }
     
-    // --- APERTURA/CHIUSURA GATE ---
     function openGate() {
         if (state === STATE.GATE_OPEN) return;
         if (state === STATE.COOLDOWN) {
@@ -3358,20 +3327,13 @@ audio.media-player::-webkit-media-controls-enclosure {
             return;
         }
         
-        try {
-            rec.start();
-        } catch(e) {
-            // Già in esecuzione - ok
-            console.log('[VoiceAI] Already started');
-        }
+        try { rec.start(); } catch(e) { console.log('[VoiceAI] Already started'); }
         
         state = STATE.GATE_OPEN;
         gateOpenedAt = Date.now();
-        
         if (voiceCmdBtn) voiceCmdBtn.classList.add('active');
         showFeedback('🎤 Parla ora...');
         
-        // Chiudi gate automaticamente dopo LISTEN_WINDOW_MS
         clearTimeout(gateTimer);
         gateTimer = setTimeout(function() {
             if (state === STATE.GATE_OPEN) {
@@ -3384,24 +3346,17 @@ audio.media-player::-webkit-media-controls-enclosure {
     function closeGate() {
         state = STATE.IDLE;
         clearTimeout(gateTimer);
-        
         if (voiceCmdBtn) voiceCmdBtn.classList.remove('active');
-        
-        // NON fermare recognition - lasciala in continuous per riutilizzo
-        // Verrà riavviata automaticamente alla prossima apertura gate
     }
     
-    // --- CLICK HANDLER ---
     if (voiceCmdBtn) {
         voiceCmdBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            
             if (!isSupported) {
                 showFeedback('❌ Browser non supporta riconoscimento vocale');
                 return;
             }
-            
             if (state === STATE.GATE_OPEN) {
                 closeGate();
                 showFeedback('🎤 Annullato');
@@ -3411,7 +3366,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         });
     }
     
-    // --- CLEANUP ---
     window.addEventListener('beforeunload', function() {
         clearTimeout(gateTimer);
         clearTimeout(cooldownTimer);
@@ -3421,7 +3375,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         }
     });
     
-    // Esponi per debug
     window.__voiceAI = {
         getState: function() { return state; },
         isSupported: isSupported
