@@ -3079,14 +3079,60 @@ var voiceCmdRestartTimer = null;
 var voiceCmdCooldownUntil = 0;
 
 var VOICE_KEYWORDS = [
+    // Comandi
     'volume','prossimo','precedente','successivo','indietro',
     'play','stop','pausa','pause','ferma','riprendi','avvia',
     'continua','esegui','cerca','trova','metti','reset',
     'cancella','pulisci','muto','silenzio','massimo',
-    'canale','avanti','alza','abbassa','schermo',
-    'radio','marte','delfino','deejay','capital','m2o','rtl',
+    'canale','avanti','alza','abbassa','schermo',"schermo intero",
+    "fullscreen","tutto schermo","espandi","torna normale","esci","schermo piccolo",
+    "homepage","esci",
+    // Generi e decadi
     'lounge','rock','jazz','pop','dance','house','soul','funk',
-    '70','80','90','virgin','italia','kiss','freccia','ibiza'
+    'techno','edm','trance','urban','afro','disco','indie','afro','new wave',
+    'wave','psychedelic','motown','classical','60','70','80','90',
+    // Radio italiane principali
+    'deejay','capital','m2o','rtl','virgin','105','101','rnc','love',
+    'kiss','freccia','ibiza','marte','delfino','bruno','stingray',
+    'linetti','naxi','jazeen','oldies','relax','paradise',
+    'miami','zoo','tiffany','caliente','traffic','pluto','napoli',
+    'retro','skyline','groove','spirit','movidatv','ricordi',
+    'ritmo','romantica','silver','piterpan','jukebox','rsc', 'radio montecarlo','rmc 2',
+    'rmc','lac','mitology','qwest','pinguin','hotmix','maretimo','rtl','vevo','m2o',
+    'austria','lite','umsh','point blank','electro','exclusive',
+    'news24','village','hilton','powerhit','coolfm','salsoul',
+    'reyfm','traxx','oxygen','beethoven','symphony','naxi','afro','new wave',
+    // Artisti (non stop)
+    'bob marley','diana krall','fleetwood','clapton','dire straits',
+    'chic','carpenters','barry white','marvin gaye','david bowie',
+    'frank sinatra','james taylor','nat king','phil collins',
+    'pink floyd','steely dan','george michael','elton john',
+    'eagles','genesis','avicii','10cc','alison moyet','gregory porter',
+    'depeche','donna summer','al green','earth wind','black sabbath',
+    'deep purple','joe satriani','simple minds','stone temple',
+    'u2','zz top','john lennon','joe bonamassa','george benson',
+    'herbie hancock','rem','cure','smiths','olivia newton',
+    'spandau ballet','tears fears','cars','police','chicago',
+    'chris rea','huey lewis','santana','supertramp','sade',
+    // TV italiane
+    'RAI 1',' RAI 2','RAI 3','canale 5','italia 1','rete 4','la 7','tv 8','nove',
+    'discovery','cine 34','focus','grande fratello','iris',
+    'italia 2','la 5','mediaset','top crime','tgr','sicilia',
+    'tgcom24','sportitalia','zanzara','company','vintage',
+    'kicks','fm italia','ma lo ma','giada','sunset','cafe roma',
+    'youtudeep','30 song',
+    // Altre keyword specifiche
+    'ti ricordi','love 80','antena','power dance','bel','splash',
+    'alternative','ac dc','planet rock','night story','love song',
+    'euro indie','v2 beat','soul tv','forever young','now',
+    'monte carlo','disco inferno','bro sis','retro rock',
+    'ladies','black music','nrj','cinema','live ny',
+    'afro house','non stop','funky corner','pop lounge',
+    'nostalgie','new york','disco funky','music art','dance wave',
+    'patate douce','electro house','cafe lounge','story','1station',
+    'vevo','sharp','edm house','las vegas','lounge fm',
+    'powerhit','indie disco','the soul','london','art club',
+    'twentyseven','51 radio','54 funk','party groove','mela'
 ];
 
 var voiceFeedback = document.createElement('div');
@@ -3187,14 +3233,29 @@ function executeVoiceCommand(transcript) {
         showVoiceFeedback('🗑️ Ricerca cancellata');
         return true;
     }
-    // FULLSCREEN
-    if (/schermo intero|fullscreen/.test(t)) {
+    // FULLSCREEN - VERSIONE COMPLETA
+    if (/schermo intero|fullscreen|tutto schermo|espandi|maximizza/.test(t)) {
         if (playerContainer) {
-            if (isFullscreen()) exitFullscreen().catch(function(){});
-            else requestFullscreen(playerContainer);
+            if (!isFullscreen()) {
+                requestFullscreen(playerContainer);
+                showVoiceFeedback('🖥️ Schermo intero attivato');
+            } else {
+                showVoiceFeedback('🖥️ Già a schermo intero');
+            }
         }
-        showVoiceFeedback('🖥️ Schermo intero');
         return true;
+    }
+
+    // ESCI DA FULLSCREEN - Torna alla homepage
+    if (/torna normale|esci|riduci|homepage|schermo piccolo|annulla schermo|torna indietro/.test(t)) {
+        if (isFullscreen()) {
+            exitFullscreen().catch(function(){});
+            showVoiceFeedback('🏠 Tornato alla homepage');
+        } else {
+            showVoiceFeedback('🏠 Già in modalità normale');
+        }
+        return true;
+}
     }
     // RICERCA GENERICA (canali, generi, nomi radio)
     var query = t.replace(/^(cerca|trova|metti|apri|vai su|sintonizza|sintonizzati su|metti su|canale|radio)\s+/i, '').trim();
