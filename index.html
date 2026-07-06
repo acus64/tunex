@@ -3071,68 +3071,55 @@ audio.media-player::-webkit-media-controls-enclosure {
         if (e.key === 'Escape' && isFullscreen()) exitFullscreen().catch(function(){});
     });
 
-// ================= ASSISTENTE VOCALE - ALWAYS ON (DEFINITIVO) =================
+// ================= ASSISTENTE VOCALE - ALWAYS ON (FIX BLOCCO) =================
 var voiceCmdBtn = document.getElementById('voice-cmd-btn');
 var voiceCmdActive = false;
 var voiceCmdRecognition = null;
 var voiceCmdRestartTimer = null;
 var voiceCmdCooldownUntil = 0;
+var voiceCmdHistory = []; // Anti-loop: tiene traccia dei comandi recenti
 
-var VOICE_KEYWORDS = [
-    // Comandi
-    'volume','prossimo','precedente','successivo','indietro',
-    'play','stop','pausa','pause','ferma','riprendi','avvia',
-    'continua','esegui','cerca','trova','metti','reset',
-    'cancella','pulisci','muto','silenzio','massimo',
-    'canale','avanti','alza','abbassa','schermo',"schermo intero",
-    "fullscreen","tutto schermo","espandi","torna normale","esci","schermo piccolo",
-    "homepage","esci",
-    // Generi e decadi
-    'lounge','rock','jazz','pop','dance','house','soul','funk',
-    'techno','edm','trance','urban','afro','disco','indie','afro','new wave',
-    'wave','psychedelic','motown','classical','60','70','80','90',
-    // Radio italiane principali
-    'deejay','capital','m2o','rtl','virgin','105','101','rnc','love',
-    'kiss','freccia','ibiza','marte','delfino','bruno','stingray',
-    'linetti','naxi','jazeen','oldies','relax','paradise',
-    'miami','zoo','tiffany','caliente','traffic','pluto','napoli',
-    'retro','skyline','groove','spirit','movidatv','ricordi',
-    'ritmo','romantica','silver','piterpan','jukebox','rsc', 'radio montecarlo','rmc 2',
-    'rmc','lac','mitology','qwest','pinguin','hotmix','maretimo','rtl','vevo','m2o',
-    'austria','lite','umsh','point blank','electro','exclusive',
-    'news24','village','hilton','powerhit','coolfm','salsoul',
-    'reyfm','traxx','oxygen','beethoven','symphony','naxi','afro','new wave',
-    // Artisti (non stop)
-    'bob marley','diana krall','fleetwood','clapton','dire straits',
-    'chic','carpenters','barry white','marvin gaye','david bowie',
-    'frank sinatra','james taylor','nat king','phil collins',
-    'pink floyd','steely dan','george michael','elton john',
-    'eagles','genesis','avicii','10cc','alison moyet','gregory porter',
-    'depeche','donna summer','al green','earth wind','black sabbath',
-    'deep purple','joe satriani','simple minds','stone temple',
-    'u2','zz top','john lennon','joe bonamassa','george benson',
-    'herbie hancock','rem','cure','smiths','olivia newton',
-    'spandau ballet','tears fears','cars','police','chicago',
-    'chris rea','huey lewis','santana','supertramp','sade',
+// ✅ KEYWORD RIDOTTE: solo comandi specifici + trigger per ricerca
+// Niente più parole generiche come 'love', 'now', 'bel' che causano falsi positivi
+var VOICE_COMMAND_TRIGGERS = [
+    // Trigger per comandi specifici
+    'volume', 'prossimo', 'precedente', 'successivo', 'indietro',
+    'play', 'stop', 'pausa', 'pause', 'ferma', 'riprendi', 'avvia',
+    'continua', 'esegui', 'reset', 'cancella', 'pulisci', 'azzera',
+    'muto', 'silenzio', 'schermo', 'fullscreen', 'torna', 'esci',
+    // Trigger per ricerca canali (obbligatori all'inizio della frase)
+    'metti', 'cerca', 'trova', 'sintonizza', 'radio', 'canale', 'apri',
+    // Nomi radio specifiche (solo questi, non parole generiche)
+    'deejay', 'capital', 'm2o', 'rtl', 'virgin', 'kiss', 'freccia',
+    'ibiza', 'marte', 'delfino', 'bruno', 'stingray', 'linetti', 'naxi',
+    'jazeen', 'oldies', 'relax', 'paradise', 'miami', 'zoo', 'tiffany',
+    'caliente', 'traffic', 'pluto', 'napoli', 'retro', 'skyline', 'groove',
+    'spirit', 'movidatv', 'ricordi', 'ritmo', 'romantica', 'silver',
+    'piterpan', 'jukebox', 'rsc', 'rmc', 'monte carlo', 'lac', 'mitology',
+    'qwest', 'pinguin', 'hotmix', 'maretimo', 'vevo', 'austria', 'lite',
+    'umsh', 'electro', 'exclusive', 'news24', 'village', 'hilton',
+    'powerhit', 'coolfm', 'salsoul', 'reyfm', 'traxx', 'oxygen',
+    'beethoven', 'symphony', 'bob marley', 'diana krall', 'fleetwood',
+    'clapton', 'dire straits', 'chic', 'carpenters', 'barry white',
+    'marvin gaye', 'david bowie', 'frank sinatra', 'james taylor',
+    'nat king', 'phil collins', 'pink floyd', 'steely dan',
+    'george michael', 'elton john', 'eagles', 'genesis', 'avicii',
+    '10cc', 'alison moyet', 'gregory porter', 'depeche', 'donna summer',
+    'al green', 'earth wind', 'black sabbath', 'deep purple',
+    'joe satriani', 'simple minds', 'stone temple', 'u2', 'zz top',
+    'john lennon', 'joe bonamassa', 'george benson', 'herbie hancock',
+    'rem', 'cure', 'smiths', 'olivia newton', 'spandau ballet',
+    'tears fears', 'cars', 'police', 'chicago', 'chris rea',
+    'huey lewis', 'santana', 'supertramp', 'sade',
+    // Generi musicali (solo questi, non 'love' o 'now')
+    'lounge', 'rock', 'jazz', 'pop', 'dance', 'house', 'soul', 'funk',
+    'techno', 'edm', 'trance', 'urban', 'afro', 'disco', 'indie',
+    'new wave', 'psychedelic', 'motown', 'classical',
     // TV italiane
-    'RAI 1',' RAI 2','RAI 3','canale 5','italia 1','rete 4','la 7','tv 8','nove',
-    'discovery','cine 34','focus','grande fratello','iris',
-    'italia 2','la 5','mediaset','top crime','tgr','sicilia',
-    'tgcom24','sportitalia','zanzara','company','vintage',
-    'kicks','fm italia','ma lo ma','giada','sunset','cafe roma',
-    'youtudeep','30 song',
-    // Altre keyword specifiche
-    'ti ricordi','love 80','antena','power dance','bel','splash',
-    'alternative','ac dc','planet rock','night story','love song',
-    'euro indie','v2 beat','soul tv','forever young','now',
-    'monte carlo','disco inferno','bro sis','retro rock',
-    'ladies','black music','nrj','cinema','live ny',
-    'afro house','non stop','funky corner','pop lounge',
-    'nostalgie','new york','disco funky','music art','dance wave',
-    'patate douce','electro house','cafe lounge','story','1station',
-    'vevo','sharp','edm house','las vegas','lounge fm',
-    'powerhit','indie disco','the soul','london','art club',
-    'twentyseven','51 radio','54 funk','party groove','mela'
+    'rai 1', 'rai 2', 'rai 3', 'canale 5', 'italia 1', 'rete 4',
+    'la 7', 'tv 8', 'nove', 'discovery', 'cine 34', 'focus',
+    'grande fratello', 'iris', 'italia 2', 'la 5', 'mediaset',
+    'top crime', 'tgr', 'sicilia', 'tgcom24', 'sportitalia', 'zanzara'
 ];
 
 var voiceFeedback = document.createElement('div');
@@ -3148,11 +3135,44 @@ function showVoiceFeedback(text, duration) {
     }, duration || 2500);
 }
 
+// ✅ FILTRO MIGLIORATO: richiede trigger specifico all'inizio O comando esatto
 function containsKeyword(text) {
-    var t = text.toLowerCase();
-    for (var i = 0; i < VOICE_KEYWORDS.length; i++) {
-        if (t.indexOf(VOICE_KEYWORDS[i]) >= 0) return true;
+    var t = text.toLowerCase().trim();
+    
+    // 1. Controlla se inizia con un trigger di ricerca (metti, cerca, radio, ecc.)
+    if (/^(metti|cerca|trova|sintonizza|radio|canale|apri)\s+/.test(t)) {
+        return true;
     }
+    
+    // 2. Controlla se contiene un comando specifico
+    for (var i = 0; i < VOICE_COMMAND_TRIGGERS.length; i++) {
+        if (t.indexOf(VOICE_COMMAND_TRIGGERS[i]) >= 0) return true;
+    }
+    
+    return false;
+}
+
+// ✅ ANTI-LOOP: controlla se lo stesso comando è stato eseguito troppo di recente
+function isLooping(command) {
+    var now = Date.now();
+    // Rimuovi comandi più vecchi di 10 secondi
+    voiceCmdHistory = voiceCmdHistory.filter(function(item) {
+        return now - item.time < 10000;
+    });
+    
+    // Conta quante volte lo stesso comando è stato eseguito negli ultimi 10s
+    var count = voiceCmdHistory.filter(function(item) {
+        return item.cmd === command;
+    }).length;
+    
+    // Se più di 3 volte in 10 secondi, è un loop
+    if (count >= 3) {
+        console.warn('[VoiceAI] Loop rilevato per:', command);
+        return true;
+    }
+    
+    // Aggiungi al history
+    voiceCmdHistory.push({ cmd: command, time: now });
     return false;
 }
 
@@ -3162,6 +3182,7 @@ function executeVoiceCommand(transcript) {
 
     // VOLUME SU
     if (/volume su|alza|più forte|piu forte|aumenta/.test(t)) {
+        if (isLooping('volume_up')) return false;
         var v = Math.min(1, unifiedPlayer.volume + 0.15);
         unifiedPlayer.volume = v;
         if (volumeSlider) volumeSlider.value = v;
@@ -3171,6 +3192,7 @@ function executeVoiceCommand(transcript) {
     }
     // VOLUME GIÙ
     if (/volume giù|volume giu|abbassa|più piano|piu piano/.test(t)) {
+        if (isLooping('volume_down')) return false;
         var v2 = Math.max(0, unifiedPlayer.volume - 0.15);
         unifiedPlayer.volume = v2;
         if (volumeSlider) volumeSlider.value = v2;
@@ -3180,6 +3202,7 @@ function executeVoiceCommand(transcript) {
     }
     // MUTO
     if (/^(muto|silenzio|mute)$/.test(t) || /metti muto/.test(t)) {
+        if (isLooping('mute')) return false;
         unifiedPlayer.volume = 0;
         if (volumeSlider) volumeSlider.value = 0;
         updateVolumeIcon();
@@ -3188,6 +3211,7 @@ function executeVoiceCommand(transcript) {
     }
     // VOLUME MASSIMO
     if (/volume massimo/.test(t)) {
+        if (isLooping('volume_max')) return false;
         unifiedPlayer.volume = 1;
         if (volumeSlider) volumeSlider.value = 1;
         updateVolumeIcon();
@@ -3196,6 +3220,7 @@ function executeVoiceCommand(transcript) {
     }
     // CANALE SUCCESSIVO
     if (/prossimo|successivo|avanti|next/.test(t)) {
+        if (isLooping('next')) return false;
         var nextBtn = document.getElementById('media-next');
         if (nextBtn) nextBtn.click();
         showVoiceFeedback('⏭️ Canale successivo');
@@ -3203,6 +3228,7 @@ function executeVoiceCommand(transcript) {
     }
     // CANALE PRECEDENTE
     if (/precedente|indietro|back/.test(t)) {
+        if (isLooping('prev')) return false;
         var channels = document.querySelectorAll('.channel');
         var visible = [];
         channels.forEach(function(ch) { if (ch.offsetHeight > 0) visible.push(ch); });
@@ -3214,18 +3240,21 @@ function executeVoiceCommand(transcript) {
     }
     // PAUSA
     if (/^(stop|ferma|pausa|pause)$/.test(t) || /metti in pausa|ferma tutto/.test(t)) {
+        if (isLooping('pause')) return false;
         unifiedPlayer.pause();
         showVoiceFeedback('⏸️ Pausa');
         return true;
     }
     // PLAY
     if (/^(play|riprendi|avvia|continua|esegui|start)$/.test(t)) {
+        if (isLooping('play')) return false;
         unifiedPlayer.play().catch(function(){});
         showVoiceFeedback('▶️ Riproduzione');
         return true;
     }
     // RESET RICERCA
     if (/^(reset|cancella|pulisci|azzera)$/.test(t)) {
+        if (isLooping('reset')) return false;
         if (searchInput) {
             searchInput.value = '';
             searchInput.dispatchEvent(new Event('input'));
@@ -3233,8 +3262,9 @@ function executeVoiceCommand(transcript) {
         showVoiceFeedback('🗑️ Ricerca cancellata');
         return true;
     }
-    // FULLSCREEN - VERSIONE COMPLETA
+    // FULLSCREEN
     if (/schermo intero|fullscreen|tutto schermo|espandi|maximizza/.test(t)) {
+        if (isLooping('fullscreen')) return false;
         if (playerContainer) {
             if (!isFullscreen()) {
                 requestFullscreen(playerContainer);
@@ -3245,9 +3275,9 @@ function executeVoiceCommand(transcript) {
         }
         return true;
     }
-
-    // ESCI DA FULLSCREEN - Torna alla homepage
+    // ESCI DA FULLSCREEN
     if (/torna normale|esci|riduci|homepage|schermo piccolo|annulla schermo|torna indietro/.test(t)) {
+        if (isLooping('exit_fullscreen')) return false;
         if (isFullscreen()) {
             exitFullscreen().catch(function(){});
             showVoiceFeedback('🏠 Tornato alla homepage');
@@ -3255,11 +3285,14 @@ function executeVoiceCommand(transcript) {
             showVoiceFeedback('🏠 Già in modalità normale');
         }
         return true;
-
     }
-    // RICERCA GENERICA (canali, generi, nomi radio)
-    var query = t.replace(/^(cerca|trova|metti|apri|vai su|sintonizza|sintonizzati su|metti su|canale|radio)\s+/i, '').trim();
-    if (query.length > 2) {
+    
+    // ✅ RICERCA GENERICA: SOLO se inizia con trigger specifico
+    // Questo evita che conversazioni casuali attivino ricerche
+    var searchMatch = t.match(/^(metti|cerca|trova|sintonizza|radio|canale|apri)\s+(.+)$/i);
+    if (searchMatch && searchMatch[2] && searchMatch[2].length > 2) {
+        var query = searchMatch[2].trim();
+        if (isLooping('search_' + query)) return false;
         if (searchInput) {
             searchInput.value = query;
             searchInput.dispatchEvent(new Event('input'));
@@ -3267,6 +3300,7 @@ function executeVoiceCommand(transcript) {
         showVoiceFeedback('🔍 Cerco: "' + query + '"');
         return true;
     }
+    
     return false;
 }
 
@@ -3278,7 +3312,7 @@ function initVoiceCommand() {
     }
     voiceCmdRecognition = new SpeechRecognition();
     voiceCmdRecognition.lang = 'it-IT';
-    voiceCmdRecognition.continuous = true;   // ✅ Sempre attivo
+    voiceCmdRecognition.continuous = true;
     voiceCmdRecognition.interimResults = false;
     voiceCmdRecognition.maxAlternatives = 1;
 
@@ -3297,7 +3331,6 @@ function initVoiceCommand() {
 
         // BLOCCO 3: FILTRO KEYWORD - se non contiene keyword, scarto SILENZIOSAMENTE
         if (!containsKeyword(transcript)) {
-            // NON mostrare feedback - deve essere invisibile
             return;
         }
 
@@ -3306,22 +3339,20 @@ function initVoiceCommand() {
         // Esegui comando
         var executed = executeVoiceCommand(transcript);
 
-        // Cooldown di 4 secondi dopo ogni comando (evita loop audio)
+        // Cooldown di 5 secondi dopo ogni comando (aumentato per evitare loop)
         if (executed) {
-            voiceCmdCooldownUntil = Date.now() + 4000;
+            voiceCmdCooldownUntil = Date.now() + 5000;
         }
     };
 
     voiceCmdRecognition.onerror = function(e) {
         console.warn('[VoiceAI] Error:', e.error);
-        // Ignora errori normali in continuous mode
         if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'audio-capture') return;
         if (e.error === 'not-allowed') {
             showVoiceFeedback('🎤 Microfono non autorizzato');
             stopVoiceCommand();
             return;
         }
-        // Auto-restart su altri errori
         if (voiceCmdActive) {
             clearTimeout(voiceCmdRestartTimer);
             voiceCmdRestartTimer = setTimeout(startVoiceRecognition, 1500);
@@ -3329,7 +3360,6 @@ function initVoiceCommand() {
     };
 
     voiceCmdRecognition.onend = function() {
-        // Auto-restart se ancora attivo (Chrome lo ferma ogni ~60s)
         if (voiceCmdActive) {
             clearTimeout(voiceCmdRestartTimer);
             voiceCmdRestartTimer = setTimeout(startVoiceRecognition, 500);
@@ -3348,6 +3378,7 @@ function startVoiceCommand() {
     if (!voiceCmdRecognition && !initVoiceCommand()) return;
     voiceCmdActive = true;
     voiceCmdCooldownUntil = 0;
+    voiceCmdHistory = []; // Reset history
     voiceCmdBtn.classList.add('active');
     startVoiceRecognition();
     showVoiceFeedback('🎤 Voice AI attivo - parla quando vuoi');
@@ -3357,6 +3388,7 @@ function stopVoiceCommand() {
     voiceCmdActive = false;
     voiceCmdBtn.classList.remove('active');
     voiceCmdCooldownUntil = 0;
+    voiceCmdHistory = [];
     clearTimeout(voiceCmdRestartTimer);
     if (voiceCmdRecognition) {
         try { voiceCmdRecognition.stop(); } catch(e) {}
@@ -3373,13 +3405,11 @@ if (voiceCmdBtn) {
     });
 }
 
-// ✅ AUTO-START al primo click su qualsiasi elemento dell'app
-// (così l'utente non deve cercare il pulsante)
+// ✅ AUTO-START al primo click
 var voiceAutoStarted = false;
 document.addEventListener('click', function autoStartVoice() {
     if (voiceAutoStarted) return;
     voiceAutoStarted = true;
-    // Avvia Voice AI silenziosamente dopo 2 secondi dal primo click
     setTimeout(function() {
         if (!voiceCmdActive) {
             startVoiceCommand();
