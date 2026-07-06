@@ -3071,86 +3071,117 @@ audio.media-player::-webkit-media-controls-enclosure {
         if (e.key === 'Escape' && isFullscreen()) exitFullscreen().catch(function(){});
     });
 
-    // ================= ASSISTENTE VOCALE - MODALITÀ CLICK-TO-ACTIVATE =================
+// ================= ASSISTENTE VOCALE - PRO EDITION =================
+(function() {
+    'use strict';
+    
+    // --- CONFIGURAZIONE ---
+    var CFG = {
+        LISTEN_WINDOW_MS: 8000,      // Finestra di ascolto dopo click (8s)
+        COOLDOWN_MS: 3500,           // Silenzio dopo comando eseguito (3.5s)
+        MIN_TRANSCRIPT_LEN: 3,       // Lunghezza minima testo
+        SPEECH_LANG: 'it-IT',
+        AUTO_RESTART_DELAY: 400      // Delay restart dopo errore
+    };
+    
+    // --- STATO ---
+    var STATE = {
+        IDLE: 'idle',
+        GATE_OPEN: 'gate_open',
+        PROCESSING: 'processing',
+        COOLDOWN: 'cooldown'
+    };
+    
+    var state = STATE.IDLE;
     var voiceCmdBtn = document.getElementById('voice-cmd-btn');
-    var voiceCmdRecognition = null;
-    var voiceCmdListening = false;
-    var voiceCmdStopTimer = null;
-    var voiceCmdCooldownUntil = 0;
-
-    // Parole chiave OBBLIGATORIE - senza queste il comando viene scartato
-    var VOICE_KEYWORDS = [
-        'volume', 'prossimo', 'precedente', 'successivo', 'indietro',
-        'play', 'stop', 'pausa', 'pause', 'ferma', 'riprendi', 'avvia',
-        'continua', 'esegui', 'cerca', 'trova', 'metti', 'reset',
-        'cancella', 'pulisci', 'muto', 'silenzio', 'massimo',
-        'canale', 'avanti', 'alza', 'abbassa', 'schermo'
+    var recognition = null;
+    var gateTimer = null;
+    var cooldownTimer = null;
+    var gateOpenedAt = 0;
+    var isSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    
+    // --- KEYWORDS (filtro anti-rumore) ---
+    var KEYWORDS = [
+        'volume','prossimo','precedente','successivo','indietro',
+        'play','stop','pausa','pause','ferma','riprendi','avvia',
+        'continua','esegui','cerca','trova','metti','reset',
+        'cancella','pulisci','muto','silenzio','massimo',
+        'canale','avanti','alza','abbassa','schermo'
     ];
-
+    
+    // --- FEEDBACK VISIVO ---
     var voiceFeedback = document.createElement('div');
     voiceFeedback.className = 'voice-cmd-feedback';
+    voiceFeedback.setAttribute('aria-live', 'polite');
     document.body.appendChild(voiceFeedback);
-
-    function showVoiceFeedback(text, duration) {
+    
+    function showFeedback(text, duration) {
+        if (!voiceFeedback) return;
         voiceFeedback.textContent = text;
         voiceFeedback.classList.add('show');
-        clearTimeout(voiceFeedback._t);
-        voiceFeedback._t = setTimeout(function() {
+        clearTimeout(voiceFeedback._hideTimer);
+        voiceFeedback._hideTimer = setTimeout(function() {
             voiceFeedback.classList.remove('show');
         }, duration || 2500);
     }
-
+    
+    // --- FILTRO KEYWORD ---
     function containsKeyword(text) {
         var t = text.toLowerCase();
-        for (var i = 0; i < VOICE_KEYWORDS.length; i++) {
-            if (t.indexOf(VOICE_KEYWORDS[i]) >= 0) return true;
+        for (var i = 0; i < KEYWORDS.length; i++) {
+            if (t.indexOf(KEYWORDS[i]) >= 0) return true;
         }
         return false;
     }
-
-    function executeVoiceCommand(transcript) {
+    
+    // --- ESECUZIONE COMANDI ---
+    function executeCommand(transcript) {
+        if (!unifiedPlayer) return false;
         var t = transcript.toLowerCase().trim();
-        console.log('[VoiceCmd] Elaboro:', t);
-
-        // VOLUME
-        if (/volume su|alza|più forte|piu forte|aumenta/.test(t)) {
+        console.log('[VoiceAI] Comando:', t);
+        
+        // VOLUME SU
+        if (/volume\s*(su|più|piu|alto)|alza\s*(il\s*)?volume|aumenta/.test(t)) {
             var v = Math.min(1, unifiedPlayer.volume + 0.15);
             unifiedPlayer.volume = v;
             if (volumeSlider) volumeSlider.value = v;
-            updateVolumeIcon();
-            showVoiceFeedback('🔊 Volume: ' + Math.round(v * 100) + '%');
+            if (typeof updateVolumeIcon === 'function') updateVolumeIcon();
+            showFeedback('🔊 Volume: ' + Math.round(v * 100) + '%');
             return true;
         }
-        if (/volume giù|volume giu|abbassa|più piano|piu piano/.test(t)) {
+        // VOLUME GIÙ
+        if (/volume\s*(giù|giu|basso|meno)|abbassa\s*(il\s*)?volume/.test(t)) {
             var v2 = Math.max(0, unifiedPlayer.volume - 0.15);
             unifiedPlayer.volume = v2;
             if (volumeSlider) volumeSlider.value = v2;
-            updateVolumeIcon();
-            showVoiceFeedback('🔉 Volume: ' + Math.round(v2 * 100) + '%');
+            if (typeof updateVolumeIcon === 'function') updateVolumeIcon();
+            showFeedback('🔉 Volume: ' + Math.round(v2 * 100) + '%');
             return true;
         }
-        if (/^(muto|silenzio|mute)$/.test(t) || /volume muto|metti muto/.test(t)) {
+        // MUTO
+        if (/^(muto|silenzio|mute)$/.test(t) || /metti\s*(in\s*)?muto/.test(t)) {
             unifiedPlayer.volume = 0;
             if (volumeSlider) volumeSlider.value = 0;
-            updateVolumeIcon();
-            showVoiceFeedback('🔇 Muto');
+            if (typeof updateVolumeIcon === 'function') updateVolumeIcon();
+            showFeedback('🔇 Muto');
             return true;
         }
-        if (/volume massimo|al massimo/.test(t)) {
+        // VOLUME MASSIMO
+        if (/volume\s*(al\s*)?massimo|alza\s*(al\s*)?massimo/.test(t)) {
             unifiedPlayer.volume = 1;
             if (volumeSlider) volumeSlider.value = 1;
-            updateVolumeIcon();
-            showVoiceFeedback('🔊 Volume massimo');
+            if (typeof updateVolumeIcon === 'function') updateVolumeIcon();
+            showFeedback('🔊 Volume massimo');
             return true;
         }
-
-        // CANALE SUCCESSIVO / PRECEDENTE
+        // CANALE SUCCESSIVO
         if (/prossimo|successivo|avanti|next/.test(t)) {
             var nextBtn = document.getElementById('media-next');
             if (nextBtn) nextBtn.click();
-            showVoiceFeedback('⏭️ Canale successivo');
+            showFeedback('⏭️ Canale successivo');
             return true;
         }
+        // CANALE PRECEDENTE
         if (/precedente|indietro|back/.test(t)) {
             var channels = document.querySelectorAll('.channel');
             var visible = [];
@@ -3162,253 +3193,242 @@ audio.media-player::-webkit-media-controls-enclosure {
                 if (ch.classList.contains('active')) activeIdx = i;
             });
             if (activeIdx > 0) visible[activeIdx - 1].click();
-            showVoiceFeedback('⏮️ Canale precedente');
+            showFeedback('⏮️ Canale precedente');
             return true;
         }
-
-        // PLAY / PAUSA
-        if (/^(stop|ferma|pausa|pause)$/.test(t) || /metti in pausa|ferma tutto/.test(t)) {
+        // PAUSA
+        if (/^(stop|ferma|pausa|pause)$/.test(t) || /metti\s*(in\s*)?pausa|ferma\s*tutto/.test(t)) {
             unifiedPlayer.pause();
-            showVoiceFeedback('⏸️ Pausa');
+            showFeedback('⏸️ Pausa');
             return true;
         }
-        if (/^(play|riprendi|avvia|continua|esegui|start)$/.test(t) || /riprendi la riproduzione/.test(t)) {
+        // PLAY
+        if (/^(play|riprendi|avvia|continua|esegui|start)$/.test(t) || /riprendi\s*(la\s*)?riproduzione/.test(t)) {
             unifiedPlayer.play().catch(function(){});
-            showVoiceFeedback('▶️ Riproduzione');
+            showFeedback('▶️ Riproduzione');
             return true;
         }
-
         // RESET RICERCA
-        if (/^(reset|cancella|pulisci|azzera)$/.test(t) || /cancella ricerca|resetta ricerca/.test(t)) {
+        if (/^(reset|cancella|pulisci|azzera)$/.test(t) || /cancella\s*(la\s*)?ricerca/.test(t)) {
             if (searchInput) {
                 searchInput.value = '';
                 searchInput.dispatchEvent(new Event('input'));
             }
-            showVoiceFeedback('🗑️ Ricerca cancellata');
+            showFeedback('🗑️ Ricerca cancellata');
             return true;
         }
-
         // FULLSCREEN
-        if (/schermo intero|fullscreen/.test(t)) {
-            if (playerContainer) {
-                if (isFullscreen()) exitFullscreen().catch(function(){});
-                else requestFullscreen(playerContainer);
+        if (/schermo\s*(intero)|fullscreen/.test(t)) {
+            if (typeof playerContainer !== 'undefined' && playerContainer) {
+                if (typeof isFullscreen === 'function' && isFullscreen()) {
+                    if (typeof exitFullscreen === 'function') exitFullscreen().catch(function(){});
+                } else if (typeof requestFullscreen === 'function') {
+                    requestFullscreen(playerContainer);
+                }
             }
-            showVoiceFeedback('🖥️ Schermo intero');
+            showFeedback('🖥️ Schermo intero');
             return true;
         }
-
-        // RICERCA GENERICA (solo se inizia con parole chiave)
-        if (/^(cerca|trova|metti|apri|vai su|sintonizza)\s+/.test(t)) {
-            var query = t.replace(/^(cerca|trova|metti|apri|vai su|sintonizza)\s+/i, '').trim();
-            if (query.length > 1) {
-                if (searchInput) {
-                    searchInput.value = query;
-                    searchInput.dispatchEvent(new Event('input'));
-                }
-                showVoiceFeedback('🔍 Cerco: "' + query + '"');
-                return true;
+        // RICERCA GENERICA
+        var searchMatch = t.match(/^(cerca|trova|metti|apri|vai\s*su|sintonizza)\s+(.+)$/);
+        if (searchMatch && searchMatch[2] && searchMatch[2].length > 1) {
+            var query = searchMatch[2].trim();
+            if (searchInput) {
+                searchInput.value = query;
+                searchInput.dispatchEvent(new Event('input'));
             }
+            showFeedback('🔍 Cerco: "' + query + '"');
+            return true;
         }
-
+        
         return false;
     }
-
-    function initVoiceRecognition() {
-        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) return null;
+    
+    // --- GESTIONE COOLDOWN ---
+    function enterCooldown() {
+        state = STATE.COOLDOWN;
+        clearTimeout(cooldownTimer);
+        cooldownTimer = setTimeout(function() {
+            if (state === STATE.COOLDOWN) state = STATE.IDLE;
+        }, CFG.COOLDOWN_MS);
+    }
+    
+    // --- INIZIALIZZAZIONE SPEECH RECOGNITION (una sola volta) ---
+    function initRecognition() {
+        if (recognition) return recognition;
+        if (!isSupported) return null;
         
-        var rec = new SpeechRecognition();
-        rec.lang = 'it-IT';
-        rec.continuous = false;          // ❌ NO continuous mode
-        rec.interimResults = false;      // Solo risultati finali
-        rec.maxAlternatives = 1;
+        var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognitionCtor();
+        recognition.lang = CFG.SPEECH_LANG;
+        recognition.continuous = true;        // ✅ CRITICO: true per stabilità Android
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
         
-        rec.onresult = function(event) {
-            var now = Date.now();
-            if (now < voiceCmdCooldownUntil) return;
-            
-            var last = event.results.length - 1;
-            var transcript = event.results[last][0].transcript;
-            
-            if (!transcript || transcript.trim().length < 3) return;
-            if (!containsKeyword(transcript)) {
-                console.log('[VoiceCmd] Scartato (no keyword):', transcript);
+        recognition.onresult = function(event) {
+            // Ignora se gate chiuso o in cooldown
+            if (state !== STATE.GATE_OPEN) {
+                console.log('[VoiceAI] Ignorato (state=' + state + ')');
                 return;
             }
             
-            var executed = executeVoiceCommand(transcript);
+            // Ignora se in cooldown
+            if (Date.now() < gateOpenedAt + CFG.COOLDOWN_MS - CFG.COOLDOWN_MS) return;
+            
+            var transcript = '';
+            for (var i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    transcript = event.results[i][0].transcript;
+                    break;
+                }
+            }
+            if (!transcript) {
+                // Fallback: usa l'ultimo risultato
+                var last = event.results.length - 1;
+                transcript = event.results[last][0].transcript;
+            }
+            
+            if (!transcript || transcript.trim().length < CFG.MIN_TRANSCRIPT_LEN) return;
+            
+            // Filtro keyword
+            if (!containsKeyword(transcript)) {
+                console.log('[VoiceAI] Scartato (no keyword):', transcript);
+                return;
+            }
+            
+            // Processing
+            state = STATE.PROCESSING;
+            var executed = executeCommand(transcript);
+            
             if (executed) {
-                voiceCmdCooldownUntil = Date.now() + 2000;
-                stopVoiceListening();
+                // Chiudi gate e entra in cooldown
+                closeGate();
+                enterCooldown();
+            } else {
+                // Comando non riconosciuto, resta in gate open
+                state = STATE.GATE_OPEN;
+                showFeedback('❓ Non capito: "' + transcript.substring(0, 30) + '"');
             }
         };
         
-        rec.onerror = function(e) {
-            console.warn('[VoiceCmd] Error:', e.error);
+        recognition.onerror = function(e) {
+            console.warn('[VoiceAI] Error:', e.error);
+            // Errori normali in continuous mode - ignora
+            if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'audio-capture') {
+                return;
+            }
             if (e.error === 'not-allowed') {
-                showVoiceFeedback('🎤 Microfono non autorizzato');
+                showFeedback('🎤 Microfono non autorizzato');
+                closeGate();
+                return;
             }
-            stopVoiceListening();
+            if (e.error === 'network') {
+                showFeedback('🌐 Errore di rete');
+            }
+            // Ricrea istanza su errori gravi
+            recognition = null;
         };
         
-        rec.onend = function() {
-            stopVoiceListening();
+        recognition.onend = function() {
+            console.log('[VoiceAI] Recognition ended (state=' + state + ')');
+            // Se il gate è ancora aperto, riavvia automaticamente
+            if (state === STATE.GATE_OPEN) {
+                setTimeout(function() {
+                    if (state === STATE.GATE_OPEN && recognition) {
+                        try { recognition.start(); } catch(e) {}
+                    }
+                }, CFG.AUTO_RESTART_DELAY);
+            }
         };
         
-        return rec;
+        return recognition;
     }
-
-    function startVoiceListening() {
-        if (voiceCmdListening) return;
-        
-        var now = Date.now();
-        if (now < voiceCmdCooldownUntil) {
-            showVoiceFeedback('⏳ Attendi...');
+    
+    // --- APERTURA/CHIUSURA GATE ---
+    function openGate() {
+        if (state === STATE.GATE_OPEN) return;
+        if (state === STATE.COOLDOWN) {
+            showFeedback('⏳ Attendi...');
             return;
         }
         
-        if (!voiceCmdRecognition) {
-            voiceCmdRecognition = initVoiceRecognition();
-            if (!voiceCmdRecognition) {
-                showVoiceFeedback('❌ Riconoscimento non supportato');
-                return;
-            }
+        var rec = initRecognition();
+        if (!rec) {
+            showFeedback('❌ Riconoscimento non supportato');
+            return;
         }
         
         try {
-            voiceCmdRecognition.start();
-            voiceCmdListening = true;
-            voiceCmdBtn.classList.add('active');
-            showVoiceFeedback('🎤 Parla ora (5s)...');
-            
-            // Auto-stop dopo 5 secondi
-            clearTimeout(voiceCmdStopTimer);
-            voiceCmdStopTimer = setTimeout(function() {
-                if (voiceCmdListening) {
-                    stopVoiceListening();
-                    showVoiceFeedback('🎤 Tempo scaduto');
-                }
-            }, 5000);
+            rec.start();
         } catch(e) {
-            console.warn('[VoiceCmd] Start error:', e);
-            stopVoiceListening();
-        }
-    }
-
-    function stopVoiceListening() {
-        voiceCmdListening = false;
-        voiceCmdBtn.classList.remove('active');
-        clearTimeout(voiceCmdStopTimer);
-        
-        if (voiceCmdRecognition) {
-            try { voiceCmdRecognition.stop(); } catch(e) {}
-            try { voiceCmdRecognition.abort(); } catch(e) {}
+            // Già in esecuzione - ok
+            console.log('[VoiceAI] Already started');
         }
         
-        // Ricrea l'istanza per il prossimo uso (evita stati corrotti)
-        voiceCmdRecognition = null;
+        state = STATE.GATE_OPEN;
+        gateOpenedAt = Date.now();
+        
+        if (voiceCmdBtn) voiceCmdBtn.classList.add('active');
+        showFeedback('🎤 Parla ora...');
+        
+        // Chiudi gate automaticamente dopo LISTEN_WINDOW_MS
+        clearTimeout(gateTimer);
+        gateTimer = setTimeout(function() {
+            if (state === STATE.GATE_OPEN) {
+                closeGate();
+                showFeedback('⏱️ Tempo scaduto');
+            }
+        }, CFG.LISTEN_WINDOW_MS);
     }
-
-    // Click sul pulsante → avvia ascolto one-shot
+    
+    function closeGate() {
+        state = STATE.IDLE;
+        clearTimeout(gateTimer);
+        
+        if (voiceCmdBtn) voiceCmdBtn.classList.remove('active');
+        
+        // NON fermare recognition - lasciala in continuous per riutilizzo
+        // Verrà riavviata automaticamente alla prossima apertura gate
+    }
+    
+    // --- CLICK HANDLER ---
     if (voiceCmdBtn) {
         voiceCmdBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             
-            if (voiceCmdListening) {
-                stopVoiceListening();
-                showVoiceFeedback('🎤 Annullato');
+            if (!isSupported) {
+                showFeedback('❌ Browser non supporta riconoscimento vocale');
+                return;
+            }
+            
+            if (state === STATE.GATE_OPEN) {
+                closeGate();
+                showFeedback('🎤 Annullato');
             } else {
-                startVoiceListening();
+                openGate();
             }
         });
     }
-
-    // Cleanup alla chiusura pagina
+    
+    // --- CLEANUP ---
     window.addEventListener('beforeunload', function() {
-        stopVoiceListening();
+        clearTimeout(gateTimer);
+        clearTimeout(cooldownTimer);
+        if (recognition) {
+            try { recognition.abort(); } catch(e) {}
+            recognition = null;
+        }
     });
-
-    // ================= SWIPE LATERALE VOLUME =================
-    var volumeSwipeZone = null;
-    var swipeStartY = 0;
-    var swipeStartVolume = 1;
-    var swipeIndicator = null;
-
-    function initVolumeSwipe() {
-        volumeSwipeZone = document.createElement('div');
-        volumeSwipeZone.id = 'volume-swipe-zone';
-        volumeSwipeZone.style.cssText = 'position:fixed;top:0;right:0;width:40px;height:100vh;z-index:9998;background:transparent;touch-action:none;';
-        document.body.appendChild(volumeSwipeZone);
-
-        swipeIndicator = document.createElement('div');
-        swipeIndicator.id = 'swipe-vol-indicator';
-        swipeIndicator.style.cssText = 'position:fixed;right:50px;top:50%;transform:translateY(-50%);width:8px;height:200px;background:rgba(0,0,0,0.8);border-radius:4px;display:none;z-index:9999;border:1px solid var(--accent,#00ff88);overflow:hidden;';
-        swipeIndicator.innerHTML = '<div id="swipe-vol-level" style="position:absolute;bottom:0;width:100%;background:linear-gradient(to top,#00ff88,#00ccff);transition:height 0.1s;"></div>';
-        document.body.appendChild(swipeIndicator);
-
-        volumeSwipeZone.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            swipeStartY = e.touches[0].clientY;
-            swipeStartVolume = unifiedPlayer.volume;
-            swipeIndicator.style.display = 'block';
-            updateSwipeIndicator(unifiedPlayer.volume);
-        }, {passive: false});
-
-        volumeSwipeZone.addEventListener('touchmove', function(e) {
-            e.preventDefault();
-            var currentY = e.touches[0].clientY;
-            var delta = (swipeStartY - currentY) / window.innerHeight;
-            var newVol = Math.max(0, Math.min(1, swipeStartVolume + delta * 2));
-            unifiedPlayer.volume = newVol;
-            if (volumeSlider) volumeSlider.value = newVol;
-            updateVolumeIcon();
-            updateSwipeIndicator(newVol);
-        }, {passive: false});
-
-        volumeSwipeZone.addEventListener('touchend', function() {
-            swipeIndicator.style.display = 'none';
-            showToast('🔊 Volume: ' + Math.round(unifiedPlayer.volume * 100) + '%');
-        });
-
-        // Supporto mouse desktop
-        var mouseDown = false;
-        volumeSwipeZone.addEventListener('mousedown', function(e) {
-            mouseDown = true;
-            swipeStartY = e.clientY;
-            swipeStartVolume = unifiedPlayer.volume;
-            swipeIndicator.style.display = 'block';
-            updateSwipeIndicator(unifiedPlayer.volume);
-        });
-        document.addEventListener('mousemove', function(e) {
-            if (!mouseDown) return;
-            var delta = (swipeStartY - e.clientY) / window.innerHeight;
-            var newVol = Math.max(0, Math.min(1, swipeStartVolume + delta * 2));
-            unifiedPlayer.volume = newVol;
-            if (volumeSlider) volumeSlider.value = newVol;
-            updateVolumeIcon();
-            updateSwipeIndicator(newVol);
-        });
-        document.addEventListener('mouseup', function() {
-            if (mouseDown) {
-                mouseDown = false;
-                swipeIndicator.style.display = 'none';
-                showToast('🔊 Volume: ' + Math.round(unifiedPlayer.volume * 100) + '%');
-            }
-        });
-    }
-
-    function updateSwipeIndicator(vol) {
-        var level = document.getElementById('swipe-vol-level');
-        if (level) level.style.height = (vol * 100) + '%';
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initVolumeSwipe);
-    } else {
-        initVolumeSwipe();
-    }
+    
+    // Esponi per debug
+    window.__voiceAI = {
+        getState: function() { return state; },
+        isSupported: isSupported
+    };
+    
+    console.log('[VoiceAI] Inizializzato (supported=' + isSupported + ')');
+})();
   </script>
 </body>
 </html>
