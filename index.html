@@ -3071,296 +3071,262 @@ audio.media-player::-webkit-media-controls-enclosure {
         if (e.key === 'Escape' && isFullscreen()) exitFullscreen().catch(function(){});
     });
 
-// ================= ASSISTENTE VOCALE - VERSIONE DEFINITIVA =================
-(function() {
-    'use strict';
-    
-    var CFG = {
-        LISTEN_WINDOW_MS: 8000,
-        COOLDOWN_MS: 3500,
-        MIN_TRANSCRIPT_LEN: 2,
-        SPEECH_LANG: 'it-IT',
-        AUTO_RESTART_DELAY: 400
-    };
-    
-    var STATE = { IDLE: 'idle', GATE_OPEN: 'gate_open', PROCESSING: 'processing', COOLDOWN: 'cooldown' };
-    var state = STATE.IDLE;
-    
-    var voiceCmdBtn = document.getElementById('voice-cmd-btn');
-    var recognition = null;
-    var gateTimer = null;
-    var cooldownTimer = null;
-    var gateOpenedAt = 0;
-    var isSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-    
-    var voiceFeedback = document.createElement('div');
-    voiceFeedback.className = 'voice-cmd-feedback';
-    voiceFeedback.setAttribute('aria-live', 'polite');
-    document.body.appendChild(voiceFeedback);
-    
-    function showFeedback(text, duration) {
-        if (!voiceFeedback) return;
-        voiceFeedback.textContent = text;
-        voiceFeedback.classList.add('show');
-        clearTimeout(voiceFeedback._hideTimer);
-        voiceFeedback._hideTimer = setTimeout(function() {
-            voiceFeedback.classList.remove('show');
-        }, duration || 2500);
+// ================= ASSISTENTE VOCALE - ALWAYS ON (DEFINITIVO) =================
+var voiceCmdBtn = document.getElementById('voice-cmd-btn');
+var voiceCmdActive = false;
+var voiceCmdRecognition = null;
+var voiceCmdRestartTimer = null;
+var voiceCmdCooldownUntil = 0;
+
+var VOICE_KEYWORDS = [
+    'volume','prossimo','precedente','successivo','indietro',
+    'play','stop','pausa','pause','ferma','riprendi','avvia',
+    'continua','esegui','cerca','trova','metti','reset',
+    'cancella','pulisci','muto','silenzio','massimo',
+    'canale','avanti','alza','abbassa','schermo',
+    'radio','marte','delfino','deejay','capital','m2o','rtl',
+    'lounge','rock','jazz','pop','dance','house','soul','funk',
+    '70','80','90','virgin','italia','kiss','freccia','ibiza'
+];
+
+var voiceFeedback = document.createElement('div');
+voiceFeedback.className = 'voice-cmd-feedback';
+document.body.appendChild(voiceFeedback);
+
+function showVoiceFeedback(text, duration) {
+    voiceFeedback.textContent = text;
+    voiceFeedback.classList.add('show');
+    clearTimeout(voiceFeedback._t);
+    voiceFeedback._t = setTimeout(function() {
+        voiceFeedback.classList.remove('show');
+    }, duration || 2500);
+}
+
+function containsKeyword(text) {
+    var t = text.toLowerCase();
+    for (var i = 0; i < VOICE_KEYWORDS.length; i++) {
+        if (t.indexOf(VOICE_KEYWORDS[i]) >= 0) return true;
     }
-    
-    // ✅ ESECUZIONE COMANDI - Senza filtro keyword
-    function executeCommand(transcript) {
-        var t = transcript.toLowerCase().trim();
-        console.log('[VoiceAI] Ricevuto:', t);
-        
-        // === COMANDI SPECIFICI (priorità alta) ===
-        
-        // VOLUME SU
-        if (/^(volume su|alza il volume|più forte|piu forte|aumenta volume|alza volume)$/i.test(t) ||
-            /alza\s+(il\s+)?volume/i.test(t) || /volume\s+(su|alto|più|piu)/i.test(t)) {
-            var v = Math.min(1, unifiedPlayer.volume + 0.15);
-            unifiedPlayer.volume = v;
-            if (volumeSlider) volumeSlider.value = v;
-            if (typeof updateVolumeIcon === 'function') updateVolumeIcon();
-            showFeedback('🔊 Volume: ' + Math.round(v * 100) + '%');
-            return true;
+    return false;
+}
+
+function executeVoiceCommand(transcript) {
+    var t = transcript.toLowerCase().trim();
+    console.log('[VoiceAI] Comando:', t);
+
+    // VOLUME SU
+    if (/volume su|alza|più forte|piu forte|aumenta/.test(t)) {
+        var v = Math.min(1, unifiedPlayer.volume + 0.15);
+        unifiedPlayer.volume = v;
+        if (volumeSlider) volumeSlider.value = v;
+        updateVolumeIcon();
+        showVoiceFeedback('🔊 Volume: ' + Math.round(v * 100) + '%');
+        return true;
+    }
+    // VOLUME GIÙ
+    if (/volume giù|volume giu|abbassa|più piano|piu piano/.test(t)) {
+        var v2 = Math.max(0, unifiedPlayer.volume - 0.15);
+        unifiedPlayer.volume = v2;
+        if (volumeSlider) volumeSlider.value = v2;
+        updateVolumeIcon();
+        showVoiceFeedback('🔉 Volume: ' + Math.round(v2 * 100) + '%');
+        return true;
+    }
+    // MUTO
+    if (/^(muto|silenzio|mute)$/.test(t) || /metti muto/.test(t)) {
+        unifiedPlayer.volume = 0;
+        if (volumeSlider) volumeSlider.value = 0;
+        updateVolumeIcon();
+        showVoiceFeedback('🔇 Muto');
+        return true;
+    }
+    // VOLUME MASSIMO
+    if (/volume massimo/.test(t)) {
+        unifiedPlayer.volume = 1;
+        if (volumeSlider) volumeSlider.value = 1;
+        updateVolumeIcon();
+        showVoiceFeedback('🔊 Volume massimo');
+        return true;
+    }
+    // CANALE SUCCESSIVO
+    if (/prossimo|successivo|avanti|next/.test(t)) {
+        var nextBtn = document.getElementById('media-next');
+        if (nextBtn) nextBtn.click();
+        showVoiceFeedback('⏭️ Canale successivo');
+        return true;
+    }
+    // CANALE PRECEDENTE
+    if (/precedente|indietro|back/.test(t)) {
+        var channels = document.querySelectorAll('.channel');
+        var visible = [];
+        channels.forEach(function(ch) { if (ch.offsetHeight > 0) visible.push(ch); });
+        var activeIdx = -1;
+        visible.forEach(function(ch, i) { if (ch.classList.contains('active')) activeIdx = i; });
+        if (activeIdx > 0) visible[activeIdx - 1].click();
+        showVoiceFeedback('⏮️ Canale precedente');
+        return true;
+    }
+    // PAUSA
+    if (/^(stop|ferma|pausa|pause)$/.test(t) || /metti in pausa|ferma tutto/.test(t)) {
+        unifiedPlayer.pause();
+        showVoiceFeedback('⏸️ Pausa');
+        return true;
+    }
+    // PLAY
+    if (/^(play|riprendi|avvia|continua|esegui|start)$/.test(t)) {
+        unifiedPlayer.play().catch(function(){});
+        showVoiceFeedback('▶️ Riproduzione');
+        return true;
+    }
+    // RESET RICERCA
+    if (/^(reset|cancella|pulisci|azzera)$/.test(t)) {
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
         }
-        // VOLUME GIÙ
-        if (/^(volume giù|volume giu|abbassa il volume|più piano|piu piano|abbassa volume)$/i.test(t) ||
-            /abbassa\s+(il\s+)?volume/i.test(t) || /volume\s+(giù|giu|basso|meno)/i.test(t)) {
-            var v2 = Math.max(0, unifiedPlayer.volume - 0.15);
-            unifiedPlayer.volume = v2;
-            if (volumeSlider) volumeSlider.value = v2;
-            if (typeof updateVolumeIcon === 'function') updateVolumeIcon();
-            showFeedback('🔉 Volume: ' + Math.round(v2 * 100) + '%');
-            return true;
+        showVoiceFeedback('🗑️ Ricerca cancellata');
+        return true;
+    }
+    // FULLSCREEN
+    if (/schermo intero|fullscreen/.test(t)) {
+        if (playerContainer) {
+            if (isFullscreen()) exitFullscreen().catch(function(){});
+            else requestFullscreen(playerContainer);
         }
-        // MUTO
-        if (/^(muto|silenzio|mute)$/i.test(t) || /metti\s+(in\s+)?muto/i.test(t)) {
-            unifiedPlayer.volume = 0;
-            if (volumeSlider) volumeSlider.value = 0;
-            if (typeof updateVolumeIcon === 'function') updateVolumeIcon();
-            showFeedback('🔇 Muto');
-            return true;
+        showVoiceFeedback('🖥️ Schermo intero');
+        return true;
+    }
+    // RICERCA GENERICA (canali, generi, nomi radio)
+    var query = t.replace(/^(cerca|trova|metti|apri|vai su|sintonizza|sintonizzati su|metti su|canale|radio)\s+/i, '').trim();
+    if (query.length > 2) {
+        if (searchInput) {
+            searchInput.value = query;
+            searchInput.dispatchEvent(new Event('input'));
         }
-        // VOLUME MASSIMO
-        if (/volume\s+(al\s+)?massimo/i.test(t) || /alza\s+(al\s+)?massimo/i.test(t)) {
-            unifiedPlayer.volume = 1;
-            if (volumeSlider) volumeSlider.value = 1;
-            if (typeof updateVolumeIcon === 'function') updateVolumeIcon();
-            showFeedback('🔊 Volume massimo');
-            return true;
-        }
-        // CANALE SUCCESSIVO
-        if (/^(prossimo|successivo|avanti|next|canale successivo|vai avanti)$/i.test(t)) {
-            var nextBtn = document.getElementById('media-next');
-            if (nextBtn) nextBtn.click();
-            showFeedback('⏭️ Canale successivo');
-            return true;
-        }
-        // CANALE PRECEDENTE
-        if (/^(precedente|indietro|back|canale precedente)$/i.test(t)) {
-            var channels = document.querySelectorAll('.channel');
-            var visible = [];
-            channels.forEach(function(ch) { if (ch.offsetHeight > 0) visible.push(ch); });
-            var activeIdx = -1;
-            visible.forEach(function(ch, i) { if (ch.classList.contains('active')) activeIdx = i; });
-            if (activeIdx > 0) visible[activeIdx - 1].click();
-            showFeedback('⏮️ Canale precedente');
-            return true;
-        }
-        // PAUSA
-        if (/^(stop|ferma|pausa|pause|fermati|ferma tutto)$/i.test(t) || /metti\s+(in\s+)?pausa/i.test(t)) {
-            unifiedPlayer.pause();
-            showFeedback('⏸️ Pausa');
-            return true;
-        }
-        // PLAY
-        if (/^(play|riprendi|avvia|continua|esegui|start|riproduci)$/i.test(t) || /riprendi\s+(la\s+)?riproduzione/i.test(t)) {
-            unifiedPlayer.play().catch(function(){});
-            showFeedback('▶️ Riproduzione');
-            return true;
-        }
-        // RESET RICERCA
-        if (/^(reset|cancella|pulisci|azzera|cancella ricerca|resetta ricerca)$/i.test(t)) {
-            if (searchInput) {
-                searchInput.value = '';
-                searchInput.dispatchEvent(new Event('input'));
-            }
-            showFeedback('🗑️ Ricerca cancellata');
-            return true;
-        }
-        // FULLSCREEN
-        if (/^(schermo intero|fullscreen|tutto schermo)$/i.test(t)) {
-            if (typeof playerContainer !== 'undefined' && playerContainer) {
-                if (typeof isFullscreen === 'function' && isFullscreen()) {
-                    if (typeof exitFullscreen === 'function') exitFullscreen().catch(function(){});
-                } else if (typeof requestFullscreen === 'function') {
-                    requestFullscreen(playerContainer);
-                }
-            }
-            showFeedback('🖥️ Schermo intero');
-            return true;
-        }
-        
-        // === FALLBACK: RICERCA COME IL PULSANTE "VOICE" ===
-        // Tutto ciò che non è un comando specifico → cerca canali/generi
-        if (t.length >= CFG.MIN_TRANSCRIPT_LEN) {
-            if (searchInput) {
-                searchInput.value = t;
-                searchInput.dispatchEvent(new Event('input'));
-            }
-            showFeedback('🔍 Cerco: "' + t + '"');
-            return true;
-        }
-        
+        showVoiceFeedback('🔍 Cerco: "' + query + '"');
+        return true;
+    }
+    return false;
+}
+
+function initVoiceCommand() {
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        showVoiceFeedback('❌ Riconoscimento non supportato');
         return false;
     }
-    
-    function enterCooldown() {
-        state = STATE.COOLDOWN;
-        clearTimeout(cooldownTimer);
-        cooldownTimer = setTimeout(function() {
-            if (state === STATE.COOLDOWN) state = STATE.IDLE;
-        }, CFG.COOLDOWN_MS);
-    }
-    
-    function initRecognition() {
-        if (recognition) return recognition;
-        if (!isSupported) return null;
-        
-        var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SpeechRecognitionCtor();
-        recognition.lang = CFG.SPEECH_LANG;
-        recognition.continuous = true;
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
-        
-        recognition.onresult = function(event) {
-            if (state !== STATE.GATE_OPEN) return;
-            
-            var transcript = '';
-            for (var i = event.resultIndex; i < event.results.length; i++) {
-                if (event.results[i].isFinal) {
-                    transcript = event.results[i][0].transcript;
-                    break;
-                }
-            }
-            if (!transcript) {
-                var last = event.results.length - 1;
-                transcript = event.results[last][0].transcript;
-            }
-            
-            if (!transcript || transcript.trim().length < CFG.MIN_TRANSCRIPT_LEN) return;
-            
-            console.log('[VoiceAI] Rilevato:', transcript);
-            
-            state = STATE.PROCESSING;
-            var executed = executeCommand(transcript);
-            
-            if (executed) {
-                closeGate();
-                enterCooldown();
-            } else {
-                state = STATE.GATE_OPEN;
-                showFeedback('❓ Non capito: "' + transcript.substring(0, 30) + '"');
-            }
-        };
-        
-        recognition.onerror = function(e) {
-            console.warn('[VoiceAI] Error:', e.error);
-            if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'audio-capture') return;
-            if (e.error === 'not-allowed') {
-                showFeedback('🎤 Microfono non autorizzato');
-                closeGate();
-                return;
-            }
-            if (e.error === 'network') showFeedback('🌐 Errore di rete');
-            recognition = null;
-        };
-        
-        recognition.onend = function() {
-            console.log('[VoiceAI] Ended (state=' + state + ')');
-            if (state === STATE.GATE_OPEN) {
-                setTimeout(function() {
-                    if (state === STATE.GATE_OPEN && recognition) {
-                        try { recognition.start(); } catch(e) {}
-                    }
-                }, CFG.AUTO_RESTART_DELAY);
-            }
-        };
-        
-        return recognition;
-    }
-    
-    function openGate() {
-        if (state === STATE.GATE_OPEN) return;
-        if (state === STATE.COOLDOWN) {
-            showFeedback('⏳ Attendi...');
+    voiceCmdRecognition = new SpeechRecognition();
+    voiceCmdRecognition.lang = 'it-IT';
+    voiceCmdRecognition.continuous = true;   // ✅ Sempre attivo
+    voiceCmdRecognition.interimResults = false;
+    voiceCmdRecognition.maxAlternatives = 1;
+
+    voiceCmdRecognition.onresult = function(event) {
+        // BLOCCO 1: Cooldown attivo? Ignoro tutto
+        if (Date.now() < voiceCmdCooldownUntil) {
+            console.log('[VoiceAI] In cooldown, ignoro');
             return;
         }
-        
-        var rec = initRecognition();
-        if (!rec) {
-            showFeedback('❌ Riconoscimento non supportato');
+
+        var last = event.results.length - 1;
+        var transcript = event.results[last][0].transcript;
+
+        // BLOCCO 2: Testo troppo corto? Ignoro
+        if (!transcript || transcript.trim().length < 3) return;
+
+        // BLOCCO 3: FILTRO KEYWORD - se non contiene keyword, scarto SILENZIOSAMENTE
+        if (!containsKeyword(transcript)) {
+            // NON mostrare feedback - deve essere invisibile
             return;
         }
-        
-        try { rec.start(); } catch(e) { console.log('[VoiceAI] Already started'); }
-        
-        state = STATE.GATE_OPEN;
-        gateOpenedAt = Date.now();
-        if (voiceCmdBtn) voiceCmdBtn.classList.add('active');
-        showFeedback('🎤 Parla ora...');
-        
-        clearTimeout(gateTimer);
-        gateTimer = setTimeout(function() {
-            if (state === STATE.GATE_OPEN) {
-                closeGate();
-                showFeedback('⏱️ Tempo scaduto');
-            }
-        }, CFG.LISTEN_WINDOW_MS);
-    }
-    
-    function closeGate() {
-        state = STATE.IDLE;
-        clearTimeout(gateTimer);
-        if (voiceCmdBtn) voiceCmdBtn.classList.remove('active');
-    }
-    
-    if (voiceCmdBtn) {
-        voiceCmdBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (!isSupported) {
-                showFeedback('❌ Browser non supporta riconoscimento vocale');
-                return;
-            }
-            if (state === STATE.GATE_OPEN) {
-                closeGate();
-                showFeedback('🎤 Annullato');
-            } else {
-                openGate();
-            }
-        });
-    }
-    
-    window.addEventListener('beforeunload', function() {
-        clearTimeout(gateTimer);
-        clearTimeout(cooldownTimer);
-        if (recognition) {
-            try { recognition.abort(); } catch(e) {}
-            recognition = null;
+
+        console.log('[VoiceAI] Elaboro:', transcript);
+
+        // Esegui comando
+        var executed = executeVoiceCommand(transcript);
+
+        // Cooldown di 4 secondi dopo ogni comando (evita loop audio)
+        if (executed) {
+            voiceCmdCooldownUntil = Date.now() + 4000;
         }
-    });
-    
-    window.__voiceAI = {
-        getState: function() { return state; },
-        isSupported: isSupported
     };
-    
-    console.log('[VoiceAI] Inizializzato (supported=' + isSupported + ')');
-})();
+
+    voiceCmdRecognition.onerror = function(e) {
+        console.warn('[VoiceAI] Error:', e.error);
+        // Ignora errori normali in continuous mode
+        if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'audio-capture') return;
+        if (e.error === 'not-allowed') {
+            showVoiceFeedback('🎤 Microfono non autorizzato');
+            stopVoiceCommand();
+            return;
+        }
+        // Auto-restart su altri errori
+        if (voiceCmdActive) {
+            clearTimeout(voiceCmdRestartTimer);
+            voiceCmdRestartTimer = setTimeout(startVoiceRecognition, 1500);
+        }
+    };
+
+    voiceCmdRecognition.onend = function() {
+        // Auto-restart se ancora attivo (Chrome lo ferma ogni ~60s)
+        if (voiceCmdActive) {
+            clearTimeout(voiceCmdRestartTimer);
+            voiceCmdRestartTimer = setTimeout(startVoiceRecognition, 500);
+        }
+    };
+
+    return true;
+}
+
+function startVoiceRecognition() {
+    if (!voiceCmdRecognition) return;
+    try { voiceCmdRecognition.start(); } catch(e) {}
+}
+
+function startVoiceCommand() {
+    if (!voiceCmdRecognition && !initVoiceCommand()) return;
+    voiceCmdActive = true;
+    voiceCmdCooldownUntil = 0;
+    voiceCmdBtn.classList.add('active');
+    startVoiceRecognition();
+    showVoiceFeedback('🎤 Voice AI attivo - parla quando vuoi');
+}
+
+function stopVoiceCommand() {
+    voiceCmdActive = false;
+    voiceCmdBtn.classList.remove('active');
+    voiceCmdCooldownUntil = 0;
+    clearTimeout(voiceCmdRestartTimer);
+    if (voiceCmdRecognition) {
+        try { voiceCmdRecognition.stop(); } catch(e) {}
+    }
+    showVoiceFeedback('🎤 Voice AI disattivato');
+}
+
+if (voiceCmdBtn) {
+    voiceCmdBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (voiceCmdActive) stopVoiceCommand();
+        else startVoiceCommand();
+    });
+}
+
+// ✅ AUTO-START al primo click su qualsiasi elemento dell'app
+// (così l'utente non deve cercare il pulsante)
+var voiceAutoStarted = false;
+document.addEventListener('click', function autoStartVoice() {
+    if (voiceAutoStarted) return;
+    voiceAutoStarted = true;
+    // Avvia Voice AI silenziosamente dopo 2 secondi dal primo click
+    setTimeout(function() {
+        if (!voiceCmdActive) {
+            startVoiceCommand();
+            console.log('[VoiceAI] Auto-avviato al primo click utente');
+        }
+    }, 2000);
+    document.removeEventListener('click', autoStartVoice);
+}, { once: false });
   </script>
 </body>
 </html>
