@@ -2305,13 +2305,11 @@ audio.media-player::-webkit-media-controls-enclosure {
     var shazamRecIndicator = document.getElementById('shazam-rec-indicator');
     var shazamRecTimer = document.getElementById('shazam-rec-timer');
     var AUD_D_TOKEN = '2aa7bc785cad68eb78089f19df2188a1';
-
     var activeMicStream = null;
     var shazamCleanupFn = null;
     var shazamActiveMediaRecorder = null;
     var shazamRecordingTimeout = null;
 
-    // FIX #1: Rileva mimeType supportato dal browser per MediaRecorder
     function getSupportedMimeType() {
         var candidates = [
             'audio/webm;codecs=opus',
@@ -2323,7 +2321,7 @@ audio.media-player::-webkit-media-controls-enclosure {
             ''
         ];
         for (var i = 0; i < candidates.length; i++) {
-            if (candidates[i] === '') return ''; // Nessun mimeType specificato = default del browser
+            if (candidates[i] === '') return '';
             if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(candidates[i])) {
                 console.log('MediaRecorder mimeType supportato:', candidates[i]);
                 return candidates[i];
@@ -2339,49 +2337,60 @@ audio.media-player::-webkit-media-controls-enclosure {
         return 'audio/webm';
     }
 
-    // FIX #3: Metodo 1 - Cattura audio dall'AudioContext (alta fedelta')
+    // FIX CRITICO: Cattura audio migliorata con gain node
     function captureEQAudio() {
-        if (!audioContext || audioContext.state !== 'running' || eqFilters.length === 0) {
+        if (!audioContext || audioContext.state !== 'running') {
+            console.warn('Shazam: AudioContext non disponibile o non running');
             return null;
         }
+        
         try {
-            // Crea un nodo splitter per catturare l'audio senza interrompere la riproduzione
-            var splitter = audioContext.createGain();
-            splitter.gain.value = 1.0;
-
-            // Trova l'ultimo nodo della catena EQ connesso alla destinazione
-            var lastNode = eqFilters[eqFilters.length - 1] || presenceBoost || preamp;
-            if (!lastNode) return null;
-
-            // Inserisci lo splitter nella catena (lastNode -> splitter -> destination)
-            try { lastNode.disconnect(audioContext.destination); } catch(e) {}
-            lastNode.connect(splitter);
-            splitter.connect(audioContext.destination);
-
-            // Crea MediaStreamDestination per catturare l'audio
+            var captureGain = audioContext.createGain();
+            captureGain.gain.value = 2.0; // Amplifica il segnale
+            
+            var sourceNode = null;
+            if (eqFilters && eqFilters.length > 0 && eqFilters[eqFilters.length - 1]) {
+                sourceNode = eqFilters[eqFilters.length - 1];
+            } else if (presenceBoost) {
+                sourceNode = presenceBoost;
+            } else if (bassBoost) {
+                sourceNode = bassBoost;
+            } else if (preamp) {
+                sourceNode = preamp;
+            }
+            
+            if (!sourceNode) {
+                console.warn('Shazam: Nessun nodo sorgente trovato');
+                return null;
+            }
+            
             var dest = audioContext.createMediaStreamDestination();
-            splitter.connect(dest);
-
+            
+            try {
+                sourceNode.connect(captureGain);
+                captureGain.connect(dest);
+            } catch(e) {
+                console.warn('Shazam: Errore connessione nodi:', e.message);
+                return null;
+            }
+            
             return {
                 stream: dest.stream,
                 cleanup: function() {
                     try {
-                        splitter.disconnect(dest);
-                        splitter.disconnect(audioContext.destination);
-                        lastNode.disconnect(splitter);
-                        lastNode.connect(audioContext.destination);
+                        captureGain.disconnect(dest);
+                        sourceNode.disconnect(captureGain);
                     } catch(e) {
-                        console.warn('Cleanup EQ capture error:', e.message);
+                        console.warn('Shazam cleanup error:', e.message);
                     }
                 }
             };
         } catch(e) {
-            console.warn('EQ audio capture failed:', e.message);
+            console.warn('Shazam EQ audio capture failed:', e.message);
             return null;
         }
     }
 
-    // Countdown timer visivo durante registrazione
     var shazamCountdownInterval = null;
     function startCountdown(durationMs) {
         var remaining = Math.ceil(durationMs / 1000);
@@ -2395,41 +2404,39 @@ audio.media-player::-webkit-media-controls-enclosure {
             if (shazamRecTimer) shazamRecTimer.textContent = formatCountdown(remaining);
         }, 1000);
     }
+
     function stopCountdown() {
         if (shazamCountdownInterval) { clearInterval(shazamCountdownInterval); shazamCountdownInterval = null; }
         if (shazamRecTimer) shazamRecTimer.textContent = '0:00';
     }
+
     function formatCountdown(secs) {
         return Math.floor(secs / 60) + ':' + (secs % 60 < 10 ? '0' : '') + (secs % 60);
     }
 
-    // FIX #12: Funzione di cleanup completo per Shazam
     function cleanupShazam() {
         stopCountdown();
         if (shazamRecIndicator) shazamRecIndicator.classList.remove('active');
         shazamBtn.classList.remove('listening');
-
-        // Ferma MediaRecorder se attivo
+        
         if (shazamActiveMediaRecorder && shazamActiveMediaRecorder.state === 'recording') {
             try { shazamActiveMediaRecorder.stop(); } catch(e) {}
         }
         shazamActiveMediaRecorder = null;
-
-        // Ferma timeout
+        
         if (shazamRecordingTimeout) { clearTimeout(shazamRecordingTimeout); shazamRecordingTimeout = null; }
-
-        // Cleanup stream
+        
         if (shazamCleanupFn) {
             try { shazamCleanupFn(); } catch(e) {}
             shazamCleanupFn = null;
         }
+        
         if (activeMicStream) {
             activeMicStream.getTracks().forEach(function(t) { try { t.stop(); } catch(e) {} });
             activeMicStream = null;
         }
     }
 
-    // Shazam: verifiche supporto browser
     function checkMediaDevicesSupport() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             var isFileProtocol = window.location.protocol === 'file:';
@@ -2437,54 +2444,54 @@ audio.media-player::-webkit-media-controls-enclosure {
                 return {
                     supported: false,
                     reason: 'file_protocol',
-                    message: 'Il file e\' aperto come file:// locale. Il microfono funziona solo tramite server HTTP/HTTPS (localhost o server web). Usa il caricamento file come alternativa.'
+                    message: 'Il file è aperto come file:// locale. Il microfono funziona solo tramite server HTTP/HTTPS.'
                 };
             }
             return {
                 supported: false,
                 reason: 'old_browser',
-                message: 'Il browser non supporta l\'accesso al microfono (API mediaDevices mancante). Aggiorna il browser o usa il caricamento file come alternativa.'
+                message: 'Il browser non supporta l\'accesso al microfono.'
             };
         }
         return { supported: true };
     }
 
-    // Shazam: fallback upload file audio quando mic non disponibile
     var shazamFileInput = document.createElement('input');
     shazamFileInput.type = 'file';
     shazamFileInput.accept = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac,.aac,.wma,.webm';
     shazamFileInput.style.display = 'none';
-    shazamFileInput.setAttribute('aria-label', 'Carica file audio per Shazam'); // <-- AGGIUNGI
+    shazamFileInput.setAttribute('aria-label', 'Carica file audio per Shazam');
     document.body.appendChild(shazamFileInput);
 
     shazamFileInput.addEventListener('change', async function(e) {
         if (!e.target.files || e.target.files.length === 0) return;
         var file = e.target.files[0];
-
+        
         shazamBtn.classList.add('listening');
         shazamResult.classList.add('show');
         sTitle.textContent = 'Analisi file audio...';
         sArtist.textContent = 'Invio al server di riconoscimento';
         sImg.style.display = 'none';
-
+        
         try {
             var formData = new FormData();
             formData.append('file', file);
             formData.append('api_token', AUD_D_TOKEN);
             formData.append('return', 'apple_music,spotify');
-
+            
             var controller = new AbortController();
             var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
-
+            
             var response = await fetch('https://api.audd.io/', {
                 method: 'POST',
                 body: formData,
                 signal: controller.signal
             });
+            
             clearTimeout(timeoutId);
-
             var text = await response.text();
             var data;
+            
             try { data = JSON.parse(text); } catch(parseErr) {
                 sTitle.textContent = 'Errore risposta server';
                 sArtist.textContent = 'Risposta non valida dal server';
@@ -2492,12 +2499,12 @@ audio.media-player::-webkit-media-controls-enclosure {
                 shazamFileInput.value = '';
                 return;
             }
-
+            
             if (data.status === 'success' && data.result) {
                 var r = data.result;
                 sTitle.textContent = (r.title || 'Brano').substring(0, 40);
                 sArtist.textContent = (r.artist || 'Sconosciuto').substring(0, 35);
-
+                
                 if (r.apple_music && r.apple_music.url) {
                     sArtist.innerHTML += '<br><a href="' + r.apple_music.url + '" target="_blank" style="color:var(--accent);font-size:11px;">Ascolta su Apple Music</a>';
                 } else if (r.spotify && r.spotify.external_urls && r.spotify.external_urls.spotify) {
@@ -2505,7 +2512,7 @@ audio.media-player::-webkit-media-controls-enclosure {
                 } else if (r.song_link) {
                     sArtist.innerHTML += '<br><a href="' + r.song_link + '" target="_blank" style="color:var(--accent);font-size:11px;">Risultato completo</a>';
                 }
-
+                
                 if (r.apple_music && r.apple_music.artwork) {
                     var artUrl = r.apple_music.artwork.url_400x400 || r.apple_music.artwork.url_100x100 || '';
                     if (artUrl) { sImg.src = artUrl; sImg.style.display = 'block'; }
@@ -2513,6 +2520,7 @@ audio.media-player::-webkit-media-controls-enclosure {
                     sImg.src = r.spotify.album.images[0].url;
                     sImg.style.display = 'block';
                 }
+                
                 showToast('Trovato: ' + r.title);
             } else if (data.status === 'error') {
                 var errMsg = data.error || {};
@@ -2521,7 +2529,7 @@ audio.media-player::-webkit-media-controls-enclosure {
                     sArtist.textContent = errMsg.error_message;
                 } else {
                     sTitle.textContent = 'Non riconosciuto';
-                    sArtist.textContent = 'Riprova con un file audio piu chiaro';
+                    sArtist.textContent = 'Riprova con un file audio più chiaro';
                 }
                 showToast('Brano non identificato');
             } else {
@@ -2540,7 +2548,7 @@ audio.media-player::-webkit-media-controls-enclosure {
             }
             showToast('Errore durante l\'analisi');
         }
-
+        
         cleanupShazam();
         shazamFileInput.value = '';
     });
@@ -2548,26 +2556,21 @@ audio.media-player::-webkit-media-controls-enclosure {
     shazamBtn.addEventListener('click', async function(e) {
         e.preventDefault();
         e.stopPropagation();
-
-        // Se gia' sta registrando, ferma tutto
+        
         if (shazamBtn.classList.contains('listening')) {
             cleanupShazam();
             sTitle.textContent = 'Identificazione annullata';
             sArtist.textContent = 'Premi Shazam per riprovare';
             return;
         }
-
-        // PRIMA: verifica se il browser supporta mediaDevices
+        
         var mdCheck = checkMediaDevicesSupport();
         if (!mdCheck.supported) {
             console.warn('Shazam: mediaDevices non disponibile - reason:', mdCheck.reason);
-
-            // Mostra warning + fallback upload file
             shazamResult.classList.add('show');
             sTitle.textContent = 'Microfono non disponibile';
             sArtist.textContent = mdCheck.message;
-
-            // Crea bottone fallback upload nella card risultato
+            
             var existingUploadBtn = document.getElementById('shazam-upload-btn');
             if (!existingUploadBtn) {
                 var uploadBtn = document.createElement('button');
@@ -2579,43 +2582,39 @@ audio.media-player::-webkit-media-controls-enclosure {
                     ev.stopPropagation();
                     shazamFileInput.click();
                 });
-                // Inserisci dopo la sezione artwork/info
                 var resultContent = shazamResult.querySelector('div');
                 if (resultContent) resultContent.appendChild(uploadBtn);
             }
-
             showToast('Microfono non disponibile - usa upload file');
             return;
         }
-
+        
         if (unifiedPlayer.paused) {
             showToast("Avvia riproduzione prima di Shazam");
             sTitle.textContent = 'Errore';
             sArtist.textContent = 'Devi riprodurre audio prima';
             return;
         }
-
+        
         shazamBtn.classList.add('listening');
         shazamResult.classList.add('show');
         if (shazamRecIndicator) shazamRecIndicator.classList.add('active');
         sTitle.textContent = 'Attivazione cattura audio...';
         sArtist.textContent = 'Preparazione in corso';
         sImg.style.display = 'none';
-
+        
         var audioStream = null;
         var captureMethod = 'none';
-
-        // METODO 1: Cattura diretta dall'AudioContext (alta qualita)
+        
         var eqCapture = captureEQAudio();
         if (eqCapture && eqCapture.stream.getAudioTracks().length > 0) {
             audioStream = eqCapture.stream;
             shazamCleanupFn = eqCapture.cleanup;
             captureMethod = 'eq';
-            sArtist.textContent = 'Cattura audio diretta (alta qualita)';
+            sArtist.textContent = 'Cattura audio diretta (alta qualità)';
             console.log('Shazam: usando cattura AudioContext');
         }
-
-        // METODO 2: Fallback - Microfono
+        
         if (!audioStream) {
             try {
                 var micConfig = {
@@ -2626,7 +2625,6 @@ audio.media-player::-webkit-media-controls-enclosure {
                     },
                     video: false
                 };
-
                 audioStream = await navigator.mediaDevices.getUserMedia(micConfig);
                 activeMicStream = audioStream;
                 shazamCleanupFn = function() {
@@ -2649,7 +2647,7 @@ audio.media-player::-webkit-media-controls-enclosure {
                     sArtist.textContent = 'Collega un microfono o usa cuffie con mic';
                     showToast('Microfono non trovato');
                 } else if (micErr.name === 'NotReadableError') {
-                    sTitle.textContent = 'Microfono gia in uso';
+                    sTitle.textContent = 'Microfono già in uso';
                     sArtist.textContent = 'Chiudi altre app che usano il microfono';
                     showToast('Microfono occupato da un\'altra app');
                 } else {
@@ -2657,8 +2655,7 @@ audio.media-player::-webkit-media-controls-enclosure {
                     sArtist.textContent = micErr.message;
                     showToast('Errore: ' + micErr.message);
                 }
-
-                // Mostra anche il bottone fallback upload
+                
                 var existingUploadBtn = document.getElementById('shazam-upload-btn');
                 if (!existingUploadBtn) {
                     var uploadBtn = document.createElement('button');
@@ -2673,13 +2670,13 @@ audio.media-player::-webkit-media-controls-enclosure {
                     var resultContent = shazamResult.querySelector('div');
                     if (resultContent) resultContent.appendChild(uploadBtn);
                 }
-
+                
                 shazamBtn.classList.remove('listening');
                 if (shazamRecIndicator) shazamRecIndicator.classList.remove('active');
                 return;
             }
         }
-
+        
         if (!audioStream || audioStream.getAudioTracks().length === 0) {
             sTitle.textContent = 'Nessun flusso audio disponibile';
             sArtist.textContent = 'Impossibile catturare audio';
@@ -2687,23 +2684,21 @@ audio.media-player::-webkit-media-controls-enclosure {
             if (shazamRecIndicator) shazamRecIndicator.classList.remove('active');
             return;
         }
-
-        // Avvia registrazione e identificazione
-        var duration = captureMethod === 'eq' ? 8000 : 15000;
+        
+        // FIX: Durata aumentata per miglior riconoscimento
+        var duration = captureMethod === 'eq' ? 12000 : 18000;
         await recordAndIdentify(audioStream, duration, captureMethod);
     });
 
     async function recordAndIdentify(stream, duration, method) {
-        // FIX #1: Usa mimeType rilevato dal browser
         var mimeType = getSupportedMimeType();
         var recorderOptions = mimeType ? { mimeType: mimeType } : {};
-
         var mediaRecorder;
+        
         try {
             mediaRecorder = new MediaRecorder(stream, recorderOptions);
         } catch(recErr) {
             console.error('MediaRecorder creation error:', recErr);
-            // FIX #1: Secondo tentativo senza mimeType specificato
             try {
                 mediaRecorder = new MediaRecorder(stream);
             } catch(recErr2) {
@@ -2715,79 +2710,76 @@ audio.media-player::-webkit-media-controls-enclosure {
                 return;
             }
         }
-
+        
         shazamActiveMediaRecorder = mediaRecorder;
         var chunks = [];
-        var recordStartTime = Date.now();
-
+        
         mediaRecorder.ondataavailable = function(e) {
             if (e.data && e.data.size > 0) chunks.push(e.data);
         };
-
+        
         mediaRecorder.onerror = function(e) {
             console.error('MediaRecorder error:', e.error);
             sTitle.textContent = 'Errore registrazione';
             sArtist.textContent = e.error ? e.error.message : 'Errore sconosciuto';
             cleanupShazam();
         };
-
+        
         mediaRecorder.onstop = async function() {
             shazamActiveMediaRecorder = null;
-
-            // Cleanup countdown
             stopCountdown();
-
-            // Determina MIME type reale dal recorder
+            
             var blobType = mediaRecorder.mimeType || getMimeExtension(mimeType);
             var blob = new Blob(chunks, { type: blobType });
-
-            // FIX #5: Soglia dimensione blob adattiva
-            var minSize = method === 'eq' ? 5000 : 10000;
+            
+            // FIX: Soglia ridotta
+            var minSize = method === 'eq' ? 3000 : 8000;
             if (blob.size < minSize) {
                 sTitle.textContent = 'Audio troppo silenzioso';
                 sArtist.textContent = method === 'mic'
                     ? 'Alza il volume e avvicina il dispositivo alle casse'
-                    : 'Lo stream potrebbe non contenere audio';
+                    : 'Lo stream potrebbe non contenere audio. Prova con il microfono.';
                 showToast('Audio non sufficiente per l\'analisi');
                 cleanupShazam();
                 return;
             }
-
+            
+            console.log('Shazam: Blob size:', blob.size, 'bytes, type:', blobType);
+            
             sTitle.textContent = 'Analisi fingerprint...';
             sArtist.textContent = 'Invio al server di riconoscimento';
-
-            // Invia all'API audD
+            
             try {
                 var formData = new FormData();
                 formData.append('file', blob, 'recording.' + (blobType.indexOf('ogg') >= 0 ? 'ogg' : blobType.indexOf('mp4') >= 0 ? 'mp4' : 'webm'));
                 formData.append('api_token', AUD_D_TOKEN);
                 formData.append('return', 'apple_music,spotify');
-
+                
                 var controller = new AbortController();
                 var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
-
+                
                 var response = await fetch('https://api.audd.io/', {
                     method: 'POST',
                     body: formData,
                     signal: controller.signal
                 });
+                
                 clearTimeout(timeoutId);
-
                 var text = await response.text();
                 var data;
+                
                 try { data = JSON.parse(text); } catch(parseErr) {
                     sTitle.textContent = 'Errore risposta server';
                     sArtist.textContent = 'Risposta non valida dal server';
                     cleanupShazam();
                     return;
                 }
-
-                // FIX #4: Gestione completa errori API
+                
                 if (data.status === 'success' && data.result) {
                     var r = data.result;
                     sTitle.textContent = (r.title || 'Brano').substring(0, 40);
                     sArtist.textContent = (r.artist || 'Sconosciuto').substring(0, 35);
-
+                    
                     if (r.apple_music && r.apple_music.url) {
                         sArtist.innerHTML += '<br><a href="' + r.apple_music.url + '" target="_blank" style="color:var(--accent);font-size:11px;">Ascolta su Apple Music</a>';
                     } else if (r.spotify && r.spotify.external_urls && r.spotify.external_urls.spotify) {
@@ -2795,7 +2787,7 @@ audio.media-player::-webkit-media-controls-enclosure {
                     } else if (r.song_link) {
                         sArtist.innerHTML += '<br><a href="' + r.song_link + '" target="_blank" style="color:var(--accent);font-size:11px;">Risultato completo</a>';
                     }
-
+                    
                     if (r.apple_music && r.apple_music.artwork) {
                         var artUrl = r.apple_music.artwork.url_400x400 || r.apple_music.artwork.url_100x100 || '';
                         if (artUrl) { sImg.src = artUrl; sImg.style.display = 'block'; }
@@ -2803,23 +2795,22 @@ audio.media-player::-webkit-media-controls-enclosure {
                         sImg.src = r.spotify.album.images[0].url;
                         sImg.style.display = 'block';
                     }
-
+                    
                     showToast('Trovato: ' + r.title);
                 } else if (data.status === 'error') {
-                    // FIX #4: Gestione errori API dettagliata
                     var errMsg = data.error || {};
                     if (errMsg.error_message) {
                         sTitle.textContent = 'Errore API';
                         sArtist.textContent = errMsg.error_message;
                     } else if (errMsg.error_code === 1002) {
                         sTitle.textContent = 'Token API non valido';
-                        sArtist.textContent = 'Il token di autenticazione e\' scaduto o non valido';
+                        sArtist.textContent = 'Il token di autenticazione è scaduto o non valido';
                     } else if (errMsg.error_code === 1003) {
                         sTitle.textContent = 'Credito esaurito';
                         sArtist.textContent = 'Limite di richieste raggiunto per questo token';
                     } else {
                         sTitle.textContent = 'Non riconosciuto';
-                        sArtist.textContent = 'Riprova con audio piu chiaro e volume piu alto';
+                        sArtist.textContent = 'Riprova con audio più chiaro e volume più alto';
                     }
                     showToast('Brano non identificato');
                 } else {
@@ -2842,14 +2833,12 @@ audio.media-player::-webkit-media-controls-enclosure {
                 }
                 showToast('Errore durante l\'analisi');
             }
-
-            // Cleanup finale
+            
             cleanupShazam();
         };
-
-        // Avvia registrazione
+        
         try {
-            mediaRecorder.start(1000); // Chiamato ogni secondo per dati intermedi
+            mediaRecorder.start(1000);
             sTitle.textContent = 'Registrazione in corso...';
             sArtist.textContent = method === 'eq'
                 ? 'Ascolto diretto (' + Math.floor(duration/1000) + 's)'
@@ -2862,8 +2851,7 @@ audio.media-player::-webkit-media-controls-enclosure {
             cleanupShazam();
             return;
         }
-
-        // Auto-stop dopo la durata specificata
+        
         shazamRecordingTimeout = setTimeout(function() {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 try { mediaRecorder.stop(); } catch(e) { console.warn('Stop recorder error:', e); }
@@ -2871,7 +2859,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         }, duration);
     }
 
-    // FIX #12: Chiudi Shazam e ferma registrazione
     var shazamCloseBtn = document.getElementById('shazam-close-btn');
     if (shazamCloseBtn) {
         shazamCloseBtn.addEventListener('click', function(e) {
