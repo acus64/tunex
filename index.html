@@ -2295,8 +2295,8 @@ audio.media-player::-webkit-media-controls-enclosure {
     window.addEventListener('load', function() {
         if (unifiedPlayer) unifiedPlayer._eqStatus = undefined;
     });
-
-    // ================= SHAZAM RISCITTO (FIX PRINCIPALE) =================
+ 
+    // ================= SHAZAM RISCITTO (FIX PRINCIPALE + FALLBACK APP) =================
     var shazamBtn = document.getElementById('shazam-btn');
     var shazamResult = document.getElementById('shazam-result');
     var sTitle = document.getElementById('s-title');
@@ -2337,7 +2337,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         return 'audio/webm';
     }
 
-    // FIX CRITICO: Cattura audio migliorata con gain node
     function captureEQAudio() {
         if (!audioContext || audioContext.state !== 'running') {
             console.warn('Shazam: AudioContext non disponibile o non running');
@@ -2346,7 +2345,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         
         try {
             var captureGain = audioContext.createGain();
-            captureGain.gain.value = 2.0; // Amplifica il segnale
+            captureGain.gain.value = 2.0;
             
             var sourceNode = null;
             if (eqFilters && eqFilters.length > 0 && eqFilters[eqFilters.length - 1]) {
@@ -2456,6 +2455,49 @@ audio.media-player::-webkit-media-controls-enclosure {
         return { supported: true };
     }
 
+    // FALLBACK: Apre app Shazam o sito web
+    function openShazamApp() {
+        var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            // Mobile: prova ad aprire l'app Shazam
+            window.location.href = 'shazam://';
+            setTimeout(function() {
+                // Se l'app non è installata, apre lo store
+                if (document.hidden) return;
+                var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                if (isIOS) {
+                    window.open('https://apps.apple.com/app/shazam/id284993459', '_blank');
+                } else {
+                    window.open('https://play.google.com/store/apps/details?id=com.shazam.android', '_blank');
+                }
+            }, 1500);
+        } else {
+            // Desktop: apre sito Shazam o suggerisce estensione
+            window.open('https://www.shazam.com/', '_blank');
+            showToast('Aperto Shazam.com - Usa l\'estensione Chrome per identificare');
+        }
+    }
+
+    // Aggiunge bottone fallback Shazam quando API fallisce
+    function addShazamFallbackButton() {
+        var existingBtn = document.getElementById('shazam-app-btn');
+        if (existingBtn) return;
+        
+        var fallbackBtn = document.createElement('button');
+        fallbackBtn.id = 'shazam-app-btn';
+        fallbackBtn.className = 'btn';
+        fallbackBtn.style.cssText = 'margin-top:10px; width:100%; font-size:12px; padding:8px 12px; justify-content:center; background:linear-gradient(135deg, #0088cc, #00ccff);';
+        fallbackBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Apri app Shazam';
+        fallbackBtn.addEventListener('click', function(ev) {
+            ev.stopPropagation();
+            openShazamApp();
+        });
+        
+        var resultContent = shazamResult.querySelector('div');
+        if (resultContent) resultContent.appendChild(fallbackBtn);
+    }
+
     var shazamFileInput = document.createElement('input');
     shazamFileInput.type = 'file';
     shazamFileInput.accept = 'audio/*,.mp3,.wav,.ogg,.m4a,.flac,.aac,.wma,.webm';
@@ -2495,6 +2537,7 @@ audio.media-player::-webkit-media-controls-enclosure {
             try { data = JSON.parse(text); } catch(parseErr) {
                 sTitle.textContent = 'Errore risposta server';
                 sArtist.textContent = 'Risposta non valida dal server';
+                addShazamFallbackButton();
                 cleanupShazam();
                 shazamFileInput.value = '';
                 return;
@@ -2531,11 +2574,13 @@ audio.media-player::-webkit-media-controls-enclosure {
                     sTitle.textContent = 'Non riconosciuto';
                     sArtist.textContent = 'Riprova con un file audio più chiaro';
                 }
-                showToast('Brano non identificato');
+                addShazamFallbackButton();
+                showToast('Brano non identificato - prova app Shazam');
             } else {
                 sTitle.textContent = 'Risposta inattesa';
                 sArtist.textContent = 'Il server ha restituito una risposta non prevista';
-                showToast('Errore API');
+                addShazamFallbackButton();
+                showToast('Errore API - prova app Shazam');
             }
         } catch(apiErr) {
             console.error('Shazam file API error:', apiErr);
@@ -2546,7 +2591,8 @@ audio.media-player::-webkit-media-controls-enclosure {
                 sTitle.textContent = 'Errore API';
                 sArtist.textContent = apiErr.message || 'Errore sconosciuto';
             }
-            showToast('Errore durante l\'analisi');
+            addShazamFallbackButton();
+            showToast('Errore durante l\'analisi - prova app Shazam');
         }
         
         cleanupShazam();
@@ -2585,7 +2631,8 @@ audio.media-player::-webkit-media-controls-enclosure {
                 var resultContent = shazamResult.querySelector('div');
                 if (resultContent) resultContent.appendChild(uploadBtn);
             }
-            showToast('Microfono non disponibile - usa upload file');
+            addShazamFallbackButton();
+            showToast('Microfono non disponibile - usa upload file o app Shazam');
             return;
         }
         
@@ -2671,6 +2718,7 @@ audio.media-player::-webkit-media-controls-enclosure {
                     if (resultContent) resultContent.appendChild(uploadBtn);
                 }
                 
+                addShazamFallbackButton();
                 shazamBtn.classList.remove('listening');
                 if (shazamRecIndicator) shazamRecIndicator.classList.remove('active');
                 return;
@@ -2685,7 +2733,6 @@ audio.media-player::-webkit-media-controls-enclosure {
             return;
         }
         
-        // FIX: Durata aumentata per miglior riconoscimento
         var duration = captureMethod === 'eq' ? 12000 : 18000;
         await recordAndIdentify(audioStream, duration, captureMethod);
     });
@@ -2705,6 +2752,7 @@ audio.media-player::-webkit-media-controls-enclosure {
                 console.error('MediaRecorder fallback error:', recErr2);
                 sTitle.textContent = 'Registrazione non supportata';
                 sArtist.textContent = 'Il tuo browser non supporta la registrazione audio';
+                addShazamFallbackButton();
                 showToast('Browser non compatibile con MediaRecorder');
                 cleanupShazam();
                 return;
@@ -2722,6 +2770,7 @@ audio.media-player::-webkit-media-controls-enclosure {
             console.error('MediaRecorder error:', e.error);
             sTitle.textContent = 'Errore registrazione';
             sArtist.textContent = e.error ? e.error.message : 'Errore sconosciuto';
+            addShazamFallbackButton();
             cleanupShazam();
         };
         
@@ -2732,13 +2781,13 @@ audio.media-player::-webkit-media-controls-enclosure {
             var blobType = mediaRecorder.mimeType || getMimeExtension(mimeType);
             var blob = new Blob(chunks, { type: blobType });
             
-            // FIX: Soglia ridotta
             var minSize = method === 'eq' ? 3000 : 8000;
             if (blob.size < minSize) {
                 sTitle.textContent = 'Audio troppo silenzioso';
                 sArtist.textContent = method === 'mic'
                     ? 'Alza il volume e avvicina il dispositivo alle casse'
                     : 'Lo stream potrebbe non contenere audio. Prova con il microfono.';
+                addShazamFallbackButton();
                 showToast('Audio non sufficiente per l\'analisi');
                 cleanupShazam();
                 return;
@@ -2771,6 +2820,7 @@ audio.media-player::-webkit-media-controls-enclosure {
                 try { data = JSON.parse(text); } catch(parseErr) {
                     sTitle.textContent = 'Errore risposta server';
                     sArtist.textContent = 'Risposta non valida dal server';
+                    addShazamFallbackButton();
                     cleanupShazam();
                     return;
                 }
@@ -2812,12 +2862,14 @@ audio.media-player::-webkit-media-controls-enclosure {
                         sTitle.textContent = 'Non riconosciuto';
                         sArtist.textContent = 'Riprova con audio più chiaro e volume più alto';
                     }
-                    showToast('Brano non identificato');
+                    addShazamFallbackButton();
+                    showToast('Brano non identificato - prova app Shazam');
                 } else {
                     sTitle.textContent = 'Risposta inattesa';
                     sArtist.textContent = 'Il server ha restituito una risposta non prevista';
                     console.warn('Shazam API unexpected response:', data);
-                    showToast('Errore API');
+                    addShazamFallbackButton();
+                    showToast('Errore API - prova app Shazam');
                 }
             } catch(apiErr) {
                 console.error('Shazam API error:', apiErr);
@@ -2831,7 +2883,8 @@ audio.media-player::-webkit-media-controls-enclosure {
                     sTitle.textContent = 'Errore API';
                     sArtist.textContent = apiErr.message || 'Errore sconosciuto';
                 }
-                showToast('Errore durante l\'analisi');
+                addShazamFallbackButton();
+                showToast('Errore durante l\'analisi - prova app Shazam');
             }
             
             cleanupShazam();
@@ -2848,6 +2901,7 @@ audio.media-player::-webkit-media-controls-enclosure {
             console.error('MediaRecorder start error:', startErr);
             sTitle.textContent = 'Impossibile avviare la registrazione';
             sArtist.textContent = startErr.message;
+            addShazamFallbackButton();
             cleanupShazam();
             return;
         }
