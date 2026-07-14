@@ -2517,26 +2517,21 @@ audio.media-player::-webkit-media-controls-enclosure {
         if (e.key === 'Escape' && isFullscreen()) exitFullscreen().catch(function(){});
     });
 
-// ================= ASSISTENTE VOCALE - ALWAYS ON (FIX BLOCCO) =================
+// ================= ASSISTENTE VOCALE (FIX INTERFERENZA AUDIO) =================
 var voiceCmdBtn = document.getElementById('voice-cmd-btn');
 var voiceCmdActive = false;
 var voiceCmdRecognition = null;
 var voiceCmdRestartTimer = null;
 var voiceCmdCooldownUntil = 0;
-var voiceCmdHistory = []; // Anti-loop: tiene traccia dei comandi recenti
+var voiceCmdHistory = [];
 
-// ✅ KEYWORD RIDOTTE: solo comandi specifici + trigger per ricerca
-// Niente più parole generiche come 'love', 'now', 'bel' che causano falsi positivi
 var VOICE_COMMAND_TRIGGERS = [
-    // Trigger per comandi specifici
     'volume', 'prossimo', 'precedente', 'successivo', 'indietro',
     'play', 'stop', 'pausa', 'pause', 'ferma', 'riprendi', 'avvia',
     'continua', 'esegui', 'reset', 'cancella', 'pulisci', 'azzera',
     'muto', 'silenzio', 'schermo', 'fullscreen', 'torna', 'esci',
-    // Trigger per ricerca canali (obbligatori all'inizio della frase)
     'metti', 'cerca', 'trova', 'sintonizza', 'radio', 'canale', 'apri',
-    // Nomi radio specifiche (solo questi, non parole generiche)
-    'deejay', 'capital', 'm2o', 'rtl', 'virgin', 'kiss', 'freccia',
+    'deeJay', 'capital', 'm2o', 'rtl', 'virgin', 'kiss', 'freccia',
     'ibiza', 'marte', 'delfino', 'bruno', 'stingray', 'linetti', 'naxi',
     'jazeen', 'oldies', 'relax', 'paradise', 'miami', 'zoo', 'tiffany',
     'caliente', 'traffic', 'pluto', 'napoli', 'retro', 'skyline', 'groove',
@@ -2557,11 +2552,9 @@ var VOICE_COMMAND_TRIGGERS = [
     'rem', 'cure', 'smiths', 'olivia newton', 'spandau ballet',
     'tears fears', 'cars', 'police', 'chicago', 'chris rea',
     'huey lewis', 'santana', 'supertramp', 'sade',
-    // Generi musicali (solo questi, non 'love' o 'now')
     'lounge', 'rock', 'jazz', 'pop', 'dance', 'house', 'soul', 'funk',
     'techno', 'edm', 'trance', 'urban', 'afro', 'disco', 'indie',
     'new wave', 'psychedelic', 'motown', 'classical',
-    // TV italiane
     'rai 1', 'rai 2', 'rai 3', 'canale 5', 'italia 1', 'rete 4',
     'la 7', 'tv 8', 'nove', 'discovery', 'cine 34', 'focus',
     'grande fratello', 'iris', 'italia 2', 'la 5', 'mediaset',
@@ -2581,43 +2574,29 @@ function showVoiceFeedback(text, duration) {
     }, duration || 2500);
 }
 
-// ✅ FILTRO MIGLIORATO: richiede trigger specifico all'inizio O comando esatto
 function containsKeyword(text) {
     var t = text.toLowerCase().trim();
-    
-    // 1. Controlla se inizia con un trigger di ricerca (metti, cerca, radio, ecc.)
     if (/^(metti|cerca|trova|sintonizza|radio|canale|apri)\s+/.test(t)) {
         return true;
     }
-    
-    // 2. Controlla se contiene un comando specifico
     for (var i = 0; i < VOICE_COMMAND_TRIGGERS.length; i++) {
         if (t.indexOf(VOICE_COMMAND_TRIGGERS[i]) >= 0) return true;
     }
-    
     return false;
 }
 
-// ✅ ANTI-LOOP: controlla se lo stesso comando è stato eseguito troppo di recente
 function isLooping(command) {
     var now = Date.now();
-    // Rimuovi comandi più vecchi di 10 secondi
     voiceCmdHistory = voiceCmdHistory.filter(function(item) {
         return now - item.time < 10000;
     });
-    
-    // Conta quante volte lo stesso comando è stato eseguito negli ultimi 10s
     var count = voiceCmdHistory.filter(function(item) {
         return item.cmd === command;
     }).length;
-    
-    // Se più di 3 volte in 10 secondi, è un loop
     if (count >= 3) {
         console.warn('[VoiceAI] Loop rilevato per:', command);
         return true;
     }
-    
-    // Aggiungi al history
     voiceCmdHistory.push({ cmd: command, time: now });
     return false;
 }
@@ -2626,7 +2605,6 @@ function executeVoiceCommand(transcript) {
     var t = transcript.toLowerCase().trim();
     console.log('[VoiceAI] Comando:', t);
 
-    // VOLUME SU
     if (/volume su|alza|più forte|piu forte|aumenta/.test(t)) {
         if (isLooping('volume_up')) return false;
         var v = Math.min(1, unifiedPlayer.volume + 0.15);
@@ -2636,7 +2614,6 @@ function executeVoiceCommand(transcript) {
         showVoiceFeedback('🔊 Volume: ' + Math.round(v * 100) + '%');
         return true;
     }
-    // VOLUME GIÙ
     if (/volume giù|volume giu|abbassa|più piano|piu piano/.test(t)) {
         if (isLooping('volume_down')) return false;
         var v2 = Math.max(0, unifiedPlayer.volume - 0.15);
@@ -2646,7 +2623,6 @@ function executeVoiceCommand(transcript) {
         showVoiceFeedback('🔉 Volume: ' + Math.round(v2 * 100) + '%');
         return true;
     }
-    // MUTO
     if (/^(muto|silenzio|mute)$/.test(t) || /metti muto/.test(t)) {
         if (isLooping('mute')) return false;
         unifiedPlayer.volume = 0;
@@ -2655,7 +2631,6 @@ function executeVoiceCommand(transcript) {
         showVoiceFeedback('🔇 Muto');
         return true;
     }
-    // VOLUME MASSIMO
     if (/volume massimo/.test(t)) {
         if (isLooping('volume_max')) return false;
         unifiedPlayer.volume = 1;
@@ -2664,7 +2639,6 @@ function executeVoiceCommand(transcript) {
         showVoiceFeedback('🔊 Volume massimo');
         return true;
     }
-    // CANALE SUCCESSIVO
     if (/prossimo|successivo|avanti|next/.test(t)) {
         if (isLooping('next')) return false;
         var nextBtn = document.getElementById('media-next');
@@ -2672,7 +2646,6 @@ function executeVoiceCommand(transcript) {
         showVoiceFeedback('⏭️ Canale successivo');
         return true;
     }
-    // CANALE PRECEDENTE
     if (/precedente|indietro|back/.test(t)) {
         if (isLooping('prev')) return false;
         var channels = document.querySelectorAll('.channel');
@@ -2681,24 +2654,22 @@ function executeVoiceCommand(transcript) {
         var activeIdx = -1;
         visible.forEach(function(ch, i) { if (ch.classList.contains('active')) activeIdx = i; });
         if (activeIdx > 0) visible[activeIdx - 1].click();
+        else if (visible.length > 0) visible[visible.length - 1].click();
         showVoiceFeedback('⏮️ Canale precedente');
         return true;
     }
-    // PAUSA
     if (/^(stop|ferma|pausa|pause)$/.test(t) || /metti in pausa|ferma tutto/.test(t)) {
         if (isLooping('pause')) return false;
         unifiedPlayer.pause();
         showVoiceFeedback('⏸️ Pausa');
         return true;
     }
-    // PLAY
     if (/^(play|riprendi|avvia|continua|esegui|start)$/.test(t)) {
         if (isLooping('play')) return false;
         unifiedPlayer.play().catch(function(){});
         showVoiceFeedback('▶️ Riproduzione');
         return true;
     }
-    // RESET RICERCA
     if (/^(reset|cancella|pulisci|azzera)$/.test(t)) {
         if (isLooping('reset')) return false;
         if (searchInput) {
@@ -2708,7 +2679,6 @@ function executeVoiceCommand(transcript) {
         showVoiceFeedback('🗑️ Ricerca cancellata');
         return true;
     }
-    // FULLSCREEN
     if (/schermo intero|fullscreen|tutto schermo|espandi|maximizza/.test(t)) {
         if (isLooping('fullscreen')) return false;
         if (playerContainer) {
@@ -2721,7 +2691,6 @@ function executeVoiceCommand(transcript) {
         }
         return true;
     }
-    // ESCI DA FULLSCREEN
     if (/torna normale|esci|riduci|homepage|schermo piccolo|annulla schermo|torna indietro/.test(t)) {
         if (isLooping('exit_fullscreen')) return false;
         if (isFullscreen()) {
@@ -2733,8 +2702,6 @@ function executeVoiceCommand(transcript) {
         return true;
     }
     
-    // ✅ RICERCA GENERICA: SOLO se inizia con trigger specifico
-    // Questo evita che conversazioni casuali attivino ricerche
     var searchMatch = t.match(/^(metti|cerca|trova|sintonizza|radio|canale|apri)\s+(.+)$/i);
     if (searchMatch && searchMatch[2] && searchMatch[2].length > 2) {
         var query = searchMatch[2].trim();
@@ -2758,76 +2725,67 @@ function initVoiceCommand() {
     }
     voiceCmdRecognition = new SpeechRecognition();
     voiceCmdRecognition.lang = 'it-IT';
-    voiceCmdRecognition.continuous = true;
+    
+    // ✅ FIX CRITICO: continuous = false evita che il browser rubi il focus audio e blocchi lo stream
+    voiceCmdRecognition.continuous = false; 
     voiceCmdRecognition.interimResults = false;
     voiceCmdRecognition.maxAlternatives = 1;
 
     voiceCmdRecognition.onresult = function(event) {
-        // BLOCCO 1: Cooldown attivo? Ignoro tutto
         if (Date.now() < voiceCmdCooldownUntil) {
             console.log('[VoiceAI] In cooldown, ignoro');
             return;
         }
-
         var last = event.results.length - 1;
         var transcript = event.results[last][0].transcript;
-
-        // BLOCCO 2: Testo troppo corto? Ignoro
         if (!transcript || transcript.trim().length < 3) return;
-
-        // BLOCCO 3: FILTRO KEYWORD - se non contiene keyword, scarto SILENZIOSAMENTE
-        if (!containsKeyword(transcript)) {
-            return;
-        }
+        if (!containsKeyword(transcript)) return;
 
         console.log('[VoiceAI] Elaboro:', transcript);
-
-        // Esegui comando
         var executed = executeVoiceCommand(transcript);
 
-        // Cooldown di 5 secondi dopo ogni comando (aumentato per evitare loop)
         if (executed) {
-            voiceCmdCooldownUntil = Date.now() + 5000;
+            voiceCmdCooldownUntil = Date.now() + 3000; // Cooldown di 3 secondi
         }
     };
 
     voiceCmdRecognition.onerror = function(e) {
         console.warn('[VoiceAI] Error:', e.error);
-        if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'audio-capture') return;
-        if (e.error === 'not-allowed') {
-            showVoiceFeedback('🎤 Microfono non autorizzato');
-            stopVoiceCommand();
-            return;
-        }
-        if (voiceCmdActive) {
-            clearTimeout(voiceCmdRestartTimer);
-            voiceCmdRestartTimer = setTimeout(startVoiceRecognition, 1500);
-        }
+        voiceCmdBtn.classList.remove('active');
+        if (e.error === 'not-allowed') showVoiceFeedback('🎤 Microfono non autorizzato');
     };
 
     voiceCmdRecognition.onend = function() {
-        if (voiceCmdActive) {
-            clearTimeout(voiceCmdRestartTimer);
-            voiceCmdRestartTimer = setTimeout(startVoiceRecognition, 500);
-        }
+        // Assicura che l'indicatore visivo si spenga quando il browser termina l'ascolto
+        voiceCmdBtn.classList.remove('active');
     };
-
     return true;
-}
-
-function startVoiceRecognition() {
-    if (!voiceCmdRecognition) return;
-    try { voiceCmdRecognition.start(); } catch(e) {}
 }
 
 function startVoiceCommand() {
     if (!voiceCmdRecognition && !initVoiceCommand()) return;
+    
     voiceCmdActive = true;
     voiceCmdCooldownUntil = 0;
-    voiceCmdHistory = []; // Reset history
+    voiceCmdHistory = [];
     voiceCmdBtn.classList.add('active');
-    startVoiceRecognition();
-    showVoiceFeedback('🎤 Voice AI attivo - parla quando vuoi');
+    showVoiceFeedback('🎤 Ascolto per 5 secondi...');
+    
+    try {
+        voiceCmdRecognition.start();
+        // ✅ FIX CRITICO: Forza lo stop dopo 5 secondi per liberare immediatamente il focus audio
+        setTimeout(function() {
+            if (voiceCmdRecognition) {
+                try { voiceCmdRecognition.stop(); } catch(e) {}
+            }
+            voiceCmdBtn.classList.remove('active');
+            voiceCmdActive = false;
+        }, 5000);
+    } catch(e) {
+        console.warn('Errore avvio voice:', e);
+        voiceCmdBtn.classList.remove('active');
+        voiceCmdActive = false;
+    }
 }
 
 function stopVoiceCommand() {
@@ -2846,24 +2804,16 @@ if (voiceCmdBtn) {
     voiceCmdBtn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        if (voiceCmdActive) stopVoiceCommand();
-        else startVoiceCommand();
+        // Click semplice: avvia ascolto di 5 secondi, poi si spegne da solo
+        if (voiceCmdActive) {
+            stopVoiceCommand();
+        } else {
+            startVoiceCommand();
+        }
     });
 }
 
-// ✅ AUTO-START al primo click
-var voiceAutoStarted = false;
-document.addEventListener('click', function autoStartVoice() {
-    if (voiceAutoStarted) return;
-    voiceAutoStarted = true;
-    setTimeout(function() {
-        if (!voiceCmdActive) {
-            startVoiceCommand();
-            console.log('[VoiceAI] Auto-avviato al primo click utente');
-        }
-    }, 2000);
-    document.removeEventListener('click', autoStartVoice);
-}, { once: false });
+// ✅ NOTA: Rimosso completamente l'auto-start al primo click, che era la causa principale del blocco del flusso audio.
   </script>
 </body>
 </html>
