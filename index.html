@@ -1122,9 +1122,11 @@ audio.media-player::-webkit-media-controls-enclosure {
   { name: 'DEEJAY 30 SONG', url: 'https://4c4b867c89244861ac216426883d1ad0.msvdn.net/radiodeejay30songs/radiodeejay30songs/play1.m3u8', type: 'youtube-link' },
   { name: 'JOY FUNKY MOTOWN', url: 'https://www.youtube.com/watch?v=G_l4hDhfWbU&list=RDG_l4hDhfWbU&start_radio=1', type: 'youtube-link' },
   { name: 'YouTuDeep Lounge Society', url: 'https://www.youtube.com/watch?v=cP1kxO0THYo&list=RDStQkFP6zTek&index=26', type: 'youtube-link' },
+  { name: 'The Eagles - Hotel California ( A & S Remix )', url: 'https://www.youtube.com/watch?v=dvSxfWQIn8w&list=RDGMEMWO-g6DgCWEqKlDtKbJA1Gw&index=30', type: 'youtube-link' },
+  { name: 'Remix House', url: 'https://www.youtube.com/watch?v=AZnO3FHmIU4&list=RDVtH628gcZZA&index=11', type: 'youtube-link' },
   { name: 'YouTube - Test', url: '', type: 'youtube-link' },
   { name: 'YouTube - Test', url: '', type: 'youtube-link' },
-  { name: 'YouTube - Test', url: '', type: 'youtube-link' },
+  { name: 'YouTube - Test', url: '', type: 'youtube-link' }, 
     ];
 
     var STORAGE_FAVORITES = 'acusstream_favorites';
@@ -2525,6 +2527,13 @@ var voiceCmdRestartTimer = null;
 var voiceCmdCooldownUntil = 0;
 var voiceCmdHistory = [];
 
+// FIX #1: Flag per sospendere temporaneamente il riconoscimento durante i comandi media
+var voiceCmdPaused = false;
+
+// FIX #3: Variabili per backoff esponenziale del restart
+var voiceCmdRestartDelay = 500;
+var voiceCmdRestartAttempts = 0;
+
 var VOICE_COMMAND_TRIGGERS = [
     'volume', 'prossimo', 'precedente', 'successivo', 'indietro',
     'play', 'stop', 'pausa', 'pause', 'ferma', 'riprendi', 'avvia',
@@ -2601,6 +2610,26 @@ function isLooping(command) {
     return false;
 }
 
+// FIX #2: Forza il ripristino dell'AudioContext se sospeso dal browser
+function ensureAudioContext() {
+    if (audioContext && audioContext.state !== 'running') {
+        audioContext.resume().catch(function(){});
+    }
+}
+
+// FIX #1: Sospende il riconoscimento per una durata specificata per evitare conflitti
+function pauseRecognitionTemporarily(duration) {
+    if (!voiceCmdRecognition || !voiceCmdActive) return;
+    voiceCmdPaused = true;
+    try { voiceCmdRecognition.stop(); } catch(e) {}
+    clearTimeout(voiceCmdRestartTimer);
+    setTimeout(function() {
+        voiceCmdPaused = false;
+        voiceCmdRestartAttempts = 0;
+        if (voiceCmdActive) startVoiceRecognition();
+    }, duration || 2500);
+}
+
 function executeVoiceCommand(transcript) {
     var t = transcript.toLowerCase().trim();
     console.log('[VoiceAI] Comando:', t);
@@ -2641,6 +2670,8 @@ function executeVoiceCommand(transcript) {
     }
     if (/prossimo|successivo|avanti|next/.test(t)) {
         if (isLooping('next')) return false;
+        // FIX #1: Pausa riconoscimento più lunga per permettere il cambio canale
+        pauseRecognitionTemporarily(3000);
         var nextBtn = document.getElementById('media-next');
         if (nextBtn) nextBtn.click();
         showVoiceFeedback('⏭️ Canale successivo');
@@ -2648,6 +2679,8 @@ function executeVoiceCommand(transcript) {
     }
     if (/precedente|indietro|back/.test(t)) {
         if (isLooping('prev')) return false;
+        // FIX #1: Pausa riconoscimento per il cambio canale precedente
+        pauseRecognitionTemporarily(3000);
         var channels = document.querySelectorAll('.channel');
         var visible = [];
         channels.forEach(function(ch) { if (ch.offsetHeight > 0) visible.push(ch); });
@@ -2661,12 +2694,18 @@ function executeVoiceCommand(transcript) {
     if (/^(stop|ferma|pausa|pause)$/.test(t) || /metti in pausa|ferma tutto/.test(t)) {
         if (isLooping('pause')) return false;
         unifiedPlayer.pause();
+        // FIX #1 + #2: Pausa riconoscimento + ripristino AudioContext
+        ensureAudioContext();
+        pauseRecognitionTemporarily(2000);
         showVoiceFeedback('⏸️ Pausa');
         return true;
     }
     if (/^(play|riprendi|avvia|continua|esegui|start)$/.test(t)) {
         if (isLooping('play')) return false;
         unifiedPlayer.play().catch(function(){});
+        // FIX #1 + #2: Pausa riconoscimento + ripristino AudioContext
+        ensureAudioContext();
+        pauseRecognitionTemporarily(2000);
         showVoiceFeedback('▶️ Riproduzione');
         return true;
     }
@@ -2726,14 +2765,16 @@ function initVoiceCommand() {
     voiceCmdRecognition = new SpeechRecognition();
     voiceCmdRecognition.lang = 'it-IT';
     
-    // ✅ FIX CRITICO: continuous = true per ascolto continuo senza premere ogni volta
     voiceCmdRecognition.continuous = true;
     voiceCmdRecognition.interimResults = false;
     voiceCmdRecognition.maxAlternatives = 1;
 
     voiceCmdRecognition.onresult = function(event) {
+        // FIX #3: Reset backoff ad ogni risultato ricevuto con successo
+        voiceCmdRestartAttempts = 0;
+
         if (Date.now() < voiceCmdCooldownUntil) {
-            return; // Ignora durante il cooldown
+            return;
         }
         var last = event.results.length - 1;
         var transcript = event.results[last][0].transcript;
@@ -2744,7 +2785,7 @@ function initVoiceCommand() {
         var executed = executeVoiceCommand(transcript);
 
         if (executed) {
-            voiceCmdCooldownUntil = Date.now() + 2000; // Cooldown di 2s dopo un comando eseguito
+            voiceCmdCooldownUntil = Date.now() + 2000;
         }
     };
 
@@ -2756,31 +2797,39 @@ function initVoiceCommand() {
             stopVoiceCommand();
             return;
         }
-        // Riavvio automatico in caso di errore temporaneo
-        if (voiceCmdActive) {
+        // FIX #3: Riavvio con backoff in caso di errore temporaneo
+        if (voiceCmdActive && !voiceCmdPaused) {
             clearTimeout(voiceCmdRestartTimer);
+            voiceCmdRestartDelay = Math.min(2000, 1000 + voiceCmdRestartAttempts * 300);
             voiceCmdRestartTimer = setTimeout(function() {
-                if (voiceCmdActive) startVoiceRecognition();
-            }, 1000);
+                if (voiceCmdActive && !voiceCmdPaused) startVoiceRecognition();
+            }, voiceCmdRestartDelay);
+            voiceCmdRestartAttempts++;
         }
     };
 
+    // FIX #3: Backoff esponenziale nel restart — non più fisso a 300ms
     voiceCmdRecognition.onend = function() {
-        // ✅ FIX CRITICO: Se è ancora attivo, riavvia l'ascolto immediatamente
-        if (voiceCmdActive) {
+        if (voiceCmdActive && !voiceCmdPaused) {
             clearTimeout(voiceCmdRestartTimer);
+            voiceCmdRestartDelay = Math.min(2000, 500 + voiceCmdRestartAttempts * 200);
             voiceCmdRestartTimer = setTimeout(function() {
-                if (voiceCmdActive) {
-                    try { voiceCmdRecognition.start(); } catch(e) {}
+                if (voiceCmdActive && !voiceCmdPaused) {
+                    try { 
+                        voiceCmdRecognition.start(); 
+                        voiceCmdRestartAttempts = 0; // Reset al successo
+                    } catch(e) {
+                        voiceCmdRestartAttempts++;
+                    }
                 }
-            }, 300); // Piccolo delay per evitare loop di errori istantanei del browser
+            }, voiceCmdRestartDelay);
         }
     };
     return true;
 }
 
 function startVoiceRecognition() {
-    if (!voiceCmdRecognition) return;
+    if (!voiceCmdRecognition || voiceCmdPaused) return;
     try { 
         voiceCmdRecognition.start(); 
     } catch(e) {
@@ -2791,8 +2840,10 @@ function startVoiceRecognition() {
 function startVoiceCommand() {
     if (!voiceCmdRecognition && !initVoiceCommand()) return;
     voiceCmdActive = true;
+    voiceCmdPaused = false;
     voiceCmdCooldownUntil = 0;
     voiceCmdHistory = [];
+    voiceCmdRestartAttempts = 0; // FIX #3: Reset backoff all'avvio
     voiceCmdBtn.classList.add('active');
     startVoiceRecognition();
     showVoiceFeedback('🎤 Voice AI ATTIVO - Parla pure, ti ascolto in continuo');
@@ -2800,13 +2851,17 @@ function startVoiceCommand() {
 
 function stopVoiceCommand() {
     voiceCmdActive = false;
+    voiceCmdPaused = false; // FIX #1: Reset flag
     voiceCmdBtn.classList.remove('active');
     voiceCmdCooldownUntil = 0;
     voiceCmdHistory = [];
+    voiceCmdRestartAttempts = 0; // FIX #3: Reset backoff
     clearTimeout(voiceCmdRestartTimer);
     if (voiceCmdRecognition) {
         try { voiceCmdRecognition.stop(); } catch(e) {}
     }
+    // FIX #2: Ripristina l'AudioContext alla disattivazione
+    ensureAudioContext();
     showVoiceFeedback('🎤 Voice AI DISATTIVATO');
 }
 
@@ -2814,7 +2869,6 @@ if (voiceCmdBtn) {
     voiceCmdBtn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        // Toggle manuale: un click accende, un click spegne
         if (voiceCmdActive) {
             stopVoiceCommand();
         } else {
