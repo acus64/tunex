@@ -691,6 +691,19 @@ audio.media-player::-webkit-media-controls-enclosure {
 @media (max-width: 700px) {
     .btn { flex: 1 1 30% !important; min-width: 90px !important; }
 }
+
+/* ================= FIX: Rimuove testo "Salvaschermo" da YouTube iframe ================= */
+#youtube-screensaver {
+    overflow: hidden !important; /* CRITICO: taglia i bordi dove appare il testo */
+}
+
+#youtube-screensaver iframe {
+    transform: scale(1.03); /* Zoom ridotto: meno perdita di qualità */
+    transform-origin: center center;
+    width: 100% !important;
+    height: 100% !important;
+    border: none;
+}
   </style>
 </head>
 <body>
@@ -1302,29 +1315,35 @@ audio.media-player::-webkit-media-controls-enclosure {
     function isM3U8(url) { return url.toLowerCase().indexOf('.m3u8') >= 0; }
 
     // Variabili globali per lo screensaver
-    const SCREENSAVER_YT_ID = "2xBem-GCvwE"; 
+    const SCREENSAVER_YT_ID = "2xBem-GCvwE";
     const ytIframe = document.getElementById('yt-iframe');
     const ytScreensaver = document.getElementById('youtube-screensaver');
 
     // Funzione per mostrare/nascondere lo screensaver
     function toggleScreensaver(isAudioOnly) {
-        const screensaverUrl = isAudioOnly
-            ? `https://www.youtube.com/embed/${SCREENSAVER_YT_ID}?autoplay=1&mute=1&loop=1&playlist=${SCREENSAVER_YT_ID}&controls=0&rel=0`
-            : '';
+        if (!ytIframe || !ytScreensaver) return;
         
-        if (ytIframe) {
-            ytIframe.src = screensaverUrl;
-            // FIX: Rimuovo 'encrypted-media' che causa warning, 'autoplay' è sufficiente per video muti
+        if (isAudioOnly) {
+            // Parametri URL ottimizzati per ridurre branding
+            const screensaverUrl = `https://www.youtube.com/embed/${SCREENSAVER_YT_ID}?autoplay=1&mute=1&loop=1&playlist=${SCREENSAVER_YT_ID}&controls=0&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&disablekb=1`;
+            
+            // Anti-flicker: ricarica solo se URL diverso
+            if (ytIframe.src !== screensaverUrl) {
+                ytIframe.src = screensaverUrl;
+            }
             ytIframe.setAttribute('allow', 'autoplay; fullscreen');
-        }
-        if (ytScreensaver) {
-            ytScreensaver.style.display = isAudioOnly ? 'block' : 'none';
+            ytScreensaver.style.display = 'block';
+        } else {
+            ytScreensaver.style.display = 'none';
+            if (ytIframe.src !== '') {
+                ytIframe.src = '';
+            }
         }
     }
 
     // Funzione playChannel aggiornata e blindata
     async function playChannel(element, name, url, type) {
-        url = url || ''; // FIX: previene ReferenceError se url è undefined o mancante
+        url = url || ''; // FIX: previene ReferenceError se url è undefined
         document.querySelectorAll('.channel').forEach(function(ch) { ch.classList.remove('active'); });
         element.classList.add('active');
         currentChannelDisplay.textContent = name;
@@ -1336,45 +1355,65 @@ audio.media-player::-webkit-media-controls-enclosure {
         
         // Resetta sempre lo screensaver all'inizio di un nuovo canale
         toggleScreensaver(false);
+        unifiedPlayer._screensaverChecked = false;
 
         if (type === 'youtube-link') {
             playYouTubeLink(name, url);
         } else if (isM3U8(url)) {
-            if (window.Hls && Hls.isSupported()) { playHLS(name, url); }
-            else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) { playStandard(name, url); }
-            else { showToast('Formato stream non supportato'); statusText.textContent = 'Errore formato'; }
+            if (window.Hls && Hls.isSupported()) { 
+                playHLS(name, url); 
+            } else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) { 
+                playStandard(name, url); 
+            } else { 
+                showToast('Formato stream non supportato'); 
+                statusText.textContent = 'Errore formato'; 
+            }
         } else {
             playStandard(name, url);
         }
         
-        // FIX: Rilevamento screensaver sicuro, isolato e senza dipendenze di scope fragili
+        // FIX: Rilevamento screensaver robusto per flussi NON-HLS
         var checkScreensaver = function() {
             if (unifiedPlayer._screensaverChecked) return;
-            if (isM3U8(url)) return; // Per flussi HLS il controllo è già gestito dentro playHLS
+            if (isM3U8(url)) return; // Per flussi HLS il controllo è già in playHLS
             
             unifiedPlayer._screensaverChecked = true;
+            
+            // Controlla dimensioni video reali
             var vw = unifiedPlayer.videoWidth || 0;
             var vh = unifiedPlayer.videoHeight || 0;
             
-            // Se ha videoTracks, controlla direttamente
-            if (unifiedPlayer.videoTracks && unifiedPlayer.videoTracks.length > 0) {
-                toggleScreensaver(false);
-                return;
-            }
+            console.log('[Screensaver Check] videoWidth:', vw, 'videoHeight:', vh);
             
-            if (vw === 0 && vh === 0) {
-                toggleScreensaver(true); // È solo audio, attiva YouTube
+            // Se ha dimensioni video reali (> 100px), è un flusso video
+            if (vw > 100 && vh > 100) {
+                toggleScreensaver(false);
             } else {
-                toggleScreensaver(false); // Ha video, nascondi YouTube
+                // Nessuna dimensione video o troppo piccola = flusso audio
+                toggleScreensaver(true);
             }
         };
 
-        // Trigger 1: loadedmetadata (funziona per file con metadati completi)
-        unifiedPlayer.onloadedmetadata = checkScreensaver;
-        // Trigger 2: playing come fallback (funziona per stream live che non emettono metadata)
-        unifiedPlayer.addEventListener('playing', checkScreensaver, { once: true });
-        // Trigger 3: dopo 3 secondi, forza il controllo se niente è partito
-        setTimeout(checkScreensaver, 3000);
+        // Trigger 1: loadedmetadata
+        unifiedPlayer.onloadedmetadata = function() {
+            console.log('[Metadata] Caricati - videoWidth:', unifiedPlayer.videoWidth, 'videoHeight:', unifiedPlayer.videoHeight);
+            // Aspetta un attimo per essere sicuri che le dimensioni siano pronte
+            setTimeout(checkScreensaver, 500);
+        };
+        
+        // Trigger 2: playing (fallback per stream live)
+        unifiedPlayer.addEventListener('playing', function() {
+            console.log('[Playing] Avviato - videoWidth:', unifiedPlayer.videoWidth, 'videoHeight:', unifiedPlayer.videoHeight);
+            setTimeout(checkScreensaver, 1000);
+        }, { once: true });
+        
+        // Trigger 3: dopo 5 secondi, forza il controllo se niente è partito
+        setTimeout(function() {
+            if (!unifiedPlayer._screensaverChecked) {
+                console.log('[Timeout] 5 secondi trascorsi, forzo controllo screensaver');
+                checkScreensaver();
+            }
+        }, 5000);
     }
 
     function playHLS(name, url) {
@@ -1386,16 +1425,34 @@ audio.media-player::-webkit-media-controls-enclosure {
         loadingInfo.style.display = 'none';
 
         currentHls.on(Hls.Events.MANIFEST_PARSED, async function(event, data) {
-            // --- RILEVAMENTO AUDIO/VIDEO INFALLIBILE ---
+            // --- RILEVAMENTO AUDIO/VIDEO PER HLS ---
             let isAudioOnly = true;
+            
             if (data.levels && data.levels.length > 0) {
                 data.levels.forEach(level => {
+                    // Se ha codec video O altezza > 0, è un flusso video
                     if (level.videoCodec || (level.height && level.height > 0)) {
-                        isAudioOnly = false; // Ha un codec video, è una TV!
+                        isAudioOnly = false;
+                        console.log('[HLS] Rilevato video - codec:', level.videoCodec, 'height:', level.height);
                     }
                 });
             }
-            toggleScreensaver(isAudioOnly); // <-- QUESTO MANCAVA NELLA SECONDA DEFINIZIONE
+            
+            // Se non abbiamo trovato codec video, controlla anche le dimensioni reali dopo il play
+            if (isAudioOnly) {
+                setTimeout(function() {
+                    var vw = unifiedPlayer.videoWidth || 0;
+                    var vh = unifiedPlayer.videoHeight || 0;
+                    if (vw > 100 && vh > 100) {
+                        console.log('[HLS] Rilevate dimensioni video reali:', vw, 'x', vh);
+                        toggleScreensaver(false);
+                        unifiedPlayer._screensaverChecked = true;
+                    }
+                }, 2000);
+            }
+            
+            toggleScreensaver(isAudioOnly);
+            unifiedPlayer._screensaverChecked = !isAudioOnly;
             // -------------------------------------------
 
             try {
