@@ -2519,20 +2519,20 @@ audio.media-player::-webkit-media-controls-enclosure {
         if (e.key === 'Escape' && isFullscreen()) exitFullscreen().catch(function(){});
     });
 
-// ================= ASSISTENTE VOCALE CONTINUO (LOGICA CORRETTA) =================
+// ================= ASSISTENTE VOCALE — APPROCCIO TAP-TO-SPEAK =================
 var voiceCmdBtn = document.getElementById('voice-cmd-btn');
-var voiceCmdActive = false;
 var voiceCmdRecognition = null;
-var voiceCmdRestartTimer = null;
+var voiceCmdListening = false;
 var voiceCmdCooldownUntil = 0;
 var voiceCmdHistory = [];
 
-// FIX #1: Flag per sospendere temporaneamente il riconoscimento durante i comandi media
-var voiceCmdPaused = false;
-
-// FIX #3: Variabili per backoff esponenziale del restart
-var voiceCmdRestartDelay = 500;
-var voiceCmdRestartAttempts = 0;
+// Guardiano: se il player riprende, chiude il microfono per evitare conflitti
+var voiceCmdPlayerGuard = function() {
+    if (voiceCmdListening) {
+        console.log('[VoiceAI] Guardiano: player in riproduzione, chiudo il microfono');
+        forceStopRecognition();
+    }
+};
 
 var VOICE_COMMAND_TRIGGERS = [
     'volume', 'prossimo', 'precedente', 'successivo', 'indietro',
@@ -2610,24 +2610,10 @@ function isLooping(command) {
     return false;
 }
 
-// FIX #2: Forza il ripristino dell'AudioContext se sospeso dal browser
 function ensureAudioContext() {
     if (audioContext && audioContext.state !== 'running') {
         audioContext.resume().catch(function(){});
     }
-}
-
-// FIX #1: Sospende il riconoscimento per una durata specificata per evitare conflitti
-function pauseRecognitionTemporarily(duration) {
-    if (!voiceCmdRecognition || !voiceCmdActive) return;
-    voiceCmdPaused = true;
-    try { voiceCmdRecognition.stop(); } catch(e) {}
-    clearTimeout(voiceCmdRestartTimer);
-    setTimeout(function() {
-        voiceCmdPaused = false;
-        voiceCmdRestartAttempts = 0;
-        if (voiceCmdActive) startVoiceRecognition();
-    }, duration || 2500);
 }
 
 function executeVoiceCommand(transcript) {
@@ -2670,8 +2656,6 @@ function executeVoiceCommand(transcript) {
     }
     if (/prossimo|successivo|avanti|next/.test(t)) {
         if (isLooping('next')) return false;
-        // FIX #1: Pausa riconoscimento più lunga per permettere il cambio canale
-        pauseRecognitionTemporarily(3000);
         var nextBtn = document.getElementById('media-next');
         if (nextBtn) nextBtn.click();
         showVoiceFeedback('⏭️ Canale successivo');
@@ -2679,8 +2663,6 @@ function executeVoiceCommand(transcript) {
     }
     if (/precedente|indietro|back/.test(t)) {
         if (isLooping('prev')) return false;
-        // FIX #1: Pausa riconoscimento per il cambio canale precedente
-        pauseRecognitionTemporarily(3000);
         var channels = document.querySelectorAll('.channel');
         var visible = [];
         channels.forEach(function(ch) { if (ch.offsetHeight > 0) visible.push(ch); });
@@ -2694,18 +2676,14 @@ function executeVoiceCommand(transcript) {
     if (/^(stop|ferma|pausa|pause)$/.test(t) || /metti in pausa|ferma tutto/.test(t)) {
         if (isLooping('pause')) return false;
         unifiedPlayer.pause();
-        // FIX #1 + #2: Pausa riconoscimento + ripristino AudioContext
         ensureAudioContext();
-        pauseRecognitionTemporarily(2000);
         showVoiceFeedback('⏸️ Pausa');
         return true;
     }
     if (/^(play|riprendi|avvia|continua|esegui|start)$/.test(t)) {
         if (isLooping('play')) return false;
         unifiedPlayer.play().catch(function(){});
-        // FIX #1 + #2: Pausa riconoscimento + ripristino AudioContext
         ensureAudioContext();
-        pauseRecognitionTemporarily(2000);
         showVoiceFeedback('▶️ Riproduzione');
         return true;
     }
@@ -2756,129 +2734,114 @@ function executeVoiceCommand(transcript) {
     return false;
 }
 
+// ================= INIZIALIZZAZIONE RICONOSCIMENTO (SINGLE-SHOT) =================
 function initVoiceCommand() {
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-        showVoiceFeedback('❌ Riconoscimento non supportato');
+        showVoiceFeedback('❌ Riconoscimento vocale non supportato');
         return false;
     }
     voiceCmdRecognition = new SpeechRecognition();
     voiceCmdRecognition.lang = 'it-IT';
-    
-    voiceCmdRecognition.continuous = true;
+    voiceCmdRecognition.continuous = false;       // NIENTE ascolto continuo
     voiceCmdRecognition.interimResults = false;
     voiceCmdRecognition.maxAlternatives = 1;
 
     voiceCmdRecognition.onresult = function(event) {
-        // FIX #3: Reset backoff ad ogni risultato ricevuto con successo
-        voiceCmdRestartAttempts = 0;
-
-        if (Date.now() < voiceCmdCooldownUntil) {
-            return;
-        }
         var last = event.results.length - 1;
         var transcript = event.results[last][0].transcript;
-        if (!transcript || transcript.trim().length < 3) return;
-        if (!containsKeyword(transcript)) return;
+        if (!transcript || transcript.trim().length < 2) return;
 
-        console.log('[VoiceAI] Elaboro:', transcript);
-        var executed = executeVoiceCommand(transcript);
+        console.log('[VoiceAI] Ricevuto:', transcript);
 
-        if (executed) {
-            voiceCmdCooldownUntil = Date.now() + 2000;
+        if (containsKeyword(transcript)) {
+            executeVoiceCommand(transcript);
+        } else {
+            showVoiceFeedback('🎤 "' + transcript + '" — non riconosciuto');
         }
+
+        // Fine: il riconoscimento si chiude da solo dopo questo risultato
+        finishListening();
     };
 
     voiceCmdRecognition.onerror = function(e) {
-        console.warn('[VoiceAI] Error:', e.error);
-        if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'audio-capture') return;
+        console.warn('[VoiceAI] Errore:', e.error);
         if (e.error === 'not-allowed') {
             showVoiceFeedback('🎤 Microfono non autorizzato');
-            stopVoiceCommand();
-            return;
+        } else if (e.error === 'no-speech') {
+            showVoiceFeedback('🎤 Nessun discorso rilevato');
         }
-        // FIX #3: Riavvio con backoff in caso di errore temporaneo
-        if (voiceCmdActive && !voiceCmdPaused) {
-            clearTimeout(voiceCmdRestartTimer);
-            voiceCmdRestartDelay = Math.min(2000, 1000 + voiceCmdRestartAttempts * 300);
-            voiceCmdRestartTimer = setTimeout(function() {
-                if (voiceCmdActive && !voiceCmdPaused) startVoiceRecognition();
-            }, voiceCmdRestartDelay);
-            voiceCmdRestartAttempts++;
-        }
+        finishListening();
     };
 
-    // FIX #3: Backoff esponenziale nel restart — non più fisso a 300ms
     voiceCmdRecognition.onend = function() {
-        if (voiceCmdActive && !voiceCmdPaused) {
-            clearTimeout(voiceCmdRestartTimer);
-            voiceCmdRestartDelay = Math.min(2000, 500 + voiceCmdRestartAttempts * 200);
-            voiceCmdRestartTimer = setTimeout(function() {
-                if (voiceCmdActive && !voiceCmdPaused) {
-                    try { 
-                        voiceCmdRecognition.start(); 
-                        voiceCmdRestartAttempts = 0; // Reset al successo
-                    } catch(e) {
-                        voiceCmdRestartAttempts++;
-                    }
-                }
-            }, voiceCmdRestartDelay);
-        }
+        // Se il riconoscimento finisce naturalmente senza che onresult/onerror
+        // abbiano già chiamato finishListening, lo facciamo qui
+        if (voiceCmdListening) finishListening();
     };
+
+    // Registra il guardiano sul player — se parte la musica, uccide il microfono
+    unifiedPlayer.addEventListener('play', voiceCmdPlayerGuard);
+
     return true;
 }
 
-function startVoiceRecognition() {
-    if (!voiceCmdRecognition || voiceCmdPaused) return;
-    try { 
-        voiceCmdRecognition.start(); 
-    } catch(e) {
-        // Se è già avviato, ignora l'errore
-    }
-}
-
-function startVoiceCommand() {
+// ================= TAP-TO-SPEAK: avvio singolo comando =================
+function startListening() {
     if (!voiceCmdRecognition && !initVoiceCommand()) return;
-    voiceCmdActive = true;
-    voiceCmdPaused = false;
+    if (voiceCmdListening) return;
+
+    voiceCmdListening = true;
     voiceCmdCooldownUntil = 0;
     voiceCmdHistory = [];
-    voiceCmdRestartAttempts = 0; // FIX #3: Reset backoff all'avvio
     voiceCmdBtn.classList.add('active');
-    startVoiceRecognition();
-    showVoiceFeedback('🎤 Voice AI ATTIVO - Parla pure, ti ascolto in continuo');
-}
+    showVoiceFeedback('🎤 Ascolto... parla ora');
 
-function stopVoiceCommand() {
-    voiceCmdActive = false;
-    voiceCmdPaused = false; // FIX #1: Reset flag
-    voiceCmdBtn.classList.remove('active');
-    voiceCmdCooldownUntil = 0;
-    voiceCmdHistory = [];
-    voiceCmdRestartAttempts = 0; // FIX #3: Reset backoff
-    clearTimeout(voiceCmdRestartTimer);
-    if (voiceCmdRecognition) {
-        try { voiceCmdRecognition.stop(); } catch(e) {}
+    try {
+        voiceCmdRecognition.start();
+    } catch(e) {
+        console.warn('[VoiceAI] Start fallito:', e.message);
+        finishListening();
     }
-    // FIX #2: Ripristina l'AudioContext alla disattivazione
-    ensureAudioContext();
-    showVoiceFeedback('🎤 Voice AI DISATTIVATO');
 }
 
+// ================= FINE ASCOLTO: pulizia totale =================
+function finishListening() {
+    voiceCmdListening = false;
+    voiceCmdBtn.classList.remove('active');
+
+    try { voiceCmdRecognition.stop(); } catch(e) {}
+
+    // Assicura che l'AudioContext sia ripristinato dopo aver rilasciato il microfono
+    setTimeout(function() {
+        ensureAudioContext();
+    }, 300);
+}
+
+// ================= FORZA CHIUSURA (usato dal guardiano) =================
+function forceStopRecognition() {
+    if (!voiceCmdListening) return;
+    voiceCmdListening = false;
+    voiceCmdBtn.classList.remove('active');
+    try { voiceCmdRecognition.abort(); } catch(e) {}
+    setTimeout(function() { ensureAudioContext(); }, 300);
+}
+
+// ================= CLICK HANDLER =================
 if (voiceCmdBtn) {
     voiceCmdBtn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        if (voiceCmdActive) {
-            stopVoiceCommand();
+        if (voiceCmdListening) {
+            // Clic mentre ascolta = annulla
+            forceStopRecognition();
+            showVoiceFeedback('🎤 Ascolto annullato');
         } else {
-            startVoiceCommand();
+            // Clic = avvia un singolo ascolto
+            startListening();
         }
     });
 }
-
-// ✅ NOTA: Rimosso completamente l'auto-start nascosto che causava il conflitto audio iniziale.
-// Ora l'assistente si attiva SOLO quando l'utente lo decide esplicitamente.
   </script>
 </body>
 </html>
