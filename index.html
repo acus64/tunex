@@ -735,7 +735,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         
         <!-- NUOVO: Screensaver YouTube per i soli flussi audio -->
         <div id="youtube-screensaver" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; background: #000;">
-            <iframe id="yt-iframe" width="100%" height="100%" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            <iframe id="yt-iframe" width="100%" height="100%" src="" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
         </div>
 
         <div class="custom-controls" id="custom-controls">
@@ -774,14 +774,14 @@ audio.media-player::-webkit-media-controls-enclosure {
         </div>
 
         <div class="main-controls" id="main-controls">
-          <button id="media-play" class="btn"><i class="fas fa-play"></i> Play</button>
-          <button id="media-stop" class="btn secondary"><i class="fas fa-stop"></i> Stop</button>
-          <button id="media-next" class="btn secondary"><i class="fas fa-step-forward"></i> Next</button>
-          <button id="voice-search" class="btn voice-btn"><i class="fas fa-microphone"></i> Voice</button>
-          <button id="shazam-btn" class="btn secondary" title="Identifica brano"><i class="fas fa-music"></i> Shazam</button>
-          <button id="voice-cmd-btn" class="btn voice-cmd-btn" title="Assistente vocale continuo">
-            <i class="fas fa-microphone"></i> Voice AI
-          </button>
+            <button id="media-play" class="btn"><i class="fas fa-play"></i> Play</button>
+            <button id="media-stop" class="btn secondary"><i class="fas fa-stop"></i> Stop</button>
+            <button id="media-next" class="btn secondary"><i class="fas fa-step-forward"></i> Next</button>
+            <!-- RIMOSSO: <button id="voice-search" ...> -->
+            <button id="shazam-btn" class="btn secondary" title="Identifica brano"><i class="fas fa-music"></i> Shazam</button>
+            <button id="voice-cmd-btn" class="btn voice-cmd-btn" title="Assistente vocale e ricerca">
+                <i class="fas fa-microphone"></i> Voice AI
+            </button>
         </div>
 
         <div class="player-info" id="player-info"></div>
@@ -1142,7 +1142,6 @@ audio.media-player::-webkit-media-controls-enclosure {
     var mediaPlayButton = document.getElementById('media-play');
     var mediaStopButton = document.getElementById('media-stop');
     var mediaNextButton = document.getElementById('media-next');
-    var voiceSearchBtn = document.getElementById('voice-search');
     var searchInput = document.getElementById('search-input');
     var resetSearchBtn = document.getElementById('reset-search');
     var currentChannelDisplay = document.getElementById('current-channel');
@@ -1160,7 +1159,6 @@ audio.media-player::-webkit-media-controls-enclosure {
     var logoImg = document.getElementById('logo');
 
     var currentHls = null;
-    var isListening = false;
     var localFiles = [];
     var localBlobURLs = new Set();
     var localCounter = 0;
@@ -1288,136 +1286,97 @@ audio.media-player::-webkit-media-controls-enclosure {
 
     // ================= STREAM CONTROL =================
     function stopStream() {
-        unifiedPlayer._trackEnded = true; // Previene eventi spuri durante lo stop
+        unifiedPlayer._trackEnded = true;
         unifiedPlayer.removeAttribute('src');
         unifiedPlayer.load();
         statusText.textContent = 'Fermato';
         statusDot.classList.remove('playing');
-        
-        // CORREZIONE: Rimossi i riferimenti a _hls e _currentHls (non definiti)
-        if (currentHls) { 
-            try { currentHls.destroy(); } catch(e) {} 
-            currentHls = null; 
+        if (currentHls) {
+            try { currentHls.destroy(); } catch(e) {}
+            currentHls = null;
         }
-        
         unifiedPlayer.pause();
-        unifiedPlayer.removeAttribute('src');
-        unifiedPlayer.load();
         loadingInfo.style.display = 'none';
-        statusText.textContent = 'Fermato';
-        statusDot.classList.remove('playing');
     }
 
     function isM3U8(url) { return url.toLowerCase().indexOf('.m3u8') >= 0; }
 
-        // Variabili globali per lo screensaver
-        const SCREENSAVER_YT_ID = "2xBem-GCvwE"; 
-        const ytIframe = document.getElementById('yt-iframe');
-        const ytScreensaver = document.getElementById('youtube-screensaver');
+    // Variabili globali per lo screensaver
+    const SCREENSAVER_YT_ID = "2xBem-GCvwE"; 
+    const ytIframe = document.getElementById('yt-iframe');
+    const ytScreensaver = document.getElementById('youtube-screensaver');
 
-        // Funzione per mostrare/nascondere lo screensaver
-        function toggleScreensaver(isAudioOnly) {
-        const screensaverUrl = isAudioOnly 
-            ? `https://www.youtube.com/embed/${SCREENSAVER_YT_ID}?autoplay=1&mute=1&loop=1&playlist=${SCREENSAVER_YT_ID}&controls=0`
+    // Funzione per mostrare/nascondere lo screensaver
+    function toggleScreensaver(isAudioOnly) {
+        const screensaverUrl = isAudioOnly
+            ? `https://www.youtube.com/embed/${SCREENSAVER_YT_ID}?autoplay=1&mute=1&loop=1&playlist=${SCREENSAVER_YT_ID}&controls=0&rel=0`
             : '';
-
-        if (ytIframe) ytIframe.src = screensaverUrl;
-        if (ytScreensaver) ytScreensaver.style.display = isAudioOnly ? 'block' : 'none';
+        
+        if (ytIframe) {
+            ytIframe.src = screensaverUrl;
+            // FIX: Rimuovo 'encrypted-media' che causa warning, 'autoplay' è sufficiente per video muti
+            ytIframe.setAttribute('allow', 'autoplay; fullscreen');
         }
+        if (ytScreensaver) {
+            ytScreensaver.style.display = isAudioOnly ? 'block' : 'none';
+        }
+    }
 
-        // Funzione playChannel aggiornata
-        async function playChannel(element, name, url, type) {
-            document.querySelectorAll('.channel').forEach(function(ch) { ch.classList.remove('active'); });
-            element.classList.add('active');
-            currentChannelDisplay.textContent = name;
-            statusText.textContent = 'Caricamento...';
-            loadingInfo.style.display = 'none';
+    // Funzione playChannel aggiornata e blindata
+    async function playChannel(element, name, url, type) {
+        url = url || ''; // FIX: previene ReferenceError se url è undefined o mancante
+        document.querySelectorAll('.channel').forEach(function(ch) { ch.classList.remove('active'); });
+        element.classList.add('active');
+        currentChannelDisplay.textContent = name;
+        statusText.textContent = 'Caricamento...';
+        loadingInfo.style.display = 'none';
+        stopStream();
+        unifiedPlayer._trackEnded = false;
+        await initAudioEQ();
+        
+        // Resetta sempre lo screensaver all'inizio di un nuovo canale
+        toggleScreensaver(false);
+
+        if (type === 'youtube-link') {
+            playYouTubeLink(name, url);
+        } else if (isM3U8(url)) {
+            if (window.Hls && Hls.isSupported()) { playHLS(name, url); }
+            else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) { playStandard(name, url); }
+            else { showToast('Formato stream non supportato'); statusText.textContent = 'Errore formato'; }
+        } else {
+            playStandard(name, url);
+        }
+        
+        // FIX: Rilevamento screensaver sicuro, isolato e senza dipendenze di scope fragili
+        var checkScreensaver = function() {
+            if (unifiedPlayer._screensaverChecked) return;
+            if (isM3U8(url)) return; // Per flussi HLS il controllo è già gestito dentro playHLS
             
-            stopStream();
-            unifiedPlayer._trackEnded = false; 
+            unifiedPlayer._screensaverChecked = true;
+            var vw = unifiedPlayer.videoWidth || 0;
+            var vh = unifiedPlayer.videoHeight || 0;
             
-            await initAudioEQ();
-
-            // Resetta lo screensaver quando cambi canale
-            toggleScreensaver(false);
-
-            if (type === 'youtube-link') { 
-                playYouTubeLink(name, url); 
-            } else if (isM3U8(url)) {
-                if (window.Hls && Hls.isSupported()) { playHLS(name, url); }
-                else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) { playStandard(name, url); }
-                else { showToast('Formato stream non supportato'); statusText.textContent = 'Errore formato'; }
-            } else { 
-                playStandard(name, url); 
+            // Se ha videoTracks, controlla direttamente
+            if (unifiedPlayer.videoTracks && unifiedPlayer.videoTracks.length > 0) {
+                toggleScreensaver(false);
+                return;
             }
-
-            // Rilevamento infallibile per i flussi NON HLS (.mp3, .aac, ecc.)
-            // Se il flusso non ha dimensioni video, è solo audio e attiva YouTube
-            unifiedPlayer.onloadedmetadata = function() {
-                if (unifiedPlayer.videoWidth === 0 || unifiedPlayer.videoHeight === 0) {
-                    toggleScreensaver(true);
-                } else {
-                    toggleScreensaver(false);
-                }
-            };
-        }
-
-        // Funzione playHLS aggiornata con rilevamento audio
-        function playHLS(name, url) {
-            if (currentHls) { currentHls.destroy(); currentHls = null; }
-            currentHls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60, startLevel: -1, debug: false });
-            currentHls.loadSource(url);
-            currentHls.attachMedia(unifiedPlayer);
-            unifiedPlayer.style.display = 'block';
-            loadingInfo.style.display = 'none';
             
-            currentHls.on(Hls.Events.MANIFEST_PARSED, async function(event, data) {
-                // --- RILEVAMENTO AUDIO/VIDEO INFALLIBILE ---
-                let isAudioOnly = true;
-                if (data.levels && data.levels.length > 0) {
-                    data.levels.forEach(level => {
-                        if (level.videoCodec || level.height > 0) {
-                            isAudioOnly = false; // Ha un codec video, è una TV!
-                        }
-                    });
-                }
-                toggleScreensaver(isAudioOnly);
-                // -------------------------------------------
+            if (vw === 0 && vh === 0) {
+                toggleScreensaver(true); // È solo audio, attiva YouTube
+            } else {
+                toggleScreensaver(false); // Ha video, nascondi YouTube
+            }
+        };
 
-                try {
-                    await initAudioEQ();
-                    if (!isCorsRestricted(url)) {
-                        connectEQChain(unifiedPlayer);
-                    }
-                    await unifiedPlayer.play();
-                    statusText.textContent = 'In riproduzione';
-                    statusDot.classList.add('playing');
-                } catch(err) {
-                    if (err.name === 'NotAllowedError') {
-                        statusText.textContent = 'Premi Play per avviare';
-                        showToast('Tocca Play per iniziare');
-                    }
-                    statusDot.classList.remove('playing');
-                }
-            });
-            
-            currentHls.on(Hls.Events.ERROR, function(event, data) {
-                if (data.fatal) {
-                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR && data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
-                        console.warn("HLS CORS fallback: tentativo playback diretto");
-                        stopStream();
-                        playStandard(name, url);
-                        return;
-                    }
-                    switch (data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR: currentHls.startLoad(); break;
-                        case Hls.ErrorTypes.MEDIA_ERROR: currentHls.recoverMediaError(); break;
-                        default: stopStream(); showToast('Errore stream: canale non disponibile');
-                    }
-                }
-            });
-        }
-     
+        // Trigger 1: loadedmetadata (funziona per file con metadati completi)
+        unifiedPlayer.onloadedmetadata = checkScreensaver;
+        // Trigger 2: playing come fallback (funziona per stream live che non emettono metadata)
+        unifiedPlayer.addEventListener('playing', checkScreensaver, { once: true });
+        // Trigger 3: dopo 3 secondi, forza il controllo se niente è partito
+        setTimeout(checkScreensaver, 3000);
+    }
+
     function playHLS(name, url) {
         if (currentHls) { currentHls.destroy(); currentHls = null; }
         currentHls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60, startLevel: -1, debug: false });
@@ -1425,7 +1384,20 @@ audio.media-player::-webkit-media-controls-enclosure {
         currentHls.attachMedia(unifiedPlayer);
         unifiedPlayer.style.display = 'block';
         loadingInfo.style.display = 'none';
-        currentHls.on(Hls.Events.MANIFEST_PARSED, async function() {
+
+        currentHls.on(Hls.Events.MANIFEST_PARSED, async function(event, data) {
+            // --- RILEVAMENTO AUDIO/VIDEO INFALLIBILE ---
+            let isAudioOnly = true;
+            if (data.levels && data.levels.length > 0) {
+                data.levels.forEach(level => {
+                    if (level.videoCodec || (level.height && level.height > 0)) {
+                        isAudioOnly = false; // Ha un codec video, è una TV!
+                    }
+                });
+            }
+            toggleScreensaver(isAudioOnly); // <-- QUESTO MANCAVA NELLA SECONDA DEFINIZIONE
+            // -------------------------------------------
+
             try {
                 await initAudioEQ();
                 if (!isCorsRestricted(url)) {
@@ -1442,6 +1414,7 @@ audio.media-player::-webkit-media-controls-enclosure {
                 statusDot.classList.remove('playing');
             }
         });
+
         currentHls.on(Hls.Events.ERROR, function(event, data) {
             if (data.fatal) {
                 if (data.type === Hls.ErrorTypes.NETWORK_ERROR && data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
@@ -1458,6 +1431,7 @@ audio.media-player::-webkit-media-controls-enclosure {
             }
         });
     }
+
     function playStandard(name, url) {
         unifiedPlayer.removeEventListener('loadedmetadata', playStandard_onMeta);
         unifiedPlayer.removeEventListener('error', playStandard_onError);
@@ -1579,33 +1553,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         
         var nextIndex = (activeIndex + 1) % visibleChannels.length;
         visibleChannels[nextIndex].click();
-    });
-
-    // ================= VOICE SEARCH =================
-    voiceSearchBtn.addEventListener('click', function() {
-      var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) { showToast('Ricerca vocale non supportata'); return; }
-      if (isListening) { isListening = false; voiceSearchBtn.classList.remove('listening'); return; }
-      var recognition = new SpeechRecognition();
-      recognition.lang = 'it-IT';
-      isListening = true;
-      voiceSearchBtn.classList.add('listening');
-      showToast('Ascoltando...');
-      recognition.onresult = function(event) {
-          var transcript = event.results[0][0].transcript.toLowerCase();
-          searchInput.value = transcript;
-          searchInput.dispatchEvent(new Event('input'));
-      };
-      recognition.onend = function() { isListening = false; voiceSearchBtn.classList.remove('listening'); };
-      recognition.onerror = function(e) {
-          console.warn('Speech error:', e.error);
-          isListening = false;
-          voiceSearchBtn.classList.remove('listening');
-          if (e.error === 'no-speech') showToast('Nessun discorso rilevato');
-          else if (e.error === 'not-allowed') showToast('Microfono non autorizzato');
-          else showToast('Errore ricerca vocale: ' + e.error);
-      };
-      recognition.start();
     });
 
     // ================= EQUALIZER INTERACTION =================
@@ -2703,6 +2650,17 @@ function executeVoiceCommand(transcript) {
 }
 
 // ================= INIZIALIZZAZIONE =================
+// Funzione ereditata dal vecchio bottone Voice: cerca nel search input
+function voiceSearch(transcript) {
+    var q = transcript.toLowerCase().trim();
+    if (!q || q.length < 2) return;
+    if (searchInput) {
+        searchInput.value = q;
+        searchInput.dispatchEvent(new Event('input'));
+    }
+    showVoiceFeedback('🔍 Cerco: "' + q + '"');
+}
+
 function initVoiceCommand() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { showVoiceFeedback('❌ Riconoscimento non supportato'); return false; }
@@ -2720,10 +2678,16 @@ function initVoiceCommand() {
         if (!transcript || transcript.trim().length < 2) { finishListening(); return; }
 
         console.log('[VoiceAI] Ricevuto:', transcript);
+
         if (containsKeyword(transcript)) {
-            executeVoiceCommand(transcript);
+            var executed = executeVoiceCommand(transcript);
+            if (!executed) {
+                // Parola chiave trovata ma comando non matchato → cerca comunque
+                voiceSearch(transcript);
+            }
         } else {
-            showVoiceFeedback('🎤 "' + transcript + '" — non riconosciuto');
+            // Nessuna parola chiave → usa come ricerca canale
+            voiceSearch(transcript);
         }
         finishListening();
     };
