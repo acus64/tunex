@@ -1484,75 +1484,71 @@ audio.media-player::-webkit-media-controls-enclosure {
         stopStream();
         unifiedPlayer._trackEnded = false;
         await initAudioEQ();
-        toggleScreensaver(false);
+        toggleScreensaver(false); // Reset iniziale
         unifiedPlayer._screensaverChecked = false;
 
-    // ================= GESTIONE FILE LOCALI (LAZY LOADING) =================
-    if (type === 'local') {
-        try {
-            let file;
-            let finalUrl = urlOrHandle;
-            
-            // 1. Risolvi la sorgente
-            if (urlOrHandle && typeof urlOrHandle.getFile === 'function') {
-                file = await urlOrHandle.getFile();
-                finalUrl = URL.createObjectURL(file);
-            } else if (urlOrHandle instanceof File) {
-                finalUrl = URL.createObjectURL(urlOrHandle);
-            } else if (typeof urlOrHandle === 'string' && urlOrHandle) {
-                finalUrl = urlOrHandle;
-            } else {
-                showToast('❌ File non disponibile');
+        // ================= GESTIONE FILE LOCALI =================
+        if (type === 'local') {
+            try {
+                let file;
+                let finalUrl = urlOrHandle;
+                
+                if (urlOrHandle && typeof urlOrHandle.getFile === 'function') {
+                    file = await urlOrHandle.getFile();
+                    finalUrl = URL.createObjectURL(file);
+                } else if (urlOrHandle instanceof File) {
+                    finalUrl = URL.createObjectURL(urlOrHandle);
+                } else if (typeof urlOrHandle === 'string' && urlOrHandle) {
+                    finalUrl = urlOrHandle;
+                } else {
+                    showToast('❌ File non disponibile');
+                    statusText.textContent = 'Errore';
+                    return;
+                }
+                
+                if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(unifiedPlayer.src);
+                }
+                
+                unifiedPlayer.src = finalUrl;
+                unifiedPlayer.style.display = 'block';
+                
+                // Attendiamo i metadati per capire se è Video o Audio
+                await new Promise(resolve => {
+                    if (unifiedPlayer.readyState >= 1) {
+                        resolve();
+                    } else {
+                        unifiedPlayer.addEventListener('loadedmetadata', resolve, { once: true });
+                        setTimeout(resolve, 1000); // Timeout di sicurezza
+                    }
+                });
+                
+                // Controllo dimensioni: se > 100px è video, altrimenti è audio
+                const vw = unifiedPlayer.videoWidth || 0;
+                const vh = unifiedPlayer.videoHeight || 0;
+                
+                if (vw > 100 && vh > 100) {
+                    toggleScreensaver(false); // È un video
+                } else {
+                    toggleScreensaver(true);  // È audio: attiva screensaver
+                }
+                
+                await unifiedPlayer.play();
+                statusText.textContent = 'In riproduzione';
+                statusDot.classList.add('playing');
+                
+                if (!isCorsRestricted(finalUrl)) {
+                    connectEQChain(unifiedPlayer);
+                }
+                return; // Esce dalla funzione, il resto è per gli stream
+            } catch (err) {
+                console.error('Errore riproduzione file locale:', err);
+                showToast('❌ Impossibile riprodurre: ' + err.message);
                 statusText.textContent = 'Errore';
                 return;
             }
-            
-            // 2. Pulizia URL precedente per evitare fughe di memoria
-            if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
-                URL.revokeObjectURL(unifiedPlayer.src);
-            }
-            
-            unifiedPlayer.src = finalUrl;
-            unifiedPlayer.style.display = 'block';
-            
-            // 3. Attendiamo i metadati per capire se è un file Video o Audio
-            await new Promise(resolve => {
-                if (unifiedPlayer.readyState >= 1) {
-                    resolve(); // Già caricato
-                } else {
-                    unifiedPlayer.addEventListener('loadedmetadata', resolve, { once: true });
-                    setTimeout(resolve, 1000); // Timeout di sicurezza
-                }
-            });
-            
-            // 4. Controllo dimensioni: se > 100px è video, altrimenti è audio
-            const vw = unifiedPlayer.videoWidth || 0;
-            const vh = unifiedPlayer.videoHeight || 0;
-            
-            if (vw > 100 && vh > 100) {
-                toggleScreensaver(false); // È un video: niente screensaver
-            } else {
-                toggleScreensaver(true);  // È audio: attiva screensaver YouTube
-            }
-            
-            // 5. Avvia riproduzione
-            await unifiedPlayer.play();
-            statusText.textContent = 'In riproduzione';
-            statusDot.classList.add('playing');
-            
-            // 6. Collega EQ (i blob URL non hanno restrizioni CORS)
-            if (!isCorsRestricted(finalUrl)) {
-                connectEQChain(unifiedPlayer);
-            }
-            return; // Esce dalla funzione
-        } catch (err) {
-            console.error('Errore riproduzione file locale:', err);
-            showToast('❌ Impossibile riprodurre: ' + err.message);
-            statusText.textContent = 'Errore';
-            return;
         }
-    }
-    // ================= FINE GESTIONE LOCALI =================
+        // ================= FINE GESTIONE LOCALI =================
 
         // Logica originale per streaming e YouTube
         if (type === 'youtube-link') {
@@ -1569,6 +1565,8 @@ audio.media-player::-webkit-media-controls-enclosure {
         } else {
             playStandard(name, urlOrHandle);
         }
+        // LA FUNZIONE FINISCE QUI. NESSUN ALTRO CODICE.
+    }
 
         // (Mantieni qui sotto il resto del codice originale di playChannel per lo screensaver...)
         var checkScreensaver = function() {
@@ -1586,7 +1584,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         unifiedPlayer.onloadedmetadata = function() { setTimeout(checkScreensaver, 500); };
         unifiedPlayer.addEventListener('playing', function() { setTimeout(checkScreensaver, 1000); }, { once: true });
         setTimeout(function() { if (!unifiedPlayer._screensaverChecked) checkScreensaver(); }, 5000);
-    }
+    
 
     function playHLS(name, url) {
         if (currentHls) { currentHls.destroy(); currentHls = null; }
@@ -1722,7 +1720,21 @@ audio.media-player::-webkit-media-controls-enclosure {
                     if (eqInit) connectEQChain(unifiedPlayer);
                 });
             }
-        } catch(e) { console.warn("EQ init error:", e.message); }
+            
+            // Fallback sicuro per lo screensaver nei flussi standard
+            setTimeout(function() {
+                if (!unifiedPlayer._screensaverChecked) {
+                    var vw = unifiedPlayer.videoWidth || 0;
+                    var vh = unifiedPlayer.videoHeight || 0;
+                    if (vw <= 100 || vh <= 100) {
+                        toggleScreensaver(true); // Attiva screensaver se è solo audio
+                    }
+                    unifiedPlayer._screensaverChecked = true;
+                }
+            }, 1000);
+        } catch(e) { 
+            console.warn("EQ init error:", e.message); 
+        }
     }
 
     function playStandard_onError() {
@@ -2955,7 +2967,6 @@ async function askAI(question) {
         }
         return false;
     }
-
     // ================= INIZIALIZZAZIONE =================
     function voiceSearch(transcript) {
         var q = transcript.toLowerCase().trim();
@@ -2971,66 +2982,63 @@ async function askAI(question) {
     function initVoiceCommand() {
         var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) { showVoiceFeedback('❌ Riconoscimento non supportato'); return false; }
-
+        
         voiceCmdRecognition = new SR();
         voiceCmdRecognition.lang = 'it-IT';
         voiceCmdRecognition.continuous = false;
         voiceCmdRecognition.interimResults = false;
         voiceCmdRecognition.maxAlternatives = 1;
-
+        
         voiceCmdRecognition.onresult = function(event) {
             clearTimeout(voiceCmdTimeout);
             var last = event.results.length - 1;
             var transcript = event.results[last][0].transcript;
             if (!transcript || transcript.trim().length < 2) { finishListening(); return; }
-
+            
             console.log('[VoiceAI] Ricevuto:', transcript);
-
+            
             if (containsKeyword(transcript)) {
                 var executed = executeVoiceCommand(transcript);
                 if (!executed) {
-                    // Parola chiave trovata ma comando non matchato → cerca comunque
                     voiceSearch(transcript);
                 }
             } else {
-                // Nessuna parola chiave → usa come ricerca canale
                 voiceSearch(transcript);
             }
             finishListening();
         };
-
+        
         voiceCmdRecognition.onerror = function(e) {
             clearTimeout(voiceCmdTimeout);
             console.warn('[VoiceAI] Errore:', e.error);
             if (e.error === 'not-allowed') {
                 showVoiceFeedback('🎤 Microfono non autorizzato');
                 speakResponse('Per favore, autorizza il microfono');
-            }
-            else if (e.error === 'no-speech') {
+            } else if (e.error === 'no-speech') {
                 showVoiceFeedback('🎤 Nessun discorso rilevato');
                 speakResponse('Non ho sentito nulla, riprova');
-            }
-            else if (e.error === 'aborted') {
+            } else if (e.error === 'aborted') {
                 return;
-            }
-            else {
+            } else {
                 showVoiceFeedback('🎤 Errore: ' + e.error);
                 speakResponse('Si è verificato un errore, riprova');
             }
             finishListening();
         };
+        
+        return true; // <-- AGGIUNTO: Fondamentale per far funzionare l'avvio
+    } // <-- AGGIUNTO: Chiude correttamente la funzione initVoiceCommand
 
     // ================= AVVIO SINGOLO ASCOLTO =================
     function startListening() {
         if (voiceCmdListening) return;
         if (!voiceCmdRecognition && !initVoiceCommand()) return;
-
+        
         voiceCmdListening = true;
         voiceCmdHistory = [];
         voiceCmdBtn.classList.add('active');
         showVoiceFeedback('🎤 Ascolto... parla ora');
-
-        // Timeout di sicurezza: dopo 10 secondi senza risultato, chiudi
+        
         clearTimeout(voiceCmdTimeout);
         voiceCmdTimeout = setTimeout(function() {
             if (voiceCmdListening) {
@@ -3038,7 +3046,7 @@ async function askAI(question) {
                 finishListening();
             }
         }, 10000);
-
+        
         try {
             voiceCmdRecognition.start();
         } catch(e) {
