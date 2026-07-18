@@ -1260,9 +1260,9 @@ audio.media-player::-webkit-media-controls-enclosure {
           el.appendChild(nameEl);
           el.appendChild(actionsEl);
           el.addEventListener('click', function() { 
-             var source = ch.url || ch.fileHandle || ch.file;
-             playChannel(el, ch.name, source, ch.type); 
-         });
+              var source = ch.url || ch.fileHandle || ch.file;
+              playChannel(el, ch.name, source, ch.type); 
+          });
           fragment.appendChild(el);
       });
       channelListEl.appendChild(fragment);
@@ -1301,23 +1301,31 @@ audio.media-player::-webkit-media-controls-enclosure {
     });
 
     clearLocalBtn.addEventListener('click', function() {
-        // Revoca URL attualmente in riproduzione
+        // 1. Revoca l'URL blob attualmente in riproduzione per liberare immediatamente la RAM
         if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
             URL.revokeObjectURL(unifiedPlayer.src);
         }
-        // Disconnetti EQ
+        
+        // 2. Disconnetti l'EQ per evitare conflitti "MediaElementSource already connected"
         if (audioSource) {
             try { audioSource.disconnect(); } catch(e) {}
             audioSource = null;
         }
+        unifiedPlayer._eqStatus = undefined; // Resetta lo stato interno dell'EQ
+        
+        // 3. Pulisci l'elenco e il contatore (i file non sono più in RAM, solo i riferimenti)
         localFiles = [];
         localCounter = 0;
+        
+        // 4. Resetta il player multimediale
         unifiedPlayer.pause();
         unifiedPlayer.removeAttribute('src');
         unifiedPlayer.load();
         loadingInfo.style.display = 'none';
+        
+        // 5. Aggiorna l'interfaccia
         renderChannels();
-        showToast('Elenco locale pulito');
+        showToast('✅ Elenco locale pulito e memoria liberata');
     });
 
     var changeFolderBtn = document.getElementById('change-folder-btn');
@@ -1429,7 +1437,7 @@ audio.media-player::-webkit-media-controls-enclosure {
 
     // ================= STREAM CONTROL =================
     function stopStream() {
-        // Revoca il blob URL corrente se esiste
+        // REVoca il blob URL corrente per liberare memoria immediatamente
         if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
             URL.revokeObjectURL(unifiedPlayer.src);
         }
@@ -1487,68 +1495,72 @@ audio.media-player::-webkit-media-controls-enclosure {
         toggleScreensaver(false); // Reset iniziale
         unifiedPlayer._screensaverChecked = false;
 
-        // ================= GESTIONE FILE LOCALI =================
-        if (type === 'local') {
-            try {
-                let file;
-                let finalUrl = urlOrHandle;
-                
-                if (urlOrHandle && typeof urlOrHandle.getFile === 'function') {
-                    file = await urlOrHandle.getFile();
-                    finalUrl = URL.createObjectURL(file);
-                } else if (urlOrHandle instanceof File) {
-                    finalUrl = URL.createObjectURL(urlOrHandle);
-                } else if (typeof urlOrHandle === 'string' && urlOrHandle) {
-                    finalUrl = urlOrHandle;
-                } else {
-                    showToast('❌ File non disponibile');
-                    statusText.textContent = 'Errore';
-                    return;
-                }
-                
-                if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
-                    URL.revokeObjectURL(unifiedPlayer.src);
-                }
-                
-                unifiedPlayer.src = finalUrl;
-                unifiedPlayer.style.display = 'block';
-                
-                // Attendiamo i metadati per capire se è Video o Audio
-                await new Promise(resolve => {
-                    if (unifiedPlayer.readyState >= 1) {
-                        resolve();
-                    } else {
-                        unifiedPlayer.addEventListener('loadedmetadata', resolve, { once: true });
-                        setTimeout(resolve, 1000); // Timeout di sicurezza
-                    }
-                });
-                
-                // Controllo dimensioni: se > 100px è video, altrimenti è audio
-                const vw = unifiedPlayer.videoWidth || 0;
-                const vh = unifiedPlayer.videoHeight || 0;
-                
-                if (vw > 100 && vh > 100) {
-                    toggleScreensaver(false); // È un video
-                } else {
-                    toggleScreensaver(true);  // È audio: attiva screensaver
-                }
-                
-                await unifiedPlayer.play();
-                statusText.textContent = 'In riproduzione';
-                statusDot.classList.add('playing');
-                
-                if (!isCorsRestricted(finalUrl)) {
-                    connectEQChain(unifiedPlayer);
-                }
-                return; // Esce dalla funzione, il resto è per gli stream
-            } catch (err) {
-                console.error('Errore riproduzione file locale:', err);
-                showToast('❌ Impossibile riprodurre: ' + err.message);
+    // ================= GESTIONE FILE LOCALI (LAZY LOADING) =================
+    if (type === 'local') {
+        try {
+            let file;
+            let finalUrl = urlOrHandle;
+            
+            // 1. Revoca il vecchio URL blob per liberare memoria immediatamente
+            if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
+                URL.revokeObjectURL(unifiedPlayer.src);
+            }
+            
+            // 2. Risolvi la sorgente
+            if (urlOrHandle && typeof urlOrHandle.getFile === 'function') {
+                file = await urlOrHandle.getFile();
+                finalUrl = URL.createObjectURL(file);
+            } else if (urlOrHandle instanceof File) {
+                finalUrl = URL.createObjectURL(urlOrHandle);
+            } else if (typeof urlOrHandle === 'string' && urlOrHandle) {
+                finalUrl = urlOrHandle;
+            } else {
+                showToast('❌ File non disponibile');
                 statusText.textContent = 'Errore';
                 return;
             }
+            
+            unifiedPlayer.src = finalUrl;
+            unifiedPlayer.style.display = 'block';
+            
+            // 3. Attendiamo i metadati per capire se è un file Video o Audio
+            await new Promise(resolve => {
+                if (unifiedPlayer.readyState >= 1) {
+                    resolve();
+                } else {
+                    unifiedPlayer.addEventListener('loadedmetadata', resolve, { once: true });
+                    setTimeout(resolve, 1000); // Timeout di sicurezza
+                }
+            });
+            
+            // 4. Controllo dimensioni: se > 100px è video, altrimenti è audio
+            const vw = unifiedPlayer.videoWidth || 0;
+            const vh = unifiedPlayer.videoHeight || 0;
+            
+            if (vw > 100 && vh > 100) {
+                toggleScreensaver(false); // È un video
+            } else {
+                toggleScreensaver(true);  // È audio: attiva screensaver
+            }
+            
+            // 5. Avvia riproduzione
+            await unifiedPlayer.play();
+            statusText.textContent = 'In riproduzione';
+            statusDot.classList.add('playing');
+            
+            // 6. Collega EQ
+            if (!isCorsRestricted(finalUrl)) {
+                connectEQChain(unifiedPlayer);
+            }
+            return;
+        } catch (err) {
+            console.error('Errore riproduzione file locale:', err);
+            showToast('❌ Impossibile riprodurre: ' + err.message);
+            statusText.textContent = 'Errore';
+            return;
         }
-        // ================= FINE GESTIONE LOCALI =================
+    }
+    // ================= FINE GESTIONE LOCALI =================
 
         // Logica originale per streaming e YouTube
         if (type === 'youtube-link') {
@@ -2759,7 +2771,8 @@ var VOICE_COMMAND_TRIGGERS = [
     'rai 1', 'rai 2', 'rai 3', 'canale 5', 'italia 1', 'rete 4',
     'la 7', 'tv 8', 'nove', 'discovery', 'cine 34', 'focus',
     'grande fratello', 'iris', 'italia 2', 'la 5', 'mediaset',
-    'top crime', 'tgr', 'sicilia', 'tgcom24', 'sportitalia', 'zanzara'
+    'top crime', 'tgr', 'sicilia', 'tgcom24', 'sportitalia', 'zanzara',
+    'maps', 'google maps', 'naviga', 'dove mi trovo', 'navigazione', 'mi pessi'
 ];
 
 var voiceFeedback = document.createElement('div');
@@ -2799,10 +2812,19 @@ function ensureAudioContext() {
     }
 }
 
-// ================= RISPOSTA VOCALE (TTS) =================
+// ================= RISPOSTA VOCALE (TTS) CON PAUSA AUTOMATICA =================
 function speakResponse(text) {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
+    
+    // 1. Salva lo stato di riproduzione attuale
+    var wasPlaying = !unifiedPlayer.paused && (unifiedPlayer.src || unifiedPlayer.currentSrc);
+    
+    // 2. Mette in pausa il flusso audio durante la risposta vocale
+    if (wasPlaying) {
+        try { unifiedPlayer.pause(); } catch(e) {}
+    }
+    
     var utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'it-IT';
     utterance.rate = 1.05;
@@ -2810,18 +2832,37 @@ function speakResponse(text) {
     var voices = window.speechSynthesis.getVoices();
     var itVoice = voices.find(function(v) { return v.lang.startsWith('it'); });
     if (itVoice) utterance.voice = itVoice;
+    
+    // 3. Quando la voce ha finito, riprende la riproduzione se era attiva
+    utterance.onend = function() {
+        if (wasPlaying && unifiedPlayer.paused && (unifiedPlayer.src || unifiedPlayer.currentSrc)) {
+            unifiedPlayer.play().catch(function(){});
+        }
+    };
+    utterance.onerror = function() {
+        // Anche in caso di errore, ripristina la riproduzione
+        if (wasPlaying && unifiedPlayer.paused && (unifiedPlayer.src || unifiedPlayer.currentSrc)) {
+            unifiedPlayer.play().catch(function(){});
+        }
+    };
+    
     window.speechSynthesis.speak(utterance);
 }
-
 // ================= AI CONVERSAZIONALE (GROQ - GRATIS) =================
-const GROQ_API_KEY = 'INSERISCI_QUI_LA_TUA_CHIAVE_GROQ'; // <-- METTI LA TUA CHIAVE
+const GROQ_API_KEY = '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'; // <-- SOSTITUISCI CON LA TUA CHIAVE REALE (inizia con gsk_)
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 async function askAI(question) {
-    if (!GROQ_API_KEY || GROQ_API_KEY === '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') {
-        return 'Chiave Groq non configurata';
+    // 1. Controllo rigoroso della chiave API
+    if (!GROQ_API_KEY || GROQ_API_KEY === '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' || GROQ_API_KEY.length < 10) {
+        console.error('⚠️ Chiave API Groq mancante o non valida!');
+        return 'Chiave API non configurata. Apri il codice e inserisci la tua chiave Groq reale.';
     }
+    
     try {
+        console.log('🤖 Invio domanda a Groq:', question);
+        showVoiceFeedback('🤖 Sto pensando...');
+        
         const response = await fetch(GROQ_URL, {
             method: 'POST',
             headers: {
@@ -2831,18 +2872,32 @@ async function askAI(question) {
             body: JSON.stringify({
                 model: 'llama-3.3-70b-versatile',
                 messages: [
-                    { role: 'system', content: 'Sei TuneX AI, assistente vocale di un media player. Rispondi in italiano, in modo breve (max 2 frasi), amichevole e naturale.' },
+                    { 
+                        role: 'system', 
+                        content: 'Sei TuneX AI, un assistente vocale intelligente e amichevole. Rispondi in italiano, in modo molto breve (max 2-3 frasi), naturale e utile. Rispondi anche a domande generiche come meteo, curiosità o calcoli.' 
+                    },
                     { role: 'user', content: question }
                 ],
                 temperature: 0.7,
-                max_tokens: 200
+                max_tokens: 250 // Limita la lunghezza per evitare che il TTS si blocchi
             })
         });
+        
+        // 2. Gestione errori HTTP specifici
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            console.error('❌ Errore API Groq:', response.status, errData);
+            return 'Errore AI: ' + (errData.error?.message || 'Riprova più tardi');
+        }
+        
         const data = await response.json();
-        return data.choices?.[0]?.message?.content || 'Non ho capito';
+        const answer = data.choices?.[0]?.message?.content || 'Non ho capito la domanda';
+        console.log('✅ Risposta AI ricevuta:', answer);
+        return answer;
+        
     } catch (err) {
-        console.error('AI error:', err);
-        return 'Errore di connessione AI';
+        console.error('❌ Errore di rete durante la chiamata AI:', err);
+        return 'Errore di rete. Controlla la connessione internet o disattiva gli Ad-Blocker.';
     }
 }
 
@@ -2932,6 +2987,13 @@ async function askAI(question) {
             speakResponse('Ricerca cancellata');
             return true;
         }
+        if (/^(apri |mostra |vai su | mi pessi )?(google )?maps|naviga|dove sono|mi pessi|navigazione/.test(t)) {
+            if (isLooping('open_maps')) return false;
+            window.open('https://www.google.com/maps', '_blank');
+            showVoiceFeedback('🗺️ Apro Google Maps');
+            speakResponse('Apro Google Maps');
+            return true;
+        }
         if (/schermo intero|fullscreen|tutto schermo|espandi|maximizza/.test(t)) {
             if (isLooping('fullscreen')) return false;
             if (playerContainer) {
@@ -2946,6 +3008,15 @@ async function askAI(question) {
             else { showVoiceFeedback('🏠 Già in modalità normale'); speakResponse('Sei già in modalità normale'); }
             return true;
         }
+        // ================= COMANDO GOOGLE MAPS =================
+        if (/mi pessi|mi porti|apri (google )?maps|naviga|dove sono/.test(t)) {
+            if (isLooping('open_maps')) return false;
+            // Apre Google Maps in una nuova scheda (su Android attiva l'app nativa se installata)
+            window.open('https://www.google.com/maps', '_blank');
+            showVoiceFeedback('🗺️ Apro Google Maps');
+            speakResponse('Apro Google Maps');
+            return true;
+        }
         var searchMatch = t.match(/^(metti|cerca|trova|sintonizza|radio|canale|apri)\s+(.+)$/i);
         if (searchMatch && searchMatch[2] && searchMatch[2].length > 2) {
             var query = searchMatch[2].trim();
@@ -2957,14 +3028,14 @@ async function askAI(question) {
         }
         
         // ================= AI LIBERA: risponde a qualsiasi domanda =================
-        if (t.length > 2 && !isLooping('ai_' + t.substring(0, 20))) {
-            showVoiceFeedback('🤖 Pensando...');
-            askAI(transcript).then(function(answer) {
-                showVoiceFeedback('💬 ' + answer);
-                speakResponse(answer);
-            });
-            return true;
-        }
+        if (/apri (google )?maps|naviga|dove sono/.test(t)) {
+                    if (isLooping('open_maps')) return false;
+                    // Apre Google Maps in una nuova scheda (su Android attiva l'app nativa)
+                    window.open('https://www.google.com/maps', '_blank');
+                    showVoiceFeedback('🗺️ Apro Google Maps');
+                    speakResponse('Apro Google Maps');
+                    return true;
+                }
         return false;
     }
     // ================= INIZIALIZZAZIONE =================
