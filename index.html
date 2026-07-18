@@ -2772,7 +2772,7 @@ var VOICE_COMMAND_TRIGGERS = [
     'la 7', 'tv 8', 'nove', 'discovery', 'cine 34', 'focus',
     'grande fratello', 'iris', 'italia 2', 'la 5', 'mediaset',
     'top crime', 'tgr', 'sicilia', 'tgcom24', 'sportitalia', 'zanzara',
-    'maps', 'google maps', 'naviga', 'dove mi trovo', 'navigazione', 'mi pessi'
+    'maps', 'google maps', 'naviga', 'dove mi trovo', 'navigazione', 'mi pessi','mipessi', 'portami a'
 ];
 
 var voiceFeedback = document.createElement('div');
@@ -2905,6 +2905,7 @@ async function askAI(question) {
         var t = transcript.toLowerCase().trim();
         console.log('[VoiceAI] Comando:', t);
         
+        // 1. VOLUME
         if (/volume su|alza|più forte|piu forte|aumenta/.test(t)) {
             if (isLooping('volume_up')) return false;
             var v = Math.min(1, unifiedPlayer.volume + 0.15);
@@ -2943,6 +2944,8 @@ async function askAI(question) {
             speakResponse('Volume al massimo');
             return true;
         }
+        
+        // 2. NAVIGAZIONE CANALI
         if (/prossimo|successivo|avanti|next/.test(t)) {
             if (isLooping('next')) return false;
             var nextBtn = document.getElementById('media-next');
@@ -2964,6 +2967,8 @@ async function askAI(question) {
             speakResponse('Canale precedente');
             return true;
         }
+        
+        // 3. PLAY / PAUSA / STOP
         if (/^(stop|ferma|pausa|pause)$/.test(t) || /metti in pausa|ferma tutto/.test(t)) {
             if (isLooping('pause')) return false;
             unifiedPlayer.pause();
@@ -2980,6 +2985,8 @@ async function askAI(question) {
             speakResponse('Riproduzione avviata');
             return true;
         }
+        
+        // 4. RICERCA E PULIZIA
         if (/^(reset|cancella|pulisci|azzera)$/.test(t)) {
             if (isLooping('reset')) return false;
             if (searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
@@ -2987,13 +2994,30 @@ async function askAI(question) {
             speakResponse('Ricerca cancellata');
             return true;
         }
-        if (/^(apri |mostra |vai su | mi pessi )?(google )?maps|naviga|dove sono|mi pessi|navigazione/.test(t)) {
+        
+        // ================= COMANDO GOOGLE MAPS E NAVIGAZIONE =================
+        // 1. Navigazione specifica (es. "portami a roma", "vai a milano", "naviga verso stazione")
+        var navMatch = t.match(/^(portami a |vai a |naviga verso |naviga a |cerca su maps )(.+)$/i);
+        if (navMatch && navMatch[2] && navMatch[2].length > 2) {
+            if (isLooping('nav_' + navMatch[2])) return false;
+            var destination = encodeURIComponent(navMatch[2].trim());
+            // Apre Google Maps con la destinazione già impostata per le indicazioni stradali
+            window.open('https://www.google.com/maps/dir/?api=1&destination=' + destination, '_blank');
+            showVoiceFeedback('🗺️ Navigazione verso: ' + navMatch[2].trim());
+            speakResponse('Apro la navigazione verso ' + navMatch[2].trim());
+            return true;
+        }
+
+        // 2. Apertura generica di Maps (es. "apri maps", "dove sono", "mi pessi")
+        if (/^(apri |mostra |vai su )?(google )?maps|dove sono|mi pessi|mipessi/.test(t)) {
             if (isLooping('open_maps')) return false;
             window.open('https://www.google.com/maps', '_blank');
             showVoiceFeedback('🗺️ Apro Google Maps');
             speakResponse('Apro Google Maps');
             return true;
         }
+        
+        // 6. FULLSCREEN
         if (/schermo intero|fullscreen|tutto schermo|espandi|maximizza/.test(t)) {
             if (isLooping('fullscreen')) return false;
             if (playerContainer) {
@@ -3008,15 +3032,8 @@ async function askAI(question) {
             else { showVoiceFeedback('🏠 Già in modalità normale'); speakResponse('Sei già in modalità normale'); }
             return true;
         }
-        // ================= COMANDO GOOGLE MAPS =================
-        if (/mi pessi|mi porti|apri (google )?maps|naviga|dove sono/.test(t)) {
-            if (isLooping('open_maps')) return false;
-            // Apre Google Maps in una nuova scheda (su Android attiva l'app nativa se installata)
-            window.open('https://www.google.com/maps', '_blank');
-            showVoiceFeedback('🗺️ Apro Google Maps');
-            speakResponse('Apro Google Maps');
-            return true;
-        }
+        
+        // 7. RICERCA CANALE SPECIFICO
         var searchMatch = t.match(/^(metti|cerca|trova|sintonizza|radio|canale|apri)\s+(.+)$/i);
         if (searchMatch && searchMatch[2] && searchMatch[2].length > 2) {
             var query = searchMatch[2].trim();
@@ -3027,15 +3044,16 @@ async function askAI(question) {
             return true;
         }
         
-        // ================= AI LIBERA: risponde a qualsiasi domanda =================
-        if (/apri (google )?maps|naviga|dove sono/.test(t)) {
-                    if (isLooping('open_maps')) return false;
-                    // Apre Google Maps in una nuova scheda (su Android attiva l'app nativa)
-                    window.open('https://www.google.com/maps', '_blank');
-                    showVoiceFeedback('🗺️ Apro Google Maps');
-                    speakResponse('Apro Google Maps');
-                    return true;
-                }
+        // 8. AI LIBERA: risponde a qualsiasi domanda (RIPRISTINATA)
+        if (t.length > 2 && !isLooping('ai_' + t.substring(0, 20))) {
+            showVoiceFeedback('🤖 Pensando...');
+            askAI(transcript).then(function(answer) {
+                showVoiceFeedback('💬 ' + answer);
+                speakResponse(answer);
+            });
+            return true;
+        }
+        
         return false;
     }
     // ================= INIZIALIZZAZIONE =================
