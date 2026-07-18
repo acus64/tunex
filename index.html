@@ -1259,7 +1259,10 @@ audio.media-player::-webkit-media-controls-enclosure {
           actionsEl.appendChild(favoriteBtn);
           el.appendChild(nameEl);
           el.appendChild(actionsEl);
-          el.addEventListener('click', function() { playChannel(el, ch.name, ch.url, ch.type); });
+          el.addEventListener('click', function() { 
+             var source = ch.url || ch.fileHandle || ch.file;
+             playChannel(el, ch.name, source, ch.type); 
+         });
           fragment.appendChild(el);
       });
       channelListEl.appendChild(fragment);
@@ -1280,31 +1283,41 @@ audio.media-player::-webkit-media-controls-enclosure {
     fileInput.addEventListener('change', function(e) {
         if (e.target.files && e.target.files.length) {
             Array.from(e.target.files).forEach(function(file) {
-                var id = 'local-' + (++localCounter);
-                var url = URL.createObjectURL(file);
-                localBlobURLs.add(url);
-                localFiles.push({id: id, name: file.name, url: url, type: 'local'});
+                localCounter++;
+                // Salviamo l'oggetto File diretto, l'URL verrà creato solo al Play
+                localFiles.push({
+                    id: 'local-' + localCounter,
+                    name: file.name,
+                    file: file, 
+                    type: 'local'
+                });
             });
             currentTab = 'local';
             sidebarTabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === currentTab); });
             renderChannels();
-            showToast('File aggiunti!');
+            showToast('✅ ' + e.target.files.length + ' file pronti (caricamento on-demand)');
         }
         fileInput.value = '';
     });
 
     clearLocalBtn.addEventListener('click', function() {
-        localFiles.forEach(function(f) { 
-            if (f.url && localBlobURLs.has(f.url)) { 
-                URL.revokeObjectURL(f.url); 
-                localBlobURLs.delete(f.url); 
-            } 
-        });
+        // Revoca URL attualmente in riproduzione
+        if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
+            URL.revokeObjectURL(unifiedPlayer.src);
+        }
+        // Disconnetti EQ
+        if (audioSource) {
+            try { audioSource.disconnect(); } catch(e) {}
+            audioSource = null;
+        }
         localFiles = [];
-        unifiedPlayer.pause(); unifiedPlayer.src = '';
+        localCounter = 0;
+        unifiedPlayer.pause();
+        unifiedPlayer.removeAttribute('src');
+        unifiedPlayer.load();
         loadingInfo.style.display = 'none';
         renderChannels();
-        showToast('File rimossi');
+        showToast('Elenco locale pulito');
     });
 
     var changeFolderBtn = document.getElementById('change-folder-btn');
@@ -1347,45 +1360,41 @@ audio.media-player::-webkit-media-controls-enclosure {
     }
 
     async function loadMusicFromFolder(folderHandle) {
-        // 1. Pulisce i file locali precedenti per evitare duplicati
-        localFiles.forEach(function(f) { 
-            if (f.url && localBlobURLs.has(f.url)) { 
-                URL.revokeObjectURL(f.url); 
-                localBlobURLs.delete(f.url); 
-            } 
-        });
+        // Pulisce solo l'URL attualmente in riproduzione, non tutti
+        if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
+            URL.revokeObjectURL(unifiedPlayer.src);
+        }
         localFiles = [];
         localCounter = 0;
 
         try {
-            // 2. Legge AUTOMATICAMENTE tutti i file nella cartella
+            // Legge solo i nomi e salva il riferimento (handle), SENZA caricare i file in RAM
             for await (const entry of folderHandle.values()) {
                 if (entry.kind === 'file') {
                     const name = entry.name.toLowerCase();
-                    // Filtra tutti i formati audio/video supportati
                     if (name.match(/\.(mp3|mp4|wav|ogg|m4a|flac|aac|wma|webm|mkv)$/i)) {
-                        const file = await entry.getFile();
-                        const id = 'local-' + (++localCounter);
-                        const url = URL.createObjectURL(file);
-                        localBlobURLs.add(url);
-                        localFiles.push({id: id, name: entry.name, url: url, type: 'local'});
+                        localCounter++;
+                        localFiles.push({
+                            id: 'local-' + localCounter,
+                            name: entry.name,
+                            fileHandle: entry, // Salviamo solo il riferimento, non il file intero!
+                            type: 'local'
+                        });
                     }
                 }
             }
             
             if (localFiles.length === 0) {
-                showToast('⚠️ Nessun file multimediale trovato in questa cartella');
+                showToast('⚠️ Nessun file multimediale trovato');
             } else {
                 currentTab = 'local';
                 sidebarTabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === currentTab); });
                 renderChannels();
-                showToast('✅ Importati automaticamente ' + localFiles.length + ' file!');
+                showToast('✅ Indicizzati ' + localFiles.length + ' file (Memoria quasi zero!)');
             }
         } catch (err) {
-            console.error('Errore caricamento cartella:', err);
-            showToast('❌ Errore lettura cartella. Riprova a selezionarla.');
-            localStorage.removeItem(STORAGE_MUSIC_FOLDER);
-            musicFolderHandle = null;
+            console.error('Errore indicizzazione cartella:', err);
+            showToast('❌ Errore lettura cartella');
         }
     }
 
@@ -1420,6 +1429,10 @@ audio.media-player::-webkit-media-controls-enclosure {
 
     // ================= STREAM CONTROL =================
     function stopStream() {
+        // Revoca il blob URL corrente se esiste
+        if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
+            URL.revokeObjectURL(unifiedPlayer.src);
+        }
         unifiedPlayer._trackEnded = true;
         unifiedPlayer.removeAttribute('src');
         unifiedPlayer.load();
@@ -1462,9 +1475,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         }
     }
 
-    // Funzione playChannel aggiornata e blindata
-    async function playChannel(element, name, url, type) {
-        url = url || ''; // FIX: previene ReferenceError se url è undefined
+    async function playChannel(element, name, urlOrHandle, type) {
         document.querySelectorAll('.channel').forEach(function(ch) { ch.classList.remove('active'); });
         element.classList.add('active');
         currentChannelDisplay.textContent = name;
@@ -1473,68 +1484,108 @@ audio.media-player::-webkit-media-controls-enclosure {
         stopStream();
         unifiedPlayer._trackEnded = false;
         await initAudioEQ();
-        
-        // Resetta sempre lo screensaver all'inizio di un nuovo canale
         toggleScreensaver(false);
         unifiedPlayer._screensaverChecked = false;
 
+    // ================= GESTIONE FILE LOCALI (LAZY LOADING) =================
+    if (type === 'local') {
+        try {
+            let file;
+            let finalUrl = urlOrHandle;
+            
+            // 1. Risolvi la sorgente
+            if (urlOrHandle && typeof urlOrHandle.getFile === 'function') {
+                file = await urlOrHandle.getFile();
+                finalUrl = URL.createObjectURL(file);
+            } else if (urlOrHandle instanceof File) {
+                finalUrl = URL.createObjectURL(urlOrHandle);
+            } else if (typeof urlOrHandle === 'string' && urlOrHandle) {
+                finalUrl = urlOrHandle;
+            } else {
+                showToast('❌ File non disponibile');
+                statusText.textContent = 'Errore';
+                return;
+            }
+            
+            // 2. Pulizia URL precedente per evitare fughe di memoria
+            if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
+                URL.revokeObjectURL(unifiedPlayer.src);
+            }
+            
+            unifiedPlayer.src = finalUrl;
+            unifiedPlayer.style.display = 'block';
+            
+            // 3. Attendiamo i metadati per capire se è un file Video o Audio
+            await new Promise(resolve => {
+                if (unifiedPlayer.readyState >= 1) {
+                    resolve(); // Già caricato
+                } else {
+                    unifiedPlayer.addEventListener('loadedmetadata', resolve, { once: true });
+                    setTimeout(resolve, 1000); // Timeout di sicurezza
+                }
+            });
+            
+            // 4. Controllo dimensioni: se > 100px è video, altrimenti è audio
+            const vw = unifiedPlayer.videoWidth || 0;
+            const vh = unifiedPlayer.videoHeight || 0;
+            
+            if (vw > 100 && vh > 100) {
+                toggleScreensaver(false); // È un video: niente screensaver
+            } else {
+                toggleScreensaver(true);  // È audio: attiva screensaver YouTube
+            }
+            
+            // 5. Avvia riproduzione
+            await unifiedPlayer.play();
+            statusText.textContent = 'In riproduzione';
+            statusDot.classList.add('playing');
+            
+            // 6. Collega EQ (i blob URL non hanno restrizioni CORS)
+            if (!isCorsRestricted(finalUrl)) {
+                connectEQChain(unifiedPlayer);
+            }
+            return; // Esce dalla funzione
+        } catch (err) {
+            console.error('Errore riproduzione file locale:', err);
+            showToast('❌ Impossibile riprodurre: ' + err.message);
+            statusText.textContent = 'Errore';
+            return;
+        }
+    }
+    // ================= FINE GESTIONE LOCALI =================
+
+        // Logica originale per streaming e YouTube
         if (type === 'youtube-link') {
-            playYouTubeLink(name, url);
-        } else if (isM3U8(url)) {
-            if (window.Hls && Hls.isSupported()) { 
-                playHLS(name, url); 
-            } else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) { 
-                playStandard(name, url); 
-            } else { 
-                showToast('Formato stream non supportato'); 
-                statusText.textContent = 'Errore formato'; 
+            playYouTubeLink(name, urlOrHandle);
+        } else if (isM3U8(urlOrHandle)) {
+            if (window.Hls && Hls.isSupported()) {
+                playHLS(name, urlOrHandle);
+            } else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                playStandard(name, urlOrHandle);
+            } else {
+                showToast('Formato stream non supportato');
+                statusText.textContent = 'Errore formato';
             }
         } else {
-            playStandard(name, url);
+            playStandard(name, urlOrHandle);
         }
-        
-        // FIX: Rilevamento screensaver robusto per flussi NON-HLS
+
+        // (Mantieni qui sotto il resto del codice originale di playChannel per lo screensaver...)
         var checkScreensaver = function() {
             if (unifiedPlayer._screensaverChecked) return;
-            if (isM3U8(url)) return; // Per flussi HLS il controllo è già in playHLS
-            
+            if (isM3U8(urlOrHandle)) return;
             unifiedPlayer._screensaverChecked = true;
-            
-            // Controlla dimensioni video reali
             var vw = unifiedPlayer.videoWidth || 0;
             var vh = unifiedPlayer.videoHeight || 0;
-            
-            console.log('[Screensaver Check] videoWidth:', vw, 'videoHeight:', vh);
-            
-            // Se ha dimensioni video reali (> 100px), è un flusso video
             if (vw > 100 && vh > 100) {
                 toggleScreensaver(false);
             } else {
-                // Nessuna dimensione video o troppo piccola = flusso audio
                 toggleScreensaver(true);
             }
         };
-
-        // Trigger 1: loadedmetadata
-        unifiedPlayer.onloadedmetadata = function() {
-            console.log('[Metadata] Caricati - videoWidth:', unifiedPlayer.videoWidth, 'videoHeight:', unifiedPlayer.videoHeight);
-            // Aspetta un attimo per essere sicuri che le dimensioni siano pronte
-            setTimeout(checkScreensaver, 500);
-        };
-        
-        // Trigger 2: playing (fallback per stream live)
-        unifiedPlayer.addEventListener('playing', function() {
-            console.log('[Playing] Avviato - videoWidth:', unifiedPlayer.videoWidth, 'videoHeight:', unifiedPlayer.videoHeight);
-            setTimeout(checkScreensaver, 1000);
-        }, { once: true });
-        
-        // Trigger 3: dopo 5 secondi, forza il controllo se niente è partito
-        setTimeout(function() {
-            if (!unifiedPlayer._screensaverChecked) {
-                console.log('[Timeout] 5 secondi trascorsi, forzo controllo screensaver');
-                checkScreensaver();
-            }
-        }, 5000);
+        unifiedPlayer.onloadedmetadata = function() { setTimeout(checkScreensaver, 500); };
+        unifiedPlayer.addEventListener('playing', function() { setTimeout(checkScreensaver, 1000); }, { once: true });
+        setTimeout(function() { if (!unifiedPlayer._screensaverChecked) checkScreensaver(); }, 5000);
     }
 
     function playHLS(name, url) {
@@ -1614,7 +1665,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         unifiedPlayer.removeEventListener('loadedmetadata', playStandard_onMeta);
         unifiedPlayer.removeEventListener('error', playStandard_onError);
         
-        // ✅ CORREZIONE CRITICA: Reset elemento video quando si passa da EQ attivo a stream senza CORS
         var isRestricted = isCorsRestricted(url);
         var hasActiveEQ = (unifiedPlayer._eqStatus === 'active' || audioSource !== null);
         
@@ -1624,36 +1674,33 @@ audio.media-player::-webkit-media-controls-enclosure {
                 try { audioSource.disconnect(); } catch(e) {}
                 audioSource = null;
             }
+            unifiedPlayer._hasAudioSource = false; // <-- AGGIUNTO: Forza il reset del flag
             resetVideoElement();
         } else if (unifiedPlayer._eqStatus === 'failed' || unifiedPlayer._eqStatus === 'cors_failed') {
+            unifiedPlayer._hasAudioSource = false; // <-- AGGIUNTO
             resetVideoElement();
         }
-
+        
         unifiedPlayer.pause();
         unifiedPlayer.removeAttribute('crossorigin');
         unifiedPlayer._eqStatus = undefined;
-
-        // FIX #9: Usa removeAttribute + load invece di src=''
         unifiedPlayer.removeAttribute('src');
         unifiedPlayer.load();
-
         unifiedPlayer.src = url;
         unifiedPlayer.style.display = 'block';
         loadingInfo.style.display = 'none';
-
+        
         if (audioContext && audioContext.state === 'suspended') {
             audioContext.resume().catch(function(){});
         }
-
-        // FIX #9: Funzioni nominate per poter rimuovere i listener
+        
         unifiedPlayer.addEventListener('loadedmetadata', playStandard_onMeta);
         unifiedPlayer.addEventListener('error', playStandard_onError);
-
-        // Se i metadati sono gia' caricati, forza l'handler
+        
         if (unifiedPlayer.readyState >= 1) {
             playStandard_onMeta();
         }
-
+        
         unifiedPlayer.play().then(function() {
             statusText.textContent = 'In riproduzione';
             statusDot.classList.add('playing');
@@ -1954,9 +2001,11 @@ audio.media-player::-webkit-media-controls-enclosure {
         newPlayer.playsInline = true;
         newPlayer._eqStatus = undefined;
         newPlayer._trackEnded = false;
+        newPlayer._hasAudioSource = false; // <-- AGGIUNTO: Il nuovo player parte pulito
         container.replaceChild(newPlayer, oldPlayer);
         unifiedPlayer = newPlayer;
         audioSource = null;
+        
         // FIX #10: Riassegna tutti i riferimenti ai controlli
         ctrlPlayPause = document.getElementById('ctrl-play-pause');
         ctrlStop = document.getElementById('ctrl-stop');
@@ -1966,32 +2015,26 @@ audio.media-player::-webkit-media-controls-enclosure {
         volumeSlider = document.getElementById('volume-slider');
         ctrlVolume = document.getElementById('ctrl-volume');
         ctrlFullscreen = document.getElementById('ctrl-fullscreen');
+        
         // Riassegna listener base
-        // ================= PLAYER EVENT LISTENERS =================
         unifiedPlayer._trackEnded = false;
-
         unifiedPlayer.addEventListener('play', function() {
             statusText.textContent = 'In riproduzione';
             statusDot.classList.add('playing');
         });
-
         unifiedPlayer.addEventListener('pause', function() {
             if (statusText.textContent !== 'Fermato' && statusText.textContent !== 'Premi Play per avviare') {
                 statusText.textContent = 'In pausa';
                 statusDot.classList.remove('playing');
             }
         });
-
         unifiedPlayer.addEventListener('ended', function() {
             if (unifiedPlayer._trackEnded) return;
             unifiedPlayer._trackEnded = true;
             statusText.textContent = 'Fine brano - Avanzamento automatico';
             statusDot.classList.remove('playing');
-            setTimeout(function() {
-                mediaNextButton.click();
-            }, 300);
+            setTimeout(function() { mediaNextButton.click(); }, 300);
         });
-
         unifiedPlayer.addEventListener('timeupdate', function() {
             if (unifiedPlayer._trackEnded) return;
             if (unifiedPlayer.duration && !isNaN(unifiedPlayer.duration) && isFinite(unifiedPlayer.duration)) {
@@ -2000,14 +2043,11 @@ audio.media-player::-webkit-media-controls-enclosure {
                         unifiedPlayer._trackEnded = true;
                         statusText.textContent = 'Fine brano - Avanzamento automatico';
                         statusDot.classList.remove('playing');
-                        setTimeout(function() {
-                            mediaNextButton.click();
-                        }, 300);
+                        setTimeout(function() { mediaNextButton.click(); }, 300);
                     }
                 }
             }
         });
-        // Riassegna custom controls
         setupCustomControls();
     }
 
@@ -2040,26 +2080,48 @@ audio.media-player::-webkit-media-controls-enclosure {
 
     function connectEQChain(mediaElement) {
         if (isCorsRestricted(mediaElement.src)) return false;
-        if (!audioContext || eqFilters.length === 0) return false;
+        
+        // Se il contesto audio è chiuso o nullo, tenta di reinizializzarlo
+        if (!audioContext || audioContext.state === 'closed') {
+            initAudioEQ().catch(() => {});
+            if (!audioContext) return false;
+        }
+        if (eqFilters.length === 0) return false;
         if (mediaElement._eqStatus === 'failed') return false;
+        
         try {
+            // FALLBACK DI SICUREZZA: Ricrea i nodi se per qualche motivo sono nulli
+            if (!preamp) { preamp = audioContext.createGain(); preamp.gain.value = 0.85; }
+            if (!bassBoost) { bassBoost = audioContext.createBiquadFilter(); bassBoost.type = "lowshelf"; bassBoost.frequency.value = 80; bassBoost.gain.value = 0; }
+            if (!presenceBoost) { presenceBoost = audioContext.createBiquadFilter(); presenceBoost.type = "highshelf"; presenceBoost.frequency.value = 4500; presenceBoost.gain.value = 2; }
+            
             if (!audioSource || audioSource._mediaElement !== mediaElement) {
                 if (audioSource) { try { audioSource.disconnect(); } catch(e) {} }
                 audioSource = audioContext.createMediaElementSource(mediaElement);
                 audioSource._mediaElement = mediaElement;
             }
+            
             try { preamp.disconnect(); } catch(e) {}
             try { bassBoost.disconnect(); } catch(e) {}
             try { presenceBoost.disconnect(); } catch(e) {}
-            eqFilters.forEach(function(f) { try { f.disconnect(); } catch(e) {} });
-
+            eqFilters.forEach(function(f) { if(f) try { f.disconnect(); } catch(e) {} });
+            
             audioSource.connect(preamp);
             preamp.connect(bassBoost);
             bassBoost.connect(presenceBoost);
             var last = presenceBoost;
-            eqFilters.forEach(function(f) { last.connect(f); last = f; });
-            last.connect(audioContext.destination);
-
+            
+            eqFilters.forEach(function(f) { 
+                if (f && last) {
+                    last.connect(f); 
+                    last = f; 
+                }
+            });
+            
+            if (last && audioContext.destination) {
+                last.connect(audioContext.destination);
+            }
+            
             mediaElement._eqStatus = 'active';
             return true;
         } catch(e) {
@@ -2725,231 +2787,301 @@ function ensureAudioContext() {
     }
 }
 
-function executeVoiceCommand(transcript) {
-    var t = transcript.toLowerCase().trim();
-    console.log('[VoiceAI] Comando:', t);
+// ================= RISPOSTA VOCALE (TTS) =================
+function speakResponse(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    var utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'it-IT';
+    utterance.rate = 1.05;
+    utterance.pitch = 1.1;
+    var voices = window.speechSynthesis.getVoices();
+    var itVoice = voices.find(function(v) { return v.lang.startsWith('it'); });
+    if (itVoice) utterance.voice = itVoice;
+    window.speechSynthesis.speak(utterance);
+}
 
-    if (/volume su|alza|più forte|piu forte|aumenta/.test(t)) {
-        if (isLooping('volume_up')) return false;
-        var v = Math.min(1, unifiedPlayer.volume + 0.15);
-        unifiedPlayer.volume = v;
-        if (volumeSlider) volumeSlider.value = v;
-        updateVolumeIcon();
-        showVoiceFeedback('🔊 Volume: ' + Math.round(v * 100) + '%');
-        return true;
+// ================= AI CONVERSAZIONALE (GROQ - GRATIS) =================
+const GROQ_API_KEY = 'INSERISCI_QUI_LA_TUA_CHIAVE_GROQ'; // <-- METTI LA TUA CHIAVE
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+async function askAI(question) {
+    if (!GROQ_API_KEY || GROQ_API_KEY === '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') {
+        return 'Chiave Groq non configurata';
     }
-    if (/volume giù|volume giu|abbassa|più piano|piu piano/.test(t)) {
-        if (isLooping('volume_down')) return false;
-        var v2 = Math.max(0, unifiedPlayer.volume - 0.15);
-        unifiedPlayer.volume = v2;
-        if (volumeSlider) volumeSlider.value = v2;
-        updateVolumeIcon();
-        showVoiceFeedback('🔉 Volume: ' + Math.round(v2 * 100) + '%');
-        return true;
+    try {
+        const response = await fetch(GROQ_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + GROQ_API_KEY
+            },
+            body: JSON.stringify({
+                model: 'llama-3.3-70b-versatile',
+                messages: [
+                    { role: 'system', content: 'Sei TuneX AI, assistente vocale di un media player. Rispondi in italiano, in modo breve (max 2 frasi), amichevole e naturale.' },
+                    { role: 'user', content: question }
+                ],
+                temperature: 0.7,
+                max_tokens: 200
+            })
+        });
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content || 'Non ho capito';
+    } catch (err) {
+        console.error('AI error:', err);
+        return 'Errore di connessione AI';
     }
-    if (/^(muto|silenzio|mute)$/.test(t) || /metti muto/.test(t)) {
-        if (isLooping('mute')) return false;
-        unifiedPlayer.volume = 0;
-        if (volumeSlider) volumeSlider.value = 0;
-        updateVolumeIcon();
-        showVoiceFeedback('🔇 Muto');
-        return true;
-    }
-    if (/volume massimo/.test(t)) {
-        if (isLooping('volume_max')) return false;
-        unifiedPlayer.volume = 1;
-        if (volumeSlider) volumeSlider.value = 1;
-        updateVolumeIcon();
-        showVoiceFeedback('🔊 Volume massimo');
-        return true;
-    }
-    if (/prossimo|successivo|avanti|next/.test(t)) {
-        if (isLooping('next')) return false;
-        var nextBtn = document.getElementById('media-next');
-        if (nextBtn) nextBtn.click();
-        showVoiceFeedback('⏭️ Canale successivo');
-        return true;
-    }
-    if (/precedente|indietro|back/.test(t)) {
-        if (isLooping('prev')) return false;
-        var channels = document.querySelectorAll('.channel');
-        var visible = [];
-        channels.forEach(function(ch) { if (ch.offsetHeight > 0) visible.push(ch); });
-        var activeIdx = -1;
-        visible.forEach(function(ch, i) { if (ch.classList.contains('active')) activeIdx = i; });
-        if (activeIdx > 0) visible[activeIdx - 1].click();
-        else if (visible.length > 0) visible[visible.length - 1].click();
-        showVoiceFeedback('⏮️ Canale precedente');
-        return true;
-    }
-    if (/^(stop|ferma|pausa|pause)$/.test(t) || /metti in pausa|ferma tutto/.test(t)) {
-        if (isLooping('pause')) return false;
-        unifiedPlayer.pause();
-        ensureAudioContext();
-        showVoiceFeedback('⏸️ Pausa');
-        return true;
-    }
-    if (/^(play|riprendi|avvia|continua|esegui|start)$/.test(t)) {
-        if (isLooping('play')) return false;
-        unifiedPlayer.play().catch(function(){});
-        ensureAudioContext();
-        showVoiceFeedback('▶️ Riproduzione');
-        return true;
-    }
-    if (/^(reset|cancella|pulisci|azzera)$/.test(t)) {
-        if (isLooping('reset')) return false;
-        if (searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
-        showVoiceFeedback('🗑️ Ricerca cancellata');
-        return true;
-    }
-    if (/schermo intero|fullscreen|tutto schermo|espandi|maximizza/.test(t)) {
-        if (isLooping('fullscreen')) return false;
-        if (playerContainer) {
-            if (!isFullscreen()) { requestFullscreen(playerContainer); showVoiceFeedback('🖥️ Schermo intero'); }
-            else { showVoiceFeedback('🖥️ Già a schermo intero'); }
+}
+
+    function executeVoiceCommand(transcript) {
+        var t = transcript.toLowerCase().trim();
+        console.log('[VoiceAI] Comando:', t);
+        
+        if (/volume su|alza|più forte|piu forte|aumenta/.test(t)) {
+            if (isLooping('volume_up')) return false;
+            var v = Math.min(1, unifiedPlayer.volume + 0.15);
+            unifiedPlayer.volume = v;
+            if (volumeSlider) volumeSlider.value = v;
+            updateVolumeIcon();
+            showVoiceFeedback('🔊 Volume: ' + Math.round(v * 100) + '%');
+            speakResponse('Volume aumentato');
+            return true;
         }
-        return true;
+        if (/volume giù|volume giu|abbassa|più piano|piu piano/.test(t)) {
+            if (isLooping('volume_down')) return false;
+            var v2 = Math.max(0, unifiedPlayer.volume - 0.15);
+            unifiedPlayer.volume = v2;
+            if (volumeSlider) volumeSlider.value = v2;
+            updateVolumeIcon();
+            showVoiceFeedback('🔉 Volume: ' + Math.round(v2 * 100) + '%');
+            speakResponse('Volume abbassato');
+            return true;
+        }
+        if (/^(muto|silenzio|mute)$/.test(t) || /metti muto/.test(t)) {
+            if (isLooping('mute')) return false;
+            unifiedPlayer.volume = 0;
+            if (volumeSlider) volumeSlider.value = 0;
+            updateVolumeIcon();
+            showVoiceFeedback('🔇 Muto');
+            speakResponse('Audio disattivato');
+            return true;
+        }
+        if (/volume massimo/.test(t)) {
+            if (isLooping('volume_max')) return false;
+            unifiedPlayer.volume = 1;
+            if (volumeSlider) volumeSlider.value = 1;
+            updateVolumeIcon();
+            showVoiceFeedback('🔊 Volume massimo');
+            speakResponse('Volume al massimo');
+            return true;
+        }
+        if (/prossimo|successivo|avanti|next/.test(t)) {
+            if (isLooping('next')) return false;
+            var nextBtn = document.getElementById('media-next');
+            if (nextBtn) nextBtn.click();
+            showVoiceFeedback('⏭️ Canale successivo');
+            speakResponse('Canale successivo');
+            return true;
+        }
+        if (/precedente|indietro|back/.test(t)) {
+            if (isLooping('prev')) return false;
+            var channels = document.querySelectorAll('.channel');
+            var visible = [];
+            channels.forEach(function(ch) { if (ch.offsetHeight > 0) visible.push(ch); });
+            var activeIdx = -1;
+            visible.forEach(function(ch, i) { if (ch.classList.contains('active')) activeIdx = i; });
+            if (activeIdx > 0) visible[activeIdx - 1].click();
+            else if (visible.length > 0) visible[visible.length - 1].click();
+            showVoiceFeedback('⏮️ Canale precedente');
+            speakResponse('Canale precedente');
+            return true;
+        }
+        if (/^(stop|ferma|pausa|pause)$/.test(t) || /metti in pausa|ferma tutto/.test(t)) {
+            if (isLooping('pause')) return false;
+            unifiedPlayer.pause();
+            ensureAudioContext();
+            showVoiceFeedback('⏸️ Pausa');
+            speakResponse('Riproduzione in pausa');
+            return true;
+        }
+        if (/^(play|riprendi|avvia|continua|esegui|start)$/.test(t)) {
+            if (isLooping('play')) return false;
+            unifiedPlayer.play().catch(function(){});
+            ensureAudioContext();
+            showVoiceFeedback('▶️ Riproduzione');
+            speakResponse('Riproduzione avviata');
+            return true;
+        }
+        if (/^(reset|cancella|pulisci|azzera)$/.test(t)) {
+            if (isLooping('reset')) return false;
+            if (searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
+            showVoiceFeedback('🗑️ Ricerca cancellata');
+            speakResponse('Ricerca cancellata');
+            return true;
+        }
+        if (/schermo intero|fullscreen|tutto schermo|espandi|maximizza/.test(t)) {
+            if (isLooping('fullscreen')) return false;
+            if (playerContainer) {
+                if (!isFullscreen()) { requestFullscreen(playerContainer); showVoiceFeedback('🖥️ Schermo intero'); speakResponse('Schermo intero attivato'); }
+                else { showVoiceFeedback('🖥️ Già a schermo intero'); speakResponse('Sei già a schermo intero'); }
+            }
+            return true;
+        }
+        if (/torna normale|esci|riduci|homepage|schermo piccolo|annulla schermo|torna indietro/.test(t)) {
+            if (isLooping('exit_fullscreen')) return false;
+            if (isFullscreen()) { exitFullscreen().catch(function(){}); showVoiceFeedback('🏠 Modalità normale'); speakResponse('Schermo intero disattivato'); }
+            else { showVoiceFeedback('🏠 Già in modalità normale'); speakResponse('Sei già in modalità normale'); }
+            return true;
+        }
+        var searchMatch = t.match(/^(metti|cerca|trova|sintonizza|radio|canale|apri)\s+(.+)$/i);
+        if (searchMatch && searchMatch[2] && searchMatch[2].length > 2) {
+            var query = searchMatch[2].trim();
+            if (isLooping('search_' + query)) return false;
+            if (searchInput) { searchInput.value = query; searchInput.dispatchEvent(new Event('input')); }
+            showVoiceFeedback('🔍 Cerco: "' + query + '"');
+            speakResponse('Cerco ' + query);
+            return true;
+        }
+        
+        // ================= AI LIBERA: risponde a qualsiasi domanda =================
+        if (t.length > 2 && !isLooping('ai_' + t.substring(0, 20))) {
+            showVoiceFeedback('🤖 Pensando...');
+            askAI(transcript).then(function(answer) {
+                showVoiceFeedback('💬 ' + answer);
+                speakResponse(answer);
+            });
+            return true;
+        }
+        return false;
     }
-    if (/torna normale|esci|riduci|homepage|schermo piccolo|annulla schermo|torna indietro/.test(t)) {
-        if (isLooping('exit_fullscreen')) return false;
-        if (isFullscreen()) { exitFullscreen().catch(function(){}); showVoiceFeedback('🏠 Modalità normale'); }
-        else { showVoiceFeedback('🏠 Già in modalità normale'); }
-        return true;
+
+    // ================= INIZIALIZZAZIONE =================
+    function voiceSearch(transcript) {
+        var q = transcript.toLowerCase().trim();
+        if (!q || q.length < 2) return;
+        if (searchInput) {
+            searchInput.value = q;
+            searchInput.dispatchEvent(new Event('input'));
+        }
+        showVoiceFeedback('🔍 Cerco: "' + q + '"');
+        speakResponse('Cerco ' + q);
     }
-    var searchMatch = t.match(/^(metti|cerca|trova|sintonizza|radio|canale|apri)\s+(.+)$/i);
-    if (searchMatch && searchMatch[2] && searchMatch[2].length > 2) {
-        var query = searchMatch[2].trim();
-        if (isLooping('search_' + query)) return false;
-        if (searchInput) { searchInput.value = query; searchInput.dispatchEvent(new Event('input')); }
-        showVoiceFeedback('🔍 Cerco: "' + query + '"');
-        return true;
-    }
-    return false;
-}
 
-// ================= INIZIALIZZAZIONE =================
-// Funzione ereditata dal vecchio bottone Voice: cerca nel search input
-function voiceSearch(transcript) {
-    var q = transcript.toLowerCase().trim();
-    if (!q || q.length < 2) return;
-    if (searchInput) {
-        searchInput.value = q;
-        searchInput.dispatchEvent(new Event('input'));
-    }
-    showVoiceFeedback('🔍 Cerco: "' + q + '"');
-}
+    function initVoiceCommand() {
+        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) { showVoiceFeedback('❌ Riconoscimento non supportato'); return false; }
 
-function initVoiceCommand() {
-    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { showVoiceFeedback('❌ Riconoscimento non supportato'); return false; }
+        voiceCmdRecognition = new SR();
+        voiceCmdRecognition.lang = 'it-IT';
+        voiceCmdRecognition.continuous = false;
+        voiceCmdRecognition.interimResults = false;
+        voiceCmdRecognition.maxAlternatives = 1;
 
-    voiceCmdRecognition = new SR();
-    voiceCmdRecognition.lang = 'it-IT';
-    voiceCmdRecognition.continuous = false;
-    voiceCmdRecognition.interimResults = false;
-    voiceCmdRecognition.maxAlternatives = 1;
+        voiceCmdRecognition.onresult = function(event) {
+            clearTimeout(voiceCmdTimeout);
+            var last = event.results.length - 1;
+            var transcript = event.results[last][0].transcript;
+            if (!transcript || transcript.trim().length < 2) { finishListening(); return; }
 
-    voiceCmdRecognition.onresult = function(event) {
-        clearTimeout(voiceCmdTimeout);
-        var last = event.results.length - 1;
-        var transcript = event.results[last][0].transcript;
-        if (!transcript || transcript.trim().length < 2) { finishListening(); return; }
+            console.log('[VoiceAI] Ricevuto:', transcript);
 
-        console.log('[VoiceAI] Ricevuto:', transcript);
-
-        if (containsKeyword(transcript)) {
-            var executed = executeVoiceCommand(transcript);
-            if (!executed) {
-                // Parola chiave trovata ma comando non matchato → cerca comunque
+            if (containsKeyword(transcript)) {
+                var executed = executeVoiceCommand(transcript);
+                if (!executed) {
+                    // Parola chiave trovata ma comando non matchato → cerca comunque
+                    voiceSearch(transcript);
+                }
+            } else {
+                // Nessuna parola chiave → usa come ricerca canale
                 voiceSearch(transcript);
             }
-        } else {
-            // Nessuna parola chiave → usa come ricerca canale
-            voiceSearch(transcript);
-        }
-        finishListening();
-    };
+            finishListening();
+        };
 
-    voiceCmdRecognition.onerror = function(e) {
+        voiceCmdRecognition.onerror = function(e) {
+            clearTimeout(voiceCmdTimeout);
+            console.warn('[VoiceAI] Errore:', e.error);
+            if (e.error === 'not-allowed') {
+                showVoiceFeedback('🎤 Microfono non autorizzato');
+                speakResponse('Per favore, autorizza il microfono');
+            }
+            else if (e.error === 'no-speech') {
+                showVoiceFeedback('🎤 Nessun discorso rilevato');
+                speakResponse('Non ho sentito nulla, riprova');
+            }
+            else if (e.error === 'aborted') {
+                return;
+            }
+            else {
+                showVoiceFeedback('🎤 Errore: ' + e.error);
+                speakResponse('Si è verificato un errore, riprova');
+            }
+            finishListening();
+        };
+
+    // ================= AVVIO SINGOLO ASCOLTO =================
+    function startListening() {
+        if (voiceCmdListening) return;
+        if (!voiceCmdRecognition && !initVoiceCommand()) return;
+
+        voiceCmdListening = true;
+        voiceCmdHistory = [];
+        voiceCmdBtn.classList.add('active');
+        showVoiceFeedback('🎤 Ascolto... parla ora');
+
+        // Timeout di sicurezza: dopo 10 secondi senza risultato, chiudi
         clearTimeout(voiceCmdTimeout);
-        console.warn('[VoiceAI] Errore:', e.error);
-        if (e.error === 'not-allowed') showVoiceFeedback('🎤 Microfono non autorizzato');
-        else if (e.error === 'no-speech') showVoiceFeedback('🎤 Nessun discorso rilevato');
-        else if (e.error === 'aborted') return; // Silenzioso, è stato noi
-        else showVoiceFeedback('🎤 Errore: ' + e.error);
-        finishListening();
-    };
+        voiceCmdTimeout = setTimeout(function() {
+            if (voiceCmdListening) {
+                showVoiceFeedback('🎤 Timeout — ripremi il bottone');
+                finishListening();
+            }
+        }, 10000);
 
-    voiceCmdRecognition.onend = function() {
-        // Se onresult/onerror non hanno già chiamato finishListening, lo facciamo qui
-        if (voiceCmdListening) finishListening();
-    };
-
-    return true;
-}
-
-// ================= AVVIO SINGOLO ASCOLTO =================
-function startListening() {
-    if (voiceCmdListening) return;
-    if (!voiceCmdRecognition && !initVoiceCommand()) return;
-
-    voiceCmdListening = true;
-    voiceCmdHistory = [];
-    voiceCmdBtn.classList.add('active');
-    showVoiceFeedback('🎤 Ascolto... parla ora');
-
-    // Timeout di sicurezza: dopo 10 secondi senza risultato, chiudi
-    clearTimeout(voiceCmdTimeout);
-    voiceCmdTimeout = setTimeout(function() {
-        if (voiceCmdListening) {
-            showVoiceFeedback('🎤 Timeout — ripremi il bottone');
+        try {
+            voiceCmdRecognition.start();
+        } catch(e) {
+            console.warn('[VoiceAI] Start fallito:', e);
+            clearTimeout(voiceCmdTimeout);
             finishListening();
         }
-    }, 10000);
-
-    try {
-        voiceCmdRecognition.start();
-    } catch(e) {
-        console.warn('[VoiceAI] Start fallito:', e);
-        clearTimeout(voiceCmdTimeout);
-        finishListening();
     }
-}
 
-// ================= CHIUSURA E RIPRISTINO =================
-function finishListening() {
-    voiceCmdListening = false;
-    voiceCmdBtn.classList.remove('active');
-    clearTimeout(voiceCmdTimeout);
-    try { voiceCmdRecognition.stop(); } catch(e) {}
-    // Ripristina AudioContext dopo aver rilasciato il microfono
-    setTimeout(ensureAudioContext, 200);
-    setTimeout(ensureAudioContext, 600);
-}
+    // ================= CHIUSURA E RIPRISTINO =================
+    function finishListening() {
+        voiceCmdListening = false;
+        voiceCmdBtn.classList.remove('active');
+        clearTimeout(voiceCmdTimeout);
+        try { voiceCmdRecognition.stop(); } catch(e) {}
+        // Ripristina AudioContext dopo aver rilasciato il microfono
+        setTimeout(ensureAudioContext, 200);
+        setTimeout(ensureAudioContext, 600);
+    }
 
-function forceStopRecognition() {
-    if (!voiceCmdListening) return;
-    voiceCmdListening = false;
-    voiceCmdBtn.classList.remove('active');
-    clearTimeout(voiceCmdTimeout);
-    try { voiceCmdRecognition.abort(); } catch(e) {}
-    setTimeout(ensureAudioContext, 200);
-    setTimeout(ensureAudioContext, 600);
-}
+    function forceStopRecognition() {
+        if (!voiceCmdListening) return;
+        voiceCmdListening = false;
+        voiceCmdBtn.classList.remove('active');
+        clearTimeout(voiceCmdTimeout);
+        try { voiceCmdRecognition.abort(); } catch(e) {}
+        setTimeout(ensureAudioContext, 200);
+        setTimeout(ensureAudioContext, 600);
+    }
 
-// ================= CLICK HANDLER =================
-if (voiceCmdBtn) {
-    voiceCmdBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (voiceCmdListening) {
-            forceStopRecognition();
-            showVoiceFeedback('🎤 Annullato');
-        } else {
-            startListening();
-        }
-    });
-}
+    // ================= CLICK HANDLER =================
+    if (voiceCmdBtn) {
+        voiceCmdBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (voiceCmdListening) {
+                forceStopRecognition();
+                showVoiceFeedback('🎤 Annullato');
+            } else {
+                startListening();
+            }
+        });
+    }
   </script>
 </body>
 </html>
