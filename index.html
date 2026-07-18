@@ -717,10 +717,10 @@ audio.media-player::-webkit-media-controls-enclosure {
       <button class="sidebar-tab" data-tab="local"><i class="fas fa-folder"></i> Local</button>
     </div>
     <div class="sidebar-actions">
-      <button class="sidebar-btn" id="open-files-btn"><i class="fas fa-folder-open"></i> File</button>
-      <button class="sidebar-btn danger" id="clear-local-btn"><i class="fas fa-trash"></i> Pulisci</button>
-      <button class="sidebar-btn" id="change-folder-btn"><i class="fas fa-folder-plus"></i> Cartella</button>
-      <input id="file-input" type="file" accept="audio/*,video/*" multiple style="display:none" aria-label="Carica file multimediali" />
+        <button class="sidebar-btn" id="open-files-btn"><i class="fas fa-folder-open"></i> File</button>
+        <button class="sidebar-btn danger" id="clear-local-btn"><i class="fas fa-trash"></i> Pulisci</button>
+        <button class="sidebar-btn" id="change-folder-btn"><i class="fas fa-folder-plus"></i> Cambia Cartella</button>
+        <input id="file-input" type="file" accept="audio/*,video/*" multiple style="display:none" aria-label="Carica file multimediali" />
     </div>
     <div class="channel-container" id="channel-list"></div>
   </div>
@@ -1176,7 +1176,7 @@ audio.media-player::-webkit-media-controls-enclosure {
     var localFiles = [];
     var localBlobURLs = new Set();
     var localCounter = 0;
-    var STORAGE_MUSIC_FOLDER = 'tunex_music_folder';
+    var STORAGE_MUSIC_FOLDER = 'tunex_music_folder_sd'; // Nome specifico per evitare conflitti
     var musicFolderHandle = null;
     var currentTab = 'all';
 
@@ -1274,52 +1274,70 @@ audio.media-player::-webkit-media-controls-enclosure {
       });
     });
 
-    // ================= LOCAL FILES =================
+    // ================= LOCAL FILES & CARTELLA SD =================
     openFilesBtn.addEventListener('click', function() { loadSavedMusicFolder(); });
+
     fileInput.addEventListener('change', function(e) {
-      if (e.target.files && e.target.files.length) {
-        Array.from(e.target.files).forEach(function(file) {
-          var id = 'local-' + (++localCounter);
-          var url = URL.createObjectURL(file);
-          localBlobURLs.add(url);
-          localFiles.push({id: id, name: file.name, url: url, type: 'local'});
-        });
-        currentTab = 'local';
-        sidebarTabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === currentTab); });
-        renderChannels();
-        showToast('File aggiunti!');
-      }
-      fileInput.value = '';
+        if (e.target.files && e.target.files.length) {
+            Array.from(e.target.files).forEach(function(file) {
+                var id = 'local-' + (++localCounter);
+                var url = URL.createObjectURL(file);
+                localBlobURLs.add(url);
+                localFiles.push({id: id, name: file.name, url: url, type: 'local'});
+            });
+            currentTab = 'local';
+            sidebarTabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === currentTab); });
+            renderChannels();
+            showToast('File aggiunti!');
+        }
+        fileInput.value = '';
     });
+
     clearLocalBtn.addEventListener('click', function() {
-      localFiles.forEach(function(f) { if (f.url && localBlobURLs.has(f.url)) { URL.revokeObjectURL(f.url); localBlobURLs.delete(f.url); } });
-      localFiles = [];
-      unifiedPlayer.pause(); unifiedPlayer.src = '';
-      loadingInfo.style.display = 'none';
-      renderChannels();
-      showToast('File rimossi');
+        localFiles.forEach(function(f) { 
+            if (f.url && localBlobURLs.has(f.url)) { 
+                URL.revokeObjectURL(f.url); 
+                localBlobURLs.delete(f.url); 
+            } 
+        });
+        localFiles = [];
+        unifiedPlayer.pause(); unifiedPlayer.src = '';
+        loadingInfo.style.display = 'none';
+        renderChannels();
+        showToast('File rimossi');
     });
-        var changeFolderBtn = document.getElementById('change-folder-btn');
+
+    var changeFolderBtn = document.getElementById('change-folder-btn');
     if (changeFolderBtn) {
-        changeFolderBtn.addEventListener('click', function() { selectMusicFolder(); });
+        changeFolderBtn.addEventListener('click', function() { 
+            localStorage.removeItem(STORAGE_MUSIC_FOLDER);
+            musicFolderHandle = null;
+            selectMusicFolder(); 
+        });
     }
 
-    // ================= ACCESSO DIRETTO CARTELLA MUSICALE =================
+    // ================= ACCESSO DIRETTO CARTELLA MUSICALE (SD) =================
     async function selectMusicFolder() {
         try {
             if (!('showDirectoryPicker' in window)) {
-                showToast('❌ Browser non supporta accesso diretto');
+                showToast('❌ Browser non supporta accesso diretto. Usa il selettore classico.');
                 fileInput.click();
                 return;
             }
+            
+            // Messaggio guida per l'utente
+            showToast('⚠️ Seleziona la cartella "Preferiti" dentro Music/Scheda SD');
+            
+            // startIn: 'music' forza l'apertura nella cartella Musica del dispositivo
             const folderHandle = await window.showDirectoryPicker({
                 mode: 'read',
-                startIn: 'music'
+                startIn: 'music' 
             });
+            
             musicFolderHandle = folderHandle;
             localStorage.setItem(STORAGE_MUSIC_FOLDER, 'saved');
             await loadMusicFromFolder(folderHandle);
-            showToast('✅ Cartella musicale salvata!');
+            showToast('✅ Cartella salvata! Ora l\'accesso sarà diretto e automatico.');
         } catch (err) {
             if (err.name !== 'AbortError') {
                 console.error('Errore selezione cartella:', err);
@@ -1329,14 +1347,22 @@ audio.media-player::-webkit-media-controls-enclosure {
     }
 
     async function loadMusicFromFolder(folderHandle) {
+        // 1. Pulisce i file locali precedenti per evitare duplicati
+        localFiles.forEach(function(f) { 
+            if (f.url && localBlobURLs.has(f.url)) { 
+                URL.revokeObjectURL(f.url); 
+                localBlobURLs.delete(f.url); 
+            } 
+        });
         localFiles = [];
         localCounter = 0;
-        localBlobURLs.forEach(function(u) { URL.revokeObjectURL(u); });
-        localBlobURLs.clear();
+
         try {
+            // 2. Legge AUTOMATICAMENTE tutti i file nella cartella
             for await (const entry of folderHandle.values()) {
                 if (entry.kind === 'file') {
                     const name = entry.name.toLowerCase();
+                    // Filtra tutti i formati audio/video supportati
                     if (name.match(/\.(mp3|mp4|wav|ogg|m4a|flac|aac|wma|webm|mkv)$/i)) {
                         const file = await entry.getFile();
                         const id = 'local-' + (++localCounter);
@@ -1346,35 +1372,44 @@ audio.media-player::-webkit-media-controls-enclosure {
                     }
                 }
             }
+            
             if (localFiles.length === 0) {
-                showToast('⚠️ Nessun file multimediale trovato');
+                showToast('⚠️ Nessun file multimediale trovato in questa cartella');
             } else {
                 currentTab = 'local';
                 sidebarTabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === currentTab); });
                 renderChannels();
-                showToast('✅ Caricati ' + localFiles.length + ' file');
+                showToast('✅ Importati automaticamente ' + localFiles.length + ' file!');
             }
         } catch (err) {
             console.error('Errore caricamento cartella:', err);
-            showToast('❌ Errore lettura cartella');
+            showToast('❌ Errore lettura cartella. Riprova a selezionarla.');
+            localStorage.removeItem(STORAGE_MUSIC_FOLDER);
+            musicFolderHandle = null;
         }
     }
 
     async function loadSavedMusicFolder() {
         const saved = localStorage.getItem(STORAGE_MUSIC_FOLDER);
+        
+        // Se è la prima volta, avvia la procedura di selezione
         if (!saved || !musicFolderHandle) {
             await selectMusicFolder();
             return;
         }
+        
+        // Se abbiamo già il permesso, carica DIRETTAMENTE senza aprire finestre
         try {
             const perm = await musicFolderHandle.queryPermission({ mode: 'read' });
             if (perm === 'granted') {
                 await loadMusicFromFolder(musicFolderHandle);
             } else {
+                // Se il permesso è scaduto (es. aggiornamento browser), lo richiediamo silenziosamente
                 const req = await musicFolderHandle.requestPermission({ mode: 'read' });
                 if (req === 'granted') {
                     await loadMusicFromFolder(musicFolderHandle);
                 } else {
+                    showToast('🔄 Permesso scaduto. Seleziona di nuovo la cartella.');
                     await selectMusicFolder();
                 }
             }
