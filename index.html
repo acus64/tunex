@@ -719,6 +719,7 @@ audio.media-player::-webkit-media-controls-enclosure {
     <div class="sidebar-actions">
       <button class="sidebar-btn" id="open-files-btn"><i class="fas fa-folder-open"></i> File</button>
       <button class="sidebar-btn danger" id="clear-local-btn"><i class="fas fa-trash"></i> Pulisci</button>
+      <button class="sidebar-btn" id="change-folder-btn"><i class="fas fa-folder-plus"></i> Cartella</button>
       <input id="file-input" type="file" accept="audio/*,video/*" multiple style="display:none" aria-label="Carica file multimediali" />
     </div>
     <div class="channel-container" id="channel-list"></div>
@@ -1175,6 +1176,8 @@ audio.media-player::-webkit-media-controls-enclosure {
     var localFiles = [];
     var localBlobURLs = new Set();
     var localCounter = 0;
+    var STORAGE_MUSIC_FOLDER = 'tunex_music_folder';
+    var musicFolderHandle = null;
     var currentTab = 'all';
 
     function debounce(fn, ms) {
@@ -1272,7 +1275,7 @@ audio.media-player::-webkit-media-controls-enclosure {
     });
 
     // ================= LOCAL FILES =================
-    openFilesBtn.addEventListener('click', function() { fileInput.click(); });
+    openFilesBtn.addEventListener('click', function() { loadSavedMusicFolder(); });
     fileInput.addEventListener('change', function(e) {
       if (e.target.files && e.target.files.length) {
         Array.from(e.target.files).forEach(function(file) {
@@ -1296,6 +1299,89 @@ audio.media-player::-webkit-media-controls-enclosure {
       renderChannels();
       showToast('File rimossi');
     });
+        var changeFolderBtn = document.getElementById('change-folder-btn');
+    if (changeFolderBtn) {
+        changeFolderBtn.addEventListener('click', function() { selectMusicFolder(); });
+    }
+
+    // ================= ACCESSO DIRETTO CARTELLA MUSICALE =================
+    async function selectMusicFolder() {
+        try {
+            if (!('showDirectoryPicker' in window)) {
+                showToast('❌ Browser non supporta accesso diretto');
+                fileInput.click();
+                return;
+            }
+            const folderHandle = await window.showDirectoryPicker({
+                mode: 'read',
+                startIn: 'music'
+            });
+            musicFolderHandle = folderHandle;
+            localStorage.setItem(STORAGE_MUSIC_FOLDER, 'saved');
+            await loadMusicFromFolder(folderHandle);
+            showToast('✅ Cartella musicale salvata!');
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error('Errore selezione cartella:', err);
+                showToast('❌ Errore: ' + err.message);
+            }
+        }
+    }
+
+    async function loadMusicFromFolder(folderHandle) {
+        localFiles = [];
+        localCounter = 0;
+        localBlobURLs.forEach(function(u) { URL.revokeObjectURL(u); });
+        localBlobURLs.clear();
+        try {
+            for await (const entry of folderHandle.values()) {
+                if (entry.kind === 'file') {
+                    const name = entry.name.toLowerCase();
+                    if (name.match(/\.(mp3|mp4|wav|ogg|m4a|flac|aac|wma|webm|mkv)$/i)) {
+                        const file = await entry.getFile();
+                        const id = 'local-' + (++localCounter);
+                        const url = URL.createObjectURL(file);
+                        localBlobURLs.add(url);
+                        localFiles.push({id: id, name: entry.name, url: url, type: 'local'});
+                    }
+                }
+            }
+            if (localFiles.length === 0) {
+                showToast('⚠️ Nessun file multimediale trovato');
+            } else {
+                currentTab = 'local';
+                sidebarTabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === currentTab); });
+                renderChannels();
+                showToast('✅ Caricati ' + localFiles.length + ' file');
+            }
+        } catch (err) {
+            console.error('Errore caricamento cartella:', err);
+            showToast('❌ Errore lettura cartella');
+        }
+    }
+
+    async function loadSavedMusicFolder() {
+        const saved = localStorage.getItem(STORAGE_MUSIC_FOLDER);
+        if (!saved || !musicFolderHandle) {
+            await selectMusicFolder();
+            return;
+        }
+        try {
+            const perm = await musicFolderHandle.queryPermission({ mode: 'read' });
+            if (perm === 'granted') {
+                await loadMusicFromFolder(musicFolderHandle);
+            } else {
+                const req = await musicFolderHandle.requestPermission({ mode: 'read' });
+                if (req === 'granted') {
+                    await loadMusicFromFolder(musicFolderHandle);
+                } else {
+                    await selectMusicFolder();
+                }
+            }
+        } catch (err) {
+            await selectMusicFolder();
+        }
+    }
 
     // ================= STREAM CONTROL =================
     function stopStream() {
