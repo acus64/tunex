@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="it">
+<!DOCTYPE html><html lang="it">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"/>
@@ -2995,21 +2994,8 @@ async function askAI(question) {
             return true;
         }
         
-        // ================= COMANDO GOOGLE MAPS E NAVIGAZIONE =================
-        // 1. Navigazione specifica (es. "portami a roma", "vai a milano", "naviga verso stazione")
-        var navMatch = t.match(/^(portami a |vai a |naviga verso |naviga a |cerca su maps )(.+)$/i);
-        if (navMatch && navMatch[2] && navMatch[2].length > 2) {
-            if (isLooping('nav_' + navMatch[2])) return false;
-            var destination = encodeURIComponent(navMatch[2].trim());
-            // Apre Google Maps con la destinazione già impostata per le indicazioni stradali
-            window.open('https://www.google.com/maps/dir/?api=1&destination=' + destination, '_blank');
-            showVoiceFeedback('🗺️ Navigazione verso: ' + navMatch[2].trim());
-            speakResponse('Apro la navigazione verso ' + navMatch[2].trim());
-            return true;
-        }
-
-        // 2. Apertura generica di Maps (es. "apri maps", "dove sono", "mi pessi")
-        if (/^(apri |mostra |vai su )?(google )?maps|dove sono|mi pessi|mipessi/.test(t)) {
+        // 5. GOOGLE MAPS (Unico blocco consolidato)
+        if (/mi pessi|mipessi|mi porti|apri (google )?maps|naviga|dove sono|navigazione/.test(t)) {
             if (isLooping('open_maps')) return false;
             window.open('https://www.google.com/maps', '_blank');
             showVoiceFeedback('🗺️ Apro Google Maps');
