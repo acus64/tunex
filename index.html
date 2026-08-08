@@ -1263,31 +1263,6 @@ audio.media-player::-webkit-media-controls-enclosure {
         }
     }
 
-      var fragment = document.createDocumentFragment();
-      filtered.forEach(function(ch) {
-          var el = document.createElement('div');
-          el.className = 'channel';
-          var nameEl = document.createElement('div');
-          nameEl.className = 'channel-name';
-          nameEl.textContent = ch.name;
-          var actionsEl = document.createElement('div');
-          actionsEl.className = 'channel-actions';
-          var favoriteBtn = document.createElement('button');
-          favoriteBtn.className = 'channel-btn';
-          favoriteBtn.textContent = isFavorite(ch.name) ? '\u2B50' : '\u2606';
-          favoriteBtn.addEventListener('click', function(e) { e.stopPropagation(); toggleFavorite(ch.name); });
-          actionsEl.appendChild(favoriteBtn);
-          el.appendChild(nameEl);
-          el.appendChild(actionsEl);
-          el.addEventListener('click', function() { 
-              var source = ch.url || ch.fileHandle || ch.file;
-              playChannel(el, ch.name, source, ch.type); 
-          });
-          fragment.appendChild(el);
-      });
-      channelListEl.appendChild(fragment);
-    
-
     // ================= SIDEBAR TABS =================
     sidebarTabs.forEach(function(tab) {
       tab.addEventListener('click', function() {
@@ -1677,7 +1652,8 @@ async function loadSavedMusicFolder() {
         // (Mantieni qui sotto il resto del codice originale di playChannel per lo screensaver...)
         var checkScreensaver = function() {
             if (unifiedPlayer._screensaverChecked) return;
-            if (isM3U8(urlOrHandle)) return;
+            var src = unifiedPlayer.currentSrc || unifiedPlayer.src || '';
+            if (isM3U8(src)) return;
             unifiedPlayer._screensaverChecked = true;
             var vw = unifiedPlayer.videoWidth || 0;
             var vh = unifiedPlayer.videoHeight || 0;
