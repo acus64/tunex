@@ -1336,103 +1336,191 @@ audio.media-player::-webkit-media-controls-enclosure {
         });
     }
 
-    // ================= ACCESSO DIRETTO CARTELLA MUSICALE (SD) =================
-    async function selectMusicFolder() {
-        try {
-            if (!('showDirectoryPicker' in window)) {
-                showToast('❌ Browser non supporta accesso diretto. Usa il selettore classico.');
-                fileInput.click();
-                return;
-            }
-            
-            // Messaggio guida per l'utente
-            showToast('⚠️ Seleziona la cartella "Preferiti" dentro Music/Scheda SD');
-            
-            // startIn: 'music' forza l'apertura nella cartella Musica del dispositivo
-            const folderHandle = await window.showDirectoryPicker({
-                mode: 'read',
-                startIn: 'music' 
-            });
-            
-            musicFolderHandle = folderHandle;
-            localStorage.setItem(STORAGE_MUSIC_FOLDER, 'saved');
-            await loadMusicFromFolder(folderHandle);
-            showToast('✅ Cartella salvata! Ora l\'accesso sarà diretto e automatico.');
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                console.error('Errore selezione cartella:', err);
-                showToast('❌ Errore: ' + err.message);
-            }
-        }
-    }
-
-    async function loadMusicFromFolder(folderHandle) {
-        // Pulisce solo l'URL attualmente in riproduzione, non tutti
-        if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
-            URL.revokeObjectURL(unifiedPlayer.src);
-        }
-        localFiles = [];
-        localCounter = 0;
-
-        try {
-            // Legge solo i nomi e salva il riferimento (handle), SENZA caricare i file in RAM
-            for await (const entry of folderHandle.values()) {
-                if (entry.kind === 'file') {
-                    const name = entry.name.toLowerCase();
-                    if (name.match(/\.(mp3|mp4|wav|ogg|m4a|flac|aac|wma|webm|mkv)$/i)) {
-                        localCounter++;
-                        localFiles.push({
-                            id: 'local-' + localCounter,
-                            name: entry.name,
-                            fileHandle: entry, // Salviamo solo il riferimento, non il file intero!
-                            type: 'local'
-                        });
-                    }
-                }
-            }
-            
-            if (localFiles.length === 0) {
-                showToast('⚠️ Nessun file multimediale trovato');
-            } else {
-                currentTab = 'local';
-                sidebarTabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === currentTab); });
-                renderChannels();
-                showToast('✅ Indicizzati ' + localFiles.length + ' file (Memoria quasi zero!)');
-            }
-        } catch (err) {
-            console.error('Errore indicizzazione cartella:', err);
-            showToast('❌ Errore lettura cartella');
-        }
-    }
-
-    async function loadSavedMusicFolder() {
-        const saved = localStorage.getItem(STORAGE_MUSIC_FOLDER);
+// ================= ACCESSO DIRETTO CARTELLA MUSICALE (SD) =================
+async function selectMusicFolder() {
+    try {
+        // ✅ PULIZIA AGGRESSIVA MEMORIA PRIMA DI APRIRE IL PICKER
+        cleanupBeforeFolderPicker();
         
-        // Se è la prima volta, avvia la procedura di selezione
-        if (!saved || !musicFolderHandle) {
-            await selectMusicFolder();
+        if (!('showDirectoryPicker' in window)) {
+            showToast('❌ Browser non supporta accesso diretto. Usa il selettore classico.');
+            fileInput.click();
             return;
         }
         
-        // Se abbiamo già il permesso, carica DIRETTAMENTE senza aprire finestre
-        try {
-            const perm = await musicFolderHandle.queryPermission({ mode: 'read' });
-            if (perm === 'granted') {
-                await loadMusicFromFolder(musicFolderHandle);
-            } else {
-                // Se il permesso è scaduto (es. aggiornamento browser), lo richiediamo silenziosamente
-                const req = await musicFolderHandle.requestPermission({ mode: 'read' });
-                if (req === 'granted') {
-                    await loadMusicFromFolder(musicFolderHandle);
-                } else {
-                    showToast('🔄 Permesso scaduto. Seleziona di nuovo la cartella.');
-                    await selectMusicFolder();
+        showToast('⚠️ Seleziona la cartella "Preferiti" dentro Music/Scheda SD');
+        
+        const folderHandle = await window.showDirectoryPicker({
+            mode: 'read',
+            startIn: 'music'
+        });
+        
+        musicFolderHandle = folderHandle;
+        localStorage.setItem(STORAGE_MUSIC_FOLDER, 'saved');
+        await loadMusicFromFolder(folderHandle);
+        showToast('✅ Cartella salvata! Ora l\'accesso sarà diretto e automatico.');
+        
+    } catch (err) {
+        console.error('Errore selezione cartella:', err);
+        
+        // ✅ FALLBACK: Se fallisce per memoria o altro, usa il selettore classico
+        if (err.name === 'AbortError') {
+            showToast('❌ Selezione annullata');
+            return;
+        }
+        
+        if (err.name === 'NotAllowedError' || err.message?.includes('memory') || err.message?.includes('memoria')) {
+            showToast('⚠️ Memoria insufficiente. Uso selettore classico...');
+            // Piccolo delay per liberare risorse
+            await new Promise(r => setTimeout(r, 500));
+            fileInput.click();
+            return;
+        }
+        
+        showToast('❌ Errore: ' + err.message + '. Uso selettore classico.');
+        await new Promise(r => setTimeout(r, 500));
+        fileInput.click();
+    }
+}
+
+// ✅ NUOVA FUNZIONE: Pulizia aggressiva prima del picker
+function cleanupBeforeFolderPicker() {
+    console.log('🧹 Pulizia memoria prima del picker...');
+    
+    // 1. Revoca TUTTI i blob URL
+    localBlobURLs.forEach(function(url) { 
+        try { URL.revokeObjectURL(url); } catch(e) {} 
+    });
+    localBlobURLs.clear();
+    
+    // 2. Revoca blob corrente
+    if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
+        try { URL.revokeObjectURL(unifiedPlayer.src); } catch(e) {}
+    }
+    
+    // 3. Ferma riproduzione e pulisci player
+    try {
+        unifiedPlayer.pause();
+        unifiedPlayer.removeAttribute('src');
+        unifiedPlayer.load();
+    } catch(e) {}
+    
+    // 4. Distruggi HLS se attivo
+    if (currentHls) {
+        try { currentHls.destroy(); } catch(e) {}
+        currentHls = null;
+    }
+    
+    // 5. Disconnetti EQ per liberare nodi audio
+    if (audioSource) {
+        try { audioSource.disconnect(); } catch(e) {}
+        audioSource = null;
+    }
+    
+    // 6. Svuota YouTube iframe
+    if (ytIframe && ytIframe.src) {
+        ytIframe.src = 'about:blank';
+        ytIframe.removeAttribute('src');
+    }
+    
+    // 7. Ferma TTS
+    try { window.speechSynthesis.cancel(); } catch(e) {}
+    
+    // 8. Reset stato
+    unifiedPlayer._eqStatus = undefined;
+    statusText.textContent = 'Pronto';
+    statusDot.classList.remove('playing');
+    
+    console.log('✅ Memoria liberata');
+}
+
+async function loadMusicFromFolder(folderHandle) {
+    // ✅ Pulizia preventiva
+    cleanupBeforeFolderPicker();
+    
+    localFiles = [];
+    localCounter = 0;
+    
+    try {
+        // Legge solo i nomi e salva il riferimento (handle), SENZA caricare i file in RAM
+        for await (const entry of folderHandle.values()) {
+            if (entry.kind === 'file') {
+                const name = entry.name.toLowerCase();
+                if (name.match(/\.(mp3|mp4|wav|ogg|m4a|flac|aac|wma|webm|mkv)$/i)) {
+                    localCounter++;
+                    localFiles.push({
+                        id: 'local-' + localCounter,
+                        name: entry.name,
+                        fileHandle: entry,
+                        type: 'local'
+                    });
                 }
             }
-        } catch (err) {
-            await selectMusicFolder();
         }
+        
+        if (localFiles.length === 0) {
+            showToast('⚠️ Nessun file multimediale trovato');
+        } else {
+            currentTab = 'local';
+            sidebarTabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === currentTab); });
+            renderChannels();
+            showToast('✅ Indicizzati ' + localFiles.length + ' file');
+        }
+    } catch (err) {
+        console.error('Errore indicizzazione cartella:', err);
+        
+        // ✅ Fallback su errore di memoria
+        if (err.message?.includes('memory') || err.message?.includes('memoria') || err.name === 'QuotaExceededError') {
+            showToast('⚠️ Memoria insufficiente. Uso selettore classico...');
+            await new Promise(r => setTimeout(r, 500));
+            fileInput.click();
+            return;
+        }
+        
+        showToast('❌ Errore lettura cartella: ' + err.message);
     }
+}
+
+async function loadSavedMusicFolder() {
+    const saved = localStorage.getItem(STORAGE_MUSIC_FOLDER);
+    
+    if (!saved || !musicFolderHandle) {
+        await selectMusicFolder();
+        return;
+    }
+    
+    // ✅ Pulizia prima di tentare il caricamento
+    cleanupBeforeFolderPicker();
+    
+    try {
+        const perm = await musicFolderHandle.queryPermission({ mode: 'read' });
+        if (perm === 'granted') {
+            await loadMusicFromFolder(musicFolderHandle);
+        } else {
+            const req = await musicFolderHandle.requestPermission({ mode: 'read' });
+            if (req === 'granted') {
+                await loadMusicFromFolder(musicFolderHandle);
+            } else {
+                showToast('🔄 Permesso scaduto. Seleziona di nuovo la cartella.');
+                await selectMusicFolder();
+            }
+        }
+    } catch (err) {
+        console.error('Errore caricamento cartella salvata:', err);
+        
+        // ✅ Se fallisce, rimuovi il salvataggio e riprova con selettore classico
+        if (err.message?.includes('memory') || err.message?.includes('memoria')) {
+            showToast('⚠️ Memoria insufficiente. Uso selettore classico...');
+            localStorage.removeItem(STORAGE_MUSIC_FOLDER);
+            musicFolderHandle = null;
+            await new Promise(r => setTimeout(r, 500));
+            fileInput.click();
+            return;
+        }
+        
+        await selectMusicFolder();
+    }
+}
 
     // ================= STREAM CONTROL =================
     function stopStream() {
