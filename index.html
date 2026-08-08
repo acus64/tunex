@@ -719,7 +719,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         <button class="sidebar-btn" id="open-files-btn"><i class="fas fa-folder-open"></i> File</button>
         <button class="sidebar-btn danger" id="clear-local-btn"><i class="fas fa-trash"></i> Pulisci</button>
         <button class="sidebar-btn" id="change-folder-btn"><i class="fas fa-folder-plus"></i> Cambia Cartella</button>
-        <input id="file-input" type="file" accept="audio/*,video/*" multiple style="display:none" aria-label="Carica file multimediali" />
+        <input id="file-input" type="file" accept="*/*" multiple webkitdirectory style="display:none" aria-label="Carica file multimediali" />
     </div>
     <div class="channel-container" id="channel-list"></div>
   </div>
@@ -1471,11 +1471,10 @@ if (fileInput) {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
 
-        cleanupBeforeFolderPicker(); // Libera memoria prima di caricare
+        cleanupBeforeFolderPicker(); // Libera memoria
         localFiles = [];
         localCounter = 0;
 
-        // Limitiamo a 500 file per sicurezza anche qui
         const MAX_FILES = 500; 
         let count = 0;
 
@@ -1485,13 +1484,17 @@ if (fileInput) {
                 break;
             }
             
-            // Filtra solo audio/video
-            if (file.type.startsWith('audio/') || file.type.startsWith('video/')) {
+            const name = file.name.toLowerCase();
+            
+            // 🔴 FILTRO JS: Prendi solo i file audio/video, ignora il resto (PDF, JPG, ecc.)
+            const isMedia = file.type.startsWith('audio/') || file.type.startsWith('video/') || name.match(/\.(mp3|mp4|wav|ogg|m4a|flac|aac|wma|webm|mkv|avi|mov)$/i);
+            
+            if (isMedia) {
                 localCounter++;
                 localFiles.push({
                     id: 'local-' + localCounter,
                     name: file.name,
-                    fileHandle: file, // Qui passiamo direttamente il File object, non l'handle
+                    fileHandle: file, 
                     type: 'local'
                 });
                 count++;
@@ -1502,12 +1505,11 @@ if (fileInput) {
             currentTab = 'local';
             sidebarTabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === currentTab); });
             renderChannels();
-            showToast('✅ Caricati ' + localFiles.length + ' file locali');
+            showToast('✅ Caricati ' + localFiles.length + ' file multimediali');
         } else {
             showToast('⚠️ Nessun file audio/video trovato nella selezione');
         }
         
-        // Resetta l'input per permettere di ricaricare la stessa cartella
         fileInput.value = ''; 
     });
 }
