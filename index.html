@@ -2848,16 +2848,14 @@ function speakResponse(text) {
     window.speechSynthesis.speak(utterance);
 }
 // ================= AI CONVERSAZIONALE (GROQ - GRATIS) =================
-const GROQ_API_KEY = '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'; // <-- SOSTITUISCI CON LA TUA CHIAVE REALE (inizia con gsk_)
+const GROQ_API_KEY = localStorage.getItem('tunex_groq_key') || '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';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 async function askAI(question) {
-    // 1. Controllo rigoroso della chiave API
-    if (!GROQ_API_KEY || GROQ_API_KEY === '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' || GROQ_API_KEY.length < 10) {
+    if (!GROQ_API_KEY || GROQ_API_KEY.length < 10 || GROQ_API_KEY.includes('INSERISCI')) {
         console.error('⚠️ Chiave API Groq mancante o non valida!');
-        return 'Chiave API non configurata. Apri il codice e inserisci la tua chiave Groq reale.';
+        return 'Chiave API non configurata.';
     }
-    
     try {
         console.log('🤖 Invio domanda a Groq:', question);
         showVoiceFeedback('🤖 Sto pensando...');
@@ -2878,9 +2876,24 @@ async function askAI(question) {
                     { role: 'user', content: question }
                 ],
                 temperature: 0.7,
-                max_tokens: 250 // Limita la lunghezza per evitare che il TTS si blocchi
+                max_tokens: 250
             })
         });
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            console.error('❌ Errore API Groq:', response.status, errData);
+            return 'Errore AI: ' + (errData.error?.message || 'Riprova più tardi');
+        }
+        const data = await response.json();
+        const answer = data.choices?.[0]?.message?.content || 'Non ho capito la domanda';
+        console.log('✅ Risposta AI ricevuta:', answer);
+        return answer;
+    } catch (err) {
+        console.error('❌ Errore di rete durante la chiamata AI:', err);
+        return 'Errore di rete. Controlla la connessione internet o disattiva gli Ad-Blocker.';
+    }
+}
         
         // 2. Gestione errori HTTP specifici
         if (!response.ok) {
