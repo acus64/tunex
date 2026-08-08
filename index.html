@@ -1216,29 +1216,52 @@ audio.media-player::-webkit-media-controls-enclosure {
       renderChannels();
     }
 
+    var renderLimit = 40; // Solo 40 canali nel DOM alla volta
+
     function renderChannels() {
-      channelListEl.innerHTML = '';
-      var channels = [];
-      var title = '';
-      if (currentTab === 'favorites') { channels = channelsData.filter(function(ch) { return isFavorite(ch.name); }); title = 'Preferiti'; }
-      else if (currentTab === 'local') { channels = localFiles; title = 'Local'; }
-      else { channels = channelsData.concat(localFiles); title = 'Tutti i canali'; }
+        channelListEl.innerHTML = '';
+        var channels = [];
+        var title = '';
+        if (currentTab === 'favorites') { channels = channelsData.filter(function(ch) { return isFavorite(ch.name); }); title = 'Preferiti'; }
+        else if (currentTab === 'local') { channels = localFiles; title = 'Local'; }
+        else { channels = channelsData.concat(localFiles); title = 'Tutti i canali'; }
 
-      var header = document.createElement('div');
-      header.style.cssText = 'color:var(--text-secondary);padding:6px 8px;font-size:12px;font-weight:700';
-      header.textContent = title;
-      channelListEl.appendChild(header);
+        var q = searchInput.value.toLowerCase();
+        var filtered = channels.filter(function(ch) { return ch.name.toLowerCase().indexOf(q) >= 0; });
 
-      var q = searchInput.value.toLowerCase();
-      var filtered = channels.filter(function(ch) { return ch.name.toLowerCase().indexOf(q) >= 0; });
+        var header = document.createElement('div');
+        header.style.cssText = 'color:var(--text-secondary);padding:6px 8px;font-size:12px;font-weight:700';
+        header.textContent = title + ' (' + filtered.length + ')';
+        channelListEl.appendChild(header);
 
-      if (filtered.length === 0) {
-        var empty = document.createElement('div');
-        empty.style.cssText = 'padding:12px;color:var(--text-secondary);font-size:12px';
-        empty.textContent = 'Nessun elemento';
-        channelListEl.appendChild(empty);
-        return;
-      }
+        if (filtered.length === 0) {
+            channelListEl.innerHTML += '<div style="padding:12px;color:var(--text-secondary);font-size:12px">Nessun elemento</div>';
+            return;
+        }
+
+        // ✅ RENDERIZZA SOLO I PRIMI N CANALI
+        var toRender = filtered.slice(0, renderLimit);
+        var fragment = document.createDocumentFragment();
+
+        toRender.forEach(function(ch) {
+            var el = document.createElement('div');
+            el.className = 'channel';
+            el.innerHTML = '<div class="channel-name">' + ch.name + '</div><div class="channel-actions"><button class="channel-btn">' + (isFavorite(ch.name) ? '\u2B50' : '\u2606') + '</button></div>';
+            el.querySelector('.channel-btn').addEventListener('click', function(e) { e.stopPropagation(); toggleFavorite(ch.name); });
+            el.addEventListener('click', function() { playChannel(el, ch.name, ch.url || ch.fileHandle || ch.file, ch.type); });
+            fragment.appendChild(el);
+        });
+        channelListEl.appendChild(fragment);
+
+        // ✅ BOTTONE "CARICA ALTRI"
+        if (filtered.length > renderLimit) {
+            var loadMore = document.createElement('button');
+            loadMore.style.cssText = 'width:100%;padding:12px;margin-top:8px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;';
+            loadMore.textContent = '▼ Carica altri ' + (filtered.length - renderLimit) + ' canali';
+            loadMore.addEventListener('click', function() { renderLimit += 40; renderChannels(); });
+            channelListEl.appendChild(loadMore);
+        }
+    }
 
       var fragment = document.createDocumentFragment();
       filtered.forEach(function(ch) {
@@ -1263,7 +1286,7 @@ audio.media-player::-webkit-media-controls-enclosure {
           fragment.appendChild(el);
       });
       channelListEl.appendChild(fragment);
-    }
+    
 
     // ================= SIDEBAR TABS =================
     sidebarTabs.forEach(function(tab) {
@@ -1383,51 +1406,36 @@ async function selectMusicFolder() {
 
 // ✅ NUOVA FUNZIONE: Pulizia aggressiva prima del picker
 function cleanupBeforeFolderPicker() {
-    console.log('🧹 Pulizia memoria prima del picker...');
+    console.log('🧹 Pulizia estrema memoria...');
     
-    // 1. Revoca TUTTI i blob URL
-    localBlobURLs.forEach(function(url) { 
-        try { URL.revokeObjectURL(url); } catch(e) {} 
-    });
+    // 1. Blob URLs
+    localBlobURLs.forEach(function(url) { try { URL.revokeObjectURL(url); } catch(e) {} });
     localBlobURLs.clear();
     
-    // 2. Revoca blob corrente
-    if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
-        try { URL.revokeObjectURL(unifiedPlayer.src); } catch(e) {}
-    }
+    // 2. Player
+    try { unifiedPlayer.pause(); unifiedPlayer.removeAttribute('src'); unifiedPlayer.load(); } catch(e) {}
     
-    // 3. Ferma riproduzione e pulisci player
-    try {
-        unifiedPlayer.pause();
-        unifiedPlayer.removeAttribute('src');
-        unifiedPlayer.load();
-    } catch(e) {}
+    // 3. HLS
+    if (currentHls) { try { currentHls.destroy(); } catch(e) {} currentHls = null; }
     
-    // 4. Distruggi HLS se attivo
-    if (currentHls) {
-        try { currentHls.destroy(); } catch(e) {}
-        currentHls = null;
-    }
+    // 4. AudioContext - CHIUDI COMPLETAMENTE
+    if (audioContext) { try { audioContext.close(); } catch(e) {} audioContext = null; }
+    audioSource = null; eqFilters = []; preamp = null; bassBoost = null; presenceBoost = null;
     
-    // 5. Disconnetti EQ per liberare nodi audio
-    if (audioSource) {
-        try { audioSource.disconnect(); } catch(e) {}
-        audioSource = null;
-    }
+    // 5. Screensaver
+    if (ytScreensaver) { ytScreensaver.innerHTML = ''; ytScreensaver.style.display = 'none'; }
     
-    // 6. Svuota YouTube iframe
-    if (ytIframe && ytIframe.src) {
-        ytIframe.src = 'about:blank';
-        ytIframe.removeAttribute('src');
-    }
-    
-    // 7. Ferma TTS
+    // 6. TTS
     try { window.speechSynthesis.cancel(); } catch(e) {}
     
-    // 8. Reset stato
-    unifiedPlayer._eqStatus = undefined;
-    statusText.textContent = 'Pronto';
-    statusDot.classList.remove('playing');
+    // 7. ✅ RIDUCI DOM: mostra solo 20 canali temporaneamente
+    renderLimit = 20;
+    renderChannels();
+    
+    // 8. Forza repaint
+    document.body.style.display = 'none';
+    document.body.offsetHeight; // force reflow
+    document.body.style.display = '';
     
     console.log('✅ Memoria liberata');
 }
@@ -1556,14 +1564,13 @@ async function loadSavedMusicFolder() {
     // Funzione per mostrare/nascondere lo screensaver
     function toggleScreensaver(isAudioOnly) {
         if (!ytScreensaver) return;
-        
         if (isAudioOnly) {
-            // ✅ SFONDO LEGGERO: zero iframe, zero video, zero RAM extra
-            ytScreensaver.innerHTML = '<div style="width:100%;height:100%;background:linear-gradient(135deg,#0f0a2a,#3a1a7f,#0f0a2a);display:flex;align-items:center;justify-content:center;"><div style="text-align:center;color:rgba(255,255,255,0.6);"><i class="fas fa-music" style="font-size:60px;margin-bottom:12px;animation:pulse-voice 2s infinite;"></i><div style="font-size:14px;">TuneX Audio</div></div></div>';
+            // ✅ Solo un div colorato, ZERO iframe, ZERO video
+            ytScreensaver.innerHTML = '<div style="width:100%;height:100%;background:linear-gradient(135deg,#0f0a2a,#3a1a7f,#0f0a2a);display:flex;align-items:center;justify-content:center;"><i class="fas fa-music" style="font-size:48px;color:rgba(255,255,255,0.3);"></i></div>';
             ytScreensaver.style.display = 'block';
         } else {
             ytScreensaver.style.display = 'none';
-            ytScreensaver.innerHTML = ''; // ✅ libera DOM
+            ytScreensaver.innerHTML = '';
         }
     }
 
