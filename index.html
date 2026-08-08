@@ -747,9 +747,7 @@ audio.media-player::-webkit-media-controls-enclosure {
         <video id="unified-player" class="media-player"></video>
         
         <!-- NUOVO: Screensaver YouTube per i soli flussi audio -->
-        <div id="youtube-screensaver" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; background: #000;">
-            <iframe id="yt-iframe" width="100%" height="100%" src="" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
-        </div>
+        <div id="youtube-screensaver" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:5;pointer-events:none;background:#000;"></div>
 
         <div class="custom-controls" id="custom-controls">
             <div class="progress-container" id="progress-container">
@@ -1557,23 +1555,15 @@ async function loadSavedMusicFolder() {
 
     // Funzione per mostrare/nascondere lo screensaver
     function toggleScreensaver(isAudioOnly) {
-        if (!ytIframe || !ytScreensaver) return;
+        if (!ytScreensaver) return;
         
         if (isAudioOnly) {
-            // Parametri URL ottimizzati per ridurre branding
-            const screensaverUrl = `https://www.youtube.com/embed/${SCREENSAVER_YT_ID}?autoplay=1&mute=1&loop=1&playlist=${SCREENSAVER_YT_ID}&controls=0&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&disablekb=1`;
-            
-            // Anti-flicker: ricarica solo se URL diverso
-            if (ytIframe.src !== screensaverUrl) {
-                ytIframe.src = screensaverUrl;
-            }
-            ytIframe.setAttribute('allow', 'autoplay; fullscreen');
+            // ✅ SFONDO LEGGERO: zero iframe, zero video, zero RAM extra
+            ytScreensaver.innerHTML = '<div style="width:100%;height:100%;background:linear-gradient(135deg,#0f0a2a,#3a1a7f,#0f0a2a);display:flex;align-items:center;justify-content:center;"><div style="text-align:center;color:rgba(255,255,255,0.6);"><i class="fas fa-music" style="font-size:60px;margin-bottom:12px;animation:pulse-voice 2s infinite;"></i><div style="font-size:14px;">TuneX Audio</div></div></div>';
             ytScreensaver.style.display = 'block';
         } else {
             ytScreensaver.style.display = 'none';
-            if (ytIframe.src !== '') {
-                ytIframe.src = '';
-            }
+            ytScreensaver.innerHTML = ''; // ✅ libera DOM
         }
     }
 
@@ -1697,7 +1687,13 @@ async function loadSavedMusicFolder() {
 
     function playHLS(name, url) {
         if (currentHls) { currentHls.destroy(); currentHls = null; }
-        currentHls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60, startLevel: -1, debug: false });
+        currentHls = new Hls({ 
+            maxBufferLength: 10,        // era 30
+            maxMaxBufferLength: 20,     // era 60
+            maxBufferSize: 2 * 1024 * 1024,  // 2MB max
+            startLevel: -1, 
+            debug: false 
+        });
         currentHls.loadSource(url);
         currentHls.attachMedia(unifiedPlayer);
         unifiedPlayer.style.display = 'block';
@@ -2588,6 +2584,11 @@ async function loadSavedMusicFolder() {
         if (activeMicStream) {
             activeMicStream.getTracks().forEach(function(t) { try { t.stop(); } catch(e) {} });
         }
+        // ✅ 10. Svuota screensaver
+        toggleScreensaver(false);
+
+        // ✅ 11. Forza GC se disponibile
+        if (window.gc) window.gc();
     });
 
     document.addEventListener('DOMContentLoaded', function() {
