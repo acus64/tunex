@@ -2894,24 +2894,6 @@ async function askAI(question) {
         return 'Errore di rete. Controlla la connessione internet o disattiva gli Ad-Blocker.';
     }
 }
-        
-        // 2. Gestione errori HTTP specifici
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            console.error('❌ Errore API Groq:', response.status, errData);
-            return 'Errore AI: ' + (errData.error?.message || 'Riprova più tardi');
-        }
-        
-        const data = await response.json();
-        const answer = data.choices?.[0]?.message?.content || 'Non ho capito la domanda';
-        console.log('✅ Risposta AI ricevuta:', answer);
-        return answer;
-        
-    } catch (err) {
-        console.error('❌ Errore di rete durante la chiamata AI:', err);
-        return 'Errore di rete. Controlla la connessione internet o disattiva gli Ad-Blocker.';
-    }
-}
 
     function executeVoiceCommand(transcript) {
         var t = transcript.toLowerCase().trim();
