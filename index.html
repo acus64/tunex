@@ -1436,10 +1436,17 @@ audio.media-player::-webkit-media-controls-enclosure {
 
     // ================= STREAM CONTROL =================
     function stopStream() {
-        // REVoca il blob URL corrente per liberare memoria immediatamente
+        // ✅ REVOCATE TUTTI I BLOB (non solo quello attivo) - fix OOM
+        localBlobURLs.forEach(function(url) { 
+            try { URL.revokeObjectURL(url); } catch(e) {} 
+        });
+        localBlobURLs.clear();
+        
+        // Revoca il blob URL corrente se ancora presente
         if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
-            URL.revokeObjectURL(unifiedPlayer.src);
+            try { URL.revokeObjectURL(unifiedPlayer.src); } catch(e) {}
         }
+        
         unifiedPlayer._trackEnded = true;
         unifiedPlayer.removeAttribute('src');
         unifiedPlayer.load();
@@ -1502,15 +1509,18 @@ audio.media-player::-webkit-media-controls-enclosure {
             
             // 1. Revoca il vecchio URL blob per liberare memoria immediatamente
             if (unifiedPlayer.src && unifiedPlayer.src.startsWith('blob:')) {
-                URL.revokeObjectURL(unifiedPlayer.src);
+                try { URL.revokeObjectURL(unifiedPlayer.src); } catch(e) {}
+                localBlobURLs.delete(unifiedPlayer.src);
             }
-            
+
             // 2. Risolvi la sorgente
             if (urlOrHandle && typeof urlOrHandle.getFile === 'function') {
                 file = await urlOrHandle.getFile();
                 finalUrl = URL.createObjectURL(file);
+                localBlobURLs.add(finalUrl); // ✅ TRACCIA IL BLOB
             } else if (urlOrHandle instanceof File) {
                 finalUrl = URL.createObjectURL(urlOrHandle);
+                localBlobURLs.add(finalUrl); // ✅ TRACCIA IL BLOB
             } else if (typeof urlOrHandle === 'string' && urlOrHandle) {
                 finalUrl = urlOrHandle;
             } else {
