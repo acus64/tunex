@@ -1338,13 +1338,18 @@ async function selectMusicFolder() {
         // ✅ PULIZIA AGGRESSIVA MEMORIA PRIMA DI APRIRE IL PICKER
         cleanupBeforeFolderPicker();
         
-        if (!('showDirectoryPicker' in window)) {
-            showToast('❌ Browser non supporta accesso diretto. Usa il selettore classico.');
-            fileInput.click();
+        // 🔴 FIX CRITICO TABLET ANDROID: showDirectoryPicker crasha in OOM su cartelle grandi.
+        // Forziamo l'uso del selettore file nativo di Android che è sicuro.
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        
+        if (isAndroid || !('showDirectoryPicker' in window)) {
+            showToast('📱 Seleziona i file o la cartella dal selettore nativo');
+            fileInput.click(); // Apre il selettore sicuro di Android
             return;
         }
         
-        showToast('⚠️ Seleziona la cartella "Preferiti" dentro Music/Scheda SD');
+        // Logica per Desktop (Windows/Mac) dove showDirectoryPicker è stabile
+        showToast('⚠️ Seleziona la cartella Music');
         
         const folderHandle = await window.showDirectoryPicker({
             mode: 'read',
@@ -1354,28 +1359,15 @@ async function selectMusicFolder() {
         musicFolderHandle = folderHandle;
         localStorage.setItem(STORAGE_MUSIC_FOLDER, 'saved');
         await loadMusicFromFolder(folderHandle);
-        showToast('✅ Cartella salvata! Ora l\'accesso sarà diretto e automatico.');
+        showToast('✅ Cartella salvata!');
         
     } catch (err) {
         console.error('Errore selezione cartella:', err);
-        
-        // ✅ FALLBACK: Se fallisce per memoria o altro, usa il selettore classico
         if (err.name === 'AbortError') {
             showToast('❌ Selezione annullata');
             return;
         }
-        
-        if (err.name === 'NotAllowedError' || err.message?.includes('memory') || err.message?.includes('memoria')) {
-            showToast('⚠️ Memoria insufficiente. Uso selettore classico...');
-            // Piccolo delay per liberare risorse
-            await new Promise(r => setTimeout(r, 500));
-            fileInput.click();
-            return;
-        }
-        
-        showToast('❌ Errore: ' + err.message + '. Uso selettore classico.');
-        await new Promise(r => setTimeout(r, 500));
-        fileInput.click();
+        showToast('❌ Errore: ' + err.message);
     }
 }
 
@@ -1471,6 +1463,53 @@ async function loadMusicFromFolder(folderHandle) {
         
         showToast('❌ Errore lettura cartella: ' + err.message);
     }
+}
+
+// 🔴 GESTORE DEL SELETTORE FILE NATIVO ANDROID (Anti-Crash)
+if (fileInput) {
+    fileInput.addEventListener('change', async function(e) {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        cleanupBeforeFolderPicker(); // Libera memoria prima di caricare
+        localFiles = [];
+        localCounter = 0;
+
+        // Limitiamo a 500 file per sicurezza anche qui
+        const MAX_FILES = 500; 
+        let count = 0;
+
+        for (const file of files) {
+            if (count >= MAX_FILES) {
+                showToast('⚠️ Caricati max ' + MAX_FILES + ' file per memoria');
+                break;
+            }
+            
+            // Filtra solo audio/video
+            if (file.type.startsWith('audio/') || file.type.startsWith('video/')) {
+                localCounter++;
+                localFiles.push({
+                    id: 'local-' + localCounter,
+                    name: file.name,
+                    fileHandle: file, // Qui passiamo direttamente il File object, non l'handle
+                    type: 'local'
+                });
+                count++;
+            }
+        }
+
+        if (localFiles.length > 0) {
+            currentTab = 'local';
+            sidebarTabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === currentTab); });
+            renderChannels();
+            showToast('✅ Caricati ' + localFiles.length + ' file locali');
+        } else {
+            showToast('⚠️ Nessun file audio/video trovato nella selezione');
+        }
+        
+        // Resetta l'input per permettere di ricaricare la stessa cartella
+        fileInput.value = ''; 
+    });
 }
 
 async function loadSavedMusicFolder() {
