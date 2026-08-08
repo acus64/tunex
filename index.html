@@ -1407,10 +1407,10 @@ function cleanupBeforeFolderPicker() {
     renderLimit = 20;
     renderChannels();
     
-    // 8. Forza repaint
-    document.body.style.display = 'none';
-    document.body.offsetHeight; // force reflow
-    document.body.style.display = '';
+    // 8. 🔴 RIMOSSO IL TRUCCO DEL DISPLAY NONE/BLOCK: SU ALCUNI TABLET ANDROID CAUSA IL CRASH DEL LAYOUT E PICCO DI RAM
+    // document.body.style.display = 'none';
+    // document.body.offsetHeight; // force reflow
+    // document.body.style.display = '';
     
     console.log('✅ Memoria liberata');
 }
@@ -1422,12 +1422,17 @@ async function loadMusicFromFolder(folderHandle) {
     localFiles = [];
     localCounter = 0;
     
+    // 🔴 LIMITE CRITICO PER TABLET ANDROID: Previente l'Out Of Memory (OOM)
+    const MAX_FILES_FOR_TABLET = 500; 
+    
     try {
         // Legge solo i nomi e salva il riferimento (handle), SENZA caricare i file in RAM
         for await (const entry of folderHandle.values()) {
             if (entry.kind === 'file') {
                 const name = entry.name.toLowerCase();
-                if (name.match(/\.(mp3|mp4|wav|ogg|m4a|flac|aac|wma|webm|mkv)$/i)) {
+                
+                // Ignora i file nascosti di sistema (che iniziano con .) e filtra per estensione
+                if (!name.startsWith('.') && name.match(/\.(mp3|mp4|wav|ogg|m4a|flac|aac|wma|webm|mkv)$/i)) {
                     localCounter++;
                     localFiles.push({
                         id: 'local-' + localCounter,
@@ -1435,6 +1440,12 @@ async function loadMusicFromFolder(folderHandle) {
                         fileHandle: entry,
                         type: 'local'
                     });
+                    
+                    // 🔴 INTERROMPI LA LETTURA SE SI RAGGIUNGE IL LIMITE DI MEMORIA
+                    if (localCounter >= MAX_FILES_FOR_TABLET) {
+                        showToast('⚠️ Mostrati max ' + MAX_FILES_FOR_TABLET + ' file per proteggere la memoria.');
+                        break; 
+                    }
                 }
             }
         }
