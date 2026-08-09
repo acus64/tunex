@@ -1083,8 +1083,9 @@ var eqResetBtn = document.getElementById('eq-reset');
 var eqBars = []; 
 var eqBarContainers = [];
 var currentHls = null;
-var localFiles = [];
+var localFiles = [];        // Array di {id, name, url, type} - NESSUN blob in memoria
 var localCounter = 0;
+var localBlobURLs = new Set();  // Traccia URL creati per cleanup
 var currentPlaylistType = 'streaming';
 var currentTrackIndex = -1;
 var GROQ_API_KEY = localStorage.getItem('tunex_groq_api_key') || '';
@@ -1427,145 +1428,33 @@ function waitForMetadata(player) {
     });
 }
 
-// ================= INDEXEDDB (LAZY LOADING - anti-OOM tablet) =================
-// Strategia:
-//   - In IDB salviamo: meta (array di {id,name,size,mime}) + blob_<id> (singolo Blob)
-//   - All'avvio carichiamo SOLO meta (nessun blob in RAM)
-//   - Il blob viene letto da IDB on-demand quando l'utente clicca il brano
-//   - Dopo stop/fine riproduzione il riferimento blob viene rilasciato
+// ================= FILE LOCALI (URL.createObjectURL diretto, no IDB) =================
+// Approccio leggero: il browser memory-mappa il file, non lo carica tutto in RAM.
+// localBlobURLs tiene traccia degli URL creati per poterli revocare (cleanup memoria).
+var localBlobURLs = new Set();
+
+// === Funzioni legacy IDB (mantenute solo per pulizia archivio vecchio schema) ===
+// Non vengono piu' usate per salvare/caricare file, solo per clear eventuale.
 const IDB_DB_NAME = 'tunex_files_db';
 const IDB_STORE = 'files';
-const IDB_VERSION = 2; // bump versione per trigger upgrade struttura (v1 -> v2)
-// Limite totale storage IDB - ridotto per tablet Android (anti-OOM)
-const IDB_MAX_TOTAL_BYTES = 150 * 1024 * 1024; // 150MB
-// Limite singolo file - un file piu grande non entra in RAM tutta insieme
-const IDB_MAX_FILE_BYTES = 80 * 1024 * 1024; // 80MB
 
 function openIDB() {
     return new Promise((resolve, reject) => {
-        const req = indexedDB.open(IDB_DB_NAME, IDB_VERSION);
-        req.onupgradeneeded = e => {
-            const db = e.target.result;
-            // Pulizia store vecchio schema se presente (v1 -> v2)
-            if (db.objectStoreNames.contains(IDB_STORE)) {
-                try { db.deleteObjectStore(IDB_STORE); } catch(err) {}
-            }
-            db.createObjectStore(IDB_STORE);
-        };
-        req.onsuccess = e => resolve(e.target.result);
-        req.onerror = e => reject(e.target.error);
+        try {
+            const req = indexedDB.open(IDB_DB_NAME, 2);
+            req.onupgradeneeded = e => {
+                const db = e.target.result;
+                if (db.objectStoreNames.contains(IDB_STORE)) {
+                    try { db.deleteObjectStore(IDB_STORE); } catch(err) {}
+                }
+                db.createObjectStore(IDB_STORE);
+            };
+            req.onsuccess = e => resolve(e.target.result);
+            req.onerror = e => reject(e.target.error);
+        } catch(e) { reject(e); }
     });
 }
 
-// Salva meta + blob in IDB con gestione quota e limite memoria
-async function saveLocalFilesToIDB(filesArray) {
-    try {
-        const db = await openIDB();
-        const tx = db.transaction(IDB_STORE, 'readwrite');
-        const store = tx.objectStore(IDB_STORE);
-        store.clear();
-
-        const meta = { files: [] };
-        let runningTotal = 0;
-        let skippedCount = 0;
-
-        for (let i = 0; i < filesArray.length; i++) {
-            const item = filesArray[i];
-            let blob;
-            try {
-                blob = (item.file instanceof File || item.file instanceof Blob)
-                    ? item.file
-                    : (item.fileHandle && typeof item.fileHandle.getFile === 'function')
-                        ? await item.fileHandle.getFile()
-                        : null;
-            } catch (e) { console.warn('Skip file', item.name, e); skippedCount++; continue; }
-            if (!blob) { skippedCount++; continue; }
-
-            // Salta file troppo grandi
-            if (blob.size > IDB_MAX_FILE_BYTES) {
-                console.warn('Skip file too large:', item.name, blob.size);
-                skippedCount++;
-                continue;
-            }
-            // Ferma se sforiamo il limite totale
-            if (runningTotal + blob.size > IDB_MAX_TOTAL_BYTES) {
-                showToast('⚠️ Limite archivio locale (250MB) raggiunto. ' + skippedCount + ' file saltati.');
-                break;
-            }
-
-            const id = item.id || ('local-' + (i + 1));
-            try {
-                store.put(blob, 'blob_' + id);
-                meta.files.push({ id, name: item.name, size: blob.size, mime: blob.type });
-                runningTotal += blob.size;
-            } catch (e) {
-                console.warn('Put blob error', item.name, e);
-                skippedCount++;
-            }
-        }
-
-        store.put(meta, 'meta');
-        await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; tx.onabort = rej; });
-        if (skippedCount > 0 && skippedCount === filesArray.length) {
-            showToast('❌ Nessun file salvato. Troppo grandi per l\'archivio.');
-        }
-    } catch (e) {
-        console.error('Errore salvataggio IndexedDB:', e);
-        var errName = (e && e.name) || (e && e.target && e.target.error && e.target.error.name) || '';
-        if (errName === 'QuotaExceededError') {
-            showToast('⚠️ Spazio IDB esaurito. File non persistenti.');
-        } else {
-            showToast('⚠️ Errore salvataggio locale: ' + (e.message || e));
-        }
-    }
-}
-
-// Carica SOLO i metadati (nessun blob in memoria) - anti-OOM
-async function loadLocalFilesMetaFromIDB() {
-    try {
-        const db = await openIDB();
-        const tx = db.transaction(IDB_STORE, 'readonly');
-        const store = tx.objectStore(IDB_STORE);
-        const metaReq = store.get('meta');
-        await new Promise(res => { metaReq.onsuccess = res; metaReq.onerror = res; });
-        const meta = metaReq.result;
-        if (!meta || !Array.isArray(meta.files) || meta.files.length === 0) return [];
-        // Nessun blob caricato: file rimane null, verra' letto on-demand
-        return meta.files.map(function(f) {
-            return {
-                id: f.id,
-                name: f.name,
-                size: f.size || 0,
-                mime: f.mime || '',
-                file: null,
-                type: 'local'
-            };
-        });
-    } catch (e) {
-        console.error('Errore caricamento meta IndexedDB:', e);
-        return [];
-    }
-}
-
-// Carica UN singolo blob da IDB on-demand (al click del brano)
-async function loadBlobFromIDB(fileId) {
-    if (!fileId) return null;
-    try {
-        const db = await openIDB();
-        return await new Promise((resolve, reject) => {
-            const tx = db.transaction(IDB_STORE, 'readonly');
-            const store = tx.objectStore(IDB_STORE);
-            const req = store.get('blob_' + fileId);
-            req.onsuccess = () => resolve(req.result || null);
-            req.onerror = () => reject(req.error);
-        });
-    } catch (e) {
-        console.error('Errore lettura blob IDB:', e);
-        return null;
-    }
-}
-
-// Pulizia completa archivio locale
 async function clearLocalFilesIDB() {
     try {
         const db = await openIDB();
@@ -1575,6 +1464,7 @@ async function clearLocalFilesIDB() {
     } catch (e) { console.warn('clearLocalFilesIDB:', e); }
 }
 
+// =====================================================================
 // ================= RENDER CHANNELS =================
 function renderChannels() {
     channelListStreaming.innerHTML = '';
@@ -1592,8 +1482,8 @@ function createChannelElement(ch, index, isLocal) {
     el.addEventListener('click', function() {
         document.querySelectorAll('.channel-item').forEach(c => c.classList.remove('active'));
         el.classList.add('active');
-        // Passa anche ch.id per lazy-load del blob da IDB
-        playChannel(el, ch.name, ch.url || ch.fileHandle || ch.file, ch.type, index, isLocal, ch.id);
+        // Per file locali: ch.url e' gia un blob: URL (memory-mapped, no RAM)
+        playChannel(el, ch.name, ch.url, ch.type, index, isLocal);
     });
     return el;
 }
@@ -1602,14 +1492,8 @@ function createChannelElement(ch, index, isLocal) {
 function stopStream() {
     unifiedPlayer._trackEnded = true;
     unifiedPlayer.pause();
-    // === CLEANUP URL BLOB CENTRALIZZATO ===
-    if (window._currentBlobURL) {
-        try { URL.revokeObjectURL(window._currentBlobURL); } catch(e) {}
-        window._currentBlobURL = null;
-    }
-    if (unifiedPlayer.src && unifiedPlayer.src.indexOf('blob:') === 0) {
-        try { URL.revokeObjectURL(unifiedPlayer.src); } catch(e) {}
-    }
+    // === NON revocare i blob URL dei file locali: restano in localBlobURLs ===
+    // Vengono revocati solo a clearLocalBtn o beforeunload
     unifiedPlayer.removeAttribute('src');
     try { unifiedPlayer.src = ""; } catch(e) {}
     try { unifiedPlayer.load(); } catch(e) {}
@@ -1653,7 +1537,7 @@ function isCorsRestricted(url) {
     return CORS_BLACKLIST.some(p=> url.toLowerCase().split('?')[0].indexOf(p) >= 0);
 }
 
-async function playChannel(element, name, urlOrHandle, type, index, isLocal, channelId) {
+async function playChannel(element, name, url, type, index, isLocal) {
     currentPlaylistType = isLocal ? 'local' : 'streaming';
     currentTrackIndex = index;
     currentChannelDisplay.textContent = name;
@@ -1668,13 +1552,11 @@ async function playChannel(element, name, urlOrHandle, type, index, isLocal, cha
     // I file locali sono same-origin, possono usare Web Audio API sempre.
     var useDirectAudio = false;
     if (type !== 'local' && type !== 'youtube-link') {
-        useDirectAudio = shouldUseDirectAudio(urlOrHandle);
+        useDirectAudio = shouldUseDirectAudio(url);
         if (useDirectAudio) {
-            // Non-CORS: MAI crossorigin, audio diretto dal video element
             unifiedPlayer.removeAttribute('crossorigin');
             unifiedPlayer.crossOrigin = null;
         } else {
-            // CORS-ok: imposta crossorigin per analyser reale
             unifiedPlayer.setAttribute('crossorigin', 'anonymous');
             unifiedPlayer.crossOrigin = 'anonymous';
         }
@@ -1682,50 +1564,11 @@ async function playChannel(element, name, urlOrHandle, type, index, isLocal, cha
 
     if (type === 'local') {
         try {
-            // === LAZY LOAD BLOB da IDB se non gia' in memoria ===
-            // Anti-OOM: il blob viene caricato da IDB solo al click, non all'avvio
-            if (!urlOrHandle && channelId) {
-                statusText.textContent = 'Caricamento file...';
-                var blob = await loadBlobFromIDB(channelId);
-                if (!blob) {
-                    showToast('❌ File non trovato nell\'archivio locale. Riselezionalo.');
-                    statusText.textContent = 'File non disponibile';
-                    return;
-                }
-                urlOrHandle = blob;
-                // Cache in memoria per la sessione corrente (verra' rilasciata a stopStream)
-                var chItem = localFiles.find(function(f){ return f.id === channelId; });
-                if (chItem) chItem.file = blob;
-            }
-
-            // === CLEANUP URL PRECEDENTE (tracciato centralmente) ===
-            if (window._currentBlobURL) {
-                try { URL.revokeObjectURL(window._currentBlobURL); } catch(e) {}
-                window._currentBlobURL = null;
-            }
-            if (unifiedPlayer.src && unifiedPlayer.src.indexOf('blob:') === 0) {
-                try { URL.revokeObjectURL(unifiedPlayer.src); } catch(e) {}
-            }
-
+            // === URL.createObjectURL gia creato al momento del caricamento ===
+            // Il browser memory-mappa il file (no RAM duplicata)
             unifiedPlayer.removeAttribute('crossorigin');
             unifiedPlayer.crossOrigin = null;
-
-            var finalUrl = null;
-            if (urlOrHandle && typeof urlOrHandle.getFile === 'function') {
-                var fileObj = await urlOrHandle.getFile();
-                finalUrl = URL.createObjectURL(fileObj);
-            } else if (urlOrHandle instanceof File || urlOrHandle instanceof Blob) {
-                finalUrl = URL.createObjectURL(urlOrHandle);
-            }
-
-            if (!finalUrl) {
-                showToast('❌ Impossibile creare URL per il file');
-                statusText.textContent = 'Errore';
-                return;
-            }
-            // Traccia l'URL blob per cleanup sicuro
-            window._currentBlobURL = finalUrl;
-            unifiedPlayer.src = finalUrl;
+            unifiedPlayer.src = url;
 
             await waitForMetadata(unifiedPlayer);
             const hasVideo = unifiedPlayer.videoWidth > 0 && unifiedPlayer.videoHeight > 0;
@@ -1751,17 +1594,17 @@ async function playChannel(element, name, urlOrHandle, type, index, isLocal, cha
     }
 
     if (type === 'youtube-link') {
-        if(urlOrHandle && urlOrHandle.match(/youtube\.com|youtu\.be/i)) window.open(urlOrHandle, '_blank');
+        if(url && url.match(/youtube\.com|youtu\.be/i)) window.open(url, '_blank');
         statusText.textContent = 'Aperto su YouTube';
         return;
     } 
     
-    if (isM3U8(urlOrHandle)) {
-        if (window.Hls && Hls.isSupported()) playHLS(name, urlOrHandle);
-        else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) playStandard(name, urlOrHandle);
+    if (isM3U8(url)) {
+        if (window.Hls && Hls.isSupported()) playHLS(name, url);
+        else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) playStandard(name, url);
         else showToast('Formato non supportato');
     } else {
-        playStandard(name, urlOrHandle);
+        playStandard(name, url);
     }
 }
 
@@ -1882,58 +1725,27 @@ function playStandard(name, url) {
 
 // ================= LOCAL FILES =================
 openFilesBtn.addEventListener('click', function() { fileInput.click(); });
-fileInput.addEventListener('change', async function(e) {
+fileInput.addEventListener('change', function(e) {
     if (e.target.files && e.target.files.length) {
-        var filesArr = Array.from(e.target.files);
-        localFiles = [];
-        localCounter = 0;
         var acceptedCount = 0;
-        var rejectedCount = 0;
         var totalSize = 0;
-        var tempForIDB = [];
-
-        // === CHECK STORAGE DISPONIBILE prima di caricare ===
-        if (navigator.storage && navigator.storage.estimate) {
-            try {
-                var est = await navigator.storage.estimate();
-                var freeBytes = (est.quota || 0) - (est.usage || 0);
-                var sumSize = filesArr.reduce(function(s, f){ return s + f.size; }, 0);
-                if (sumSize > freeBytes * 0.7) {
-                    showToast('⚠️ Spazio insufficiente. Libera memoria del browser.');
-                }
-            } catch(err) { /* ignore */ }
-        }
-
-        filesArr.forEach(function(file) {
-            if (file.size > IDB_MAX_FILE_BYTES) {
-                rejectedCount++;
-                showToast('⚠️ ' + file.name.substring(0,30) + ' > 80MB: saltato');
-                return;
-            }
-            localCounter++;
-            var id = 'local-' + localCounter;
-            var entry = { id: id, name: file.name, file: file, type: 'local', size: file.size };
-            localFiles.push(entry);
-            tempForIDB.push(entry);
+        Array.from(e.target.files).forEach(function(file) {
+            var id = 'local-' + (++localCounter);
+            // === URL.createObjectURL: il browser memory-mappa il file ===
+            // NON lo carica tutto in RAM: legge i blocchi on-demand durante il playback
+            var url = URL.createObjectURL(file);
+            localBlobURLs.add(url);
+            localFiles.push({ id: id, name: file.name, url: url, type: 'local', size: file.size });
             totalSize += file.size;
             acceptedCount++;
         });
-
-        // Salva in IDB (con gestione quota interna)
-        await saveLocalFilesToIDB(tempForIDB);
-
-        // === ANTI-OOM CRITICO: rilascia SEMPRE i File reference dalla memoria ===
-        // Verranno caricati on-demand da IDB al click (lazy loading)
-        localFiles.forEach(function(f) { f.file = null; });
-
         renderChannels();
         if (acceptedCount > 0) {
             var sizeMB = (totalSize / (1024 * 1024)).toFixed(1);
-            showToast('✅ ' + acceptedCount + ' file aggiunti (' + sizeMB + ' MB)' + (rejectedCount > 0 ? ' ' + rejectedCount + ' saltati' : ''));
+            showToast('✅ ' + acceptedCount + ' file aggiunti (' + sizeMB + ' MB)');
             document.getElementById('section-local').classList.remove('collapsed');
             document.getElementById('section-streaming').classList.add('collapsed');
         }
-        // Aggiorna info storage
         if (typeof updateStorageInfo === 'function') updateStorageInfo();
     }
     fileInput.value = '';
@@ -2327,26 +2139,17 @@ if (panelToggleBtn && playerPanel) {
 }
 
 (async function init() {
-    // Banner file:// rimosso - l'app e ora hostata su HTTPS (GitHub Pages)
-    // === ANTI-OOM: carica SOLO metadata, nessun blob in memoria ===
-    const savedMeta = await loadLocalFilesMetaFromIDB();
-    if (savedMeta.length > 0) {
-        localFiles = savedMeta;
-        localCounter = savedMeta.length;
-        document.getElementById('section-local').classList.remove('collapsed');
-        showToast('📂 ' + savedMeta.length + ' file locali recuperati');
-    }
+    // === NO IDB LOAD: i file locali NON sono persistenti tra sessioni ===
+    // Vengono creati URL.createObjectURL on-demand al caricamento file.
+    // Approccio piu leggero: il browser memory-mappa i file (no RAM duplicata).
     renderChannels();
     initVizBars();
 
-    // === LIFECYCLE HANDLERS per rilascio memoria su tablet Android ===
-    // pagehide: cleanup completo quando la pagina viene chiusa/nascosta
+    // === LIFECYCLE: pulizia completa a chiusura pagina ===
     window.addEventListener('pagehide', function() {
         try {
-            if (window._currentBlobURL) {
-                URL.revokeObjectURL(window._currentBlobURL);
-                window._currentBlobURL = null;
-            }
+            localBlobURLs.forEach(function(url) { try { URL.revokeObjectURL(url); } catch(e) {} });
+            localBlobURLs.clear();
             if (currentHls) { currentHls.destroy(); currentHls = null; }
             if (audioContext && audioContext.state !== 'closed') {
                 audioContext.close().catch(function(){});
@@ -2354,7 +2157,7 @@ if (panelToggleBtn && playerPanel) {
             unifiedPlayer.pause();
         } catch(e) {}
     });
-    // visibilitychange: sospendi audioContext quando tab in background (risparmio RAM/CPU)
+    // visibilitychange: sospendi audioContext quando tab in background
     document.addEventListener('visibilitychange', function() {
         if (document.hidden) {
             if (audioContext && audioContext.state === 'running') {
@@ -2420,15 +2223,23 @@ if (panelSaveApi) panelSaveApi.addEventListener('click', function() {
 });
 
 // === Handler nuovo: pulisci archivio locale ===
-if (clearLocalBtn) clearLocalBtn.addEventListener('click', async function() {
-    if (!confirm('Eliminare tutti i file locali salvati? L\'azione non e reversibile.')) return;
+if (clearLocalBtn) clearLocalBtn.addEventListener('click', function() {
+    if (!confirm('Eliminare tutti i file locali? L\'azione non e reversibile.')) return;
     try {
-        await clearLocalFilesIDB();
+        // Revoca tutti i blob URL (libera memoria)
+        localFiles.forEach(function(f) {
+            if (f.url && localBlobURLs.has(f.url)) {
+                try { URL.revokeObjectURL(f.url); } catch(e) {}
+                localBlobURLs.delete(f.url);
+            }
+        });
         localFiles = [];
         localCounter = 0;
+        unifiedPlayer.pause();
+        unifiedPlayer.src = '';
         renderChannels();
-        showToast('🗑 Archivio locale pulito');
-        updateStorageInfo();
+        showToast('🗑 File locali rimossi');
+        if (typeof updateStorageInfo === 'function') updateStorageInfo();
     } catch(e) {
         showToast('❌ Errore pulizia: ' + (e.message || e));
     }
@@ -2438,11 +2249,10 @@ if (clearLocalBtn) clearLocalBtn.addEventListener('click', async function() {
 async function updateStorageInfo() {
     if (!storageInfo) return;
     try {
-        // Conta file in IDB
-        var meta = await loadLocalFilesMetaFromIDB();
-        var totalSize = meta.reduce(function(s, f){ return s + (f.size || 0); }, 0);
+        // Conta file locali in memoria (URL.createObjectURL)
+        var totalSize = localFiles.reduce(function(s, f){ return s + (f.size || 0); }, 0);
         var sizeMB = (totalSize / (1024 * 1024)).toFixed(1);
-        var html = meta.length + ' file - ' + sizeMB + ' MB';
+        var html = localFiles.length + ' file - ' + sizeMB + ' MB';
         if (navigator.storage && navigator.storage.estimate) {
             var est = await navigator.storage.estimate();
             var quotaMB = ((est.quota || 0) / (1024 * 1024)).toFixed(0);
