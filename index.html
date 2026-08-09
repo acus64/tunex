@@ -678,7 +678,7 @@ audio.media-player::-webkit-media-controls-enclosure {
     <div class="sidebar-actions">
       <button class="sidebar-btn" id="open-files-btn"><i class="fas fa-folder-open"></i> File</button>
       <button class="sidebar-btn danger" id="clear-local-btn"><i class="fas fa-trash"></i> Pulisci</button>
-      <input id="file-input" type="file" accept="audio/*,video/*" multiple style="display:none" />
+      <input id="file-input" type="file" accept="audio/*,video/*" style="display:none" />
     </div>
 
     <div class="channel-container" id="channel-list"></div>
@@ -1184,7 +1184,7 @@ audio.media-player::-webkit-media-controls-enclosure {
           actionsEl.appendChild(favoriteBtn);
           el.appendChild(nameEl);
           el.appendChild(actionsEl);
-          el.addEventListener('click', function() { playChannel(el, ch.name, ch.url, ch.type); });
+          el.addEventListener('click', function() { playChannel(el, ch.name, ch.file || ch.url, ch.type); });
           fragment.appendChild(el);
       });
       channelListEl.appendChild(fragment);
@@ -1198,61 +1198,98 @@ audio.media-player::-webkit-media-controls-enclosure {
       });
     });
 
-    openFilesBtn.addEventListener('click', function() { fileInput.click(); });
-    fileInput.addEventListener('change', function(e) {
+  openFilesBtn.addEventListener('click', function() { 
+      // 🔥 FIX CRITICO ANDROID: Libera il buffer video e il Blob URL prima di aprire il picker
+      unifiedPlayer.pause();
+      unifiedPlayer.removeAttribute('src');
+      unifiedPlayer.load(); // Forza il media engine a svuotare la RAM
+      if (unifiedPlayer._currentLocalBlobUrl) {
+          URL.revokeObjectURL(unifiedPlayer._currentLocalBlobUrl);
+          unifiedPlayer._currentLocalBlobUrl = null;
+      }
+      fileInput.click(); 
+  });
+
+  fileInput.addEventListener('change', function(e) {
       if (e.target.files && e.target.files.length) {
-        Array.from(e.target.files).forEach(function(file) {
-          var id = 'local-' + (++localCounter);
-          var url = URL.createObjectURL(file);
-          localBlobURLs.add(url);
-          localFiles.push({id: id, name: file.name, url: url, type: 'local'});
-        });
-        currentTab = 'local';
-        sidebarTabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === currentTab); });
-        renderChannels();
-        showToast('File aggiunti!');
+          Array.from(e.target.files).forEach(function(file) {
+              var id = 'local-' + (++localCounter);
+              // 🔥 FIX: Salviamo l'oggetto File invece del Blob URL (Lazy Loading)
+              localFiles.push({id: id, name: file.name, file: file, type: 'local'});
+          });
+          currentTab = 'local';
+          sidebarTabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === currentTab); });
+          renderChannels();
+          showToast('File aggiunti!');
       }
       fileInput.value = '';
-    });
-    clearLocalBtn.addEventListener('click', function() {
-      localFiles.forEach(function(f) { if (f.url && localBlobURLs.has(f.url)) { URL.revokeObjectURL(f.url); localBlobURLs.delete(f.url); } });
+  });
+
+  clearLocalBtn.addEventListener('click', function() {
+      if (unifiedPlayer._currentLocalBlobUrl) {
+          URL.revokeObjectURL(unifiedPlayer._currentLocalBlobUrl);
+          unifiedPlayer._currentLocalBlobUrl = null;
+      }
       localFiles = [];
-      unifiedPlayer.pause(); unifiedPlayer.src = '';
+      unifiedPlayer.pause(); 
+      unifiedPlayer.removeAttribute('src');
+      unifiedPlayer.load();
       loadingInfo.style.display = 'none';
       renderChannels();
       showToast('File rimossi');
-    });
+  });
 
-    function stopStream() {
-        if (currentHls) { try { currentHls.destroy(); } catch(e) {} currentHls = null; }
-        unifiedPlayer.pause();
-        unifiedPlayer.src = '';
-        // ⚠️ MANTIENI _eqStatus: traccia fallimenti CORS tra cambio canale
-        // ⚠️ NON resettare audioContext/eqFilters (globali e riutilizzabili)
-        loadingInfo.style.display = 'none';
-        statusText.textContent = 'Fermato';
-        statusDot.classList.remove('playing');
-    }
+  function stopStream() {
+      if (currentHls) { try { currentHls.destroy(); } catch(e) {} currentHls = null; }
+      unifiedPlayer.pause();
+      unifiedPlayer.removeAttribute('src');
+      unifiedPlayer.load(); // 🔥 Fondamentale su Android per rilasciare il buffer video/audio
+
+      // Revoca il Blob URL locale attivo per liberare RAM
+      if (unifiedPlayer._currentLocalBlobUrl) {
+          URL.revokeObjectURL(unifiedPlayer._currentLocalBlobUrl);
+          unifiedPlayer._currentLocalBlobUrl = null;
+      }
+
+      loadingInfo.style.display = 'none';
+      statusText.textContent = 'Fermato';
+      statusDot.classList.remove('playing');
+  }
 
     // Reset solo al caricamento pagina, non al cambio canale
     window.addEventListener('beforeunload', function() {
         if (audioContext) { try { audioContext.close(); } catch(e) {} }
+        if (unifiedPlayer && unifiedPlayer._currentLocalBlobUrl) {
+            try { URL.revokeObjectURL(unifiedPlayer._currentLocalBlobUrl); } catch(e) {}
+        }
         localBlobURLs.forEach(function(url) { try { URL.revokeObjectURL(url); } catch(e) {} });
     });
 
     function isM3U8(url) { return url.toLowerCase().indexOf('.m3u8') >= 0; }
 
-    async function playChannel(element, name, url, type) {
+    async function playChannel(element, name, urlOrFile, type) {
         document.querySelectorAll('.channel').forEach(function(ch) { ch.classList.remove('active'); });
         element.classList.add('active');
-        currentChannelDisplay.textContent = name; statusText.textContent = 'Caricamento...'; loadingInfo.style.display = 'none'; stopStream();
+        currentChannelDisplay.textContent = name; 
+        statusText.textContent = 'Caricamento...'; 
+        loadingInfo.style.display = 'none'; 
+        stopStream();
         await initAudioEQ();
-        if (type === 'youtube-link') { playYouTubeLink(name, url); }
-        else if (isM3U8(url)) {
-            if (window.Hls && Hls.isSupported()) { playHLS(name, url); }
-            else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) { playStandard(name, url); }
+
+        if (type === 'youtube-link') { 
+            playYouTubeLink(name, urlOrFile); 
+        } else if (type === 'local') {
+            // 🔥 FIX: Crea il Blob URL SOLO al momento della riproduzione
+            const blobUrl = URL.createObjectURL(urlOrFile);
+            unifiedPlayer._currentLocalBlobUrl = blobUrl;
+            playStandard(name, blobUrl);
+        } else if (typeof urlOrFile === 'string' && isM3U8(urlOrFile)) {
+            if (window.Hls && Hls.isSupported()) { playHLS(name, urlOrFile); }
+            else if (unifiedPlayer.canPlayType('application/vnd.apple.mpegurl')) { playStandard(name, urlOrFile); }
             else { showToast('Formato stream non supportato'); statusText.textContent = 'Errore formato'; }
-        } else { playStandard(name, url); }
+        } else { 
+            playStandard(name, urlOrFile); 
+        }
     }
 
     function playHLS(name, url) {
