@@ -277,13 +277,17 @@ video.media-player.show-video { opacity: 1 !important; background: #000; }
 
 .custom-controls {
     position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);
     padding: 10px 20px; border-radius: 30px;
     display: flex; flex-direction: column; align-items: center; gap: 8px;
-    opacity: 0; transition: opacity 0.3s ease; z-index: 15;
-    min-width: 300px;
+    opacity: 1; z-index: 15;
+    min-width: 280px; max-width: 95%;
 }
-.visualizer-area:hover .custom-controls, .custom-controls.visible { opacity: 1; }
+.visualizer-area:hover .custom-controls { opacity: 1; }
+/* Touch: controlli sempre visibili (no hover su tablet) */
+@media (hover: none) and (pointer: coarse) {
+    .custom-controls { opacity: 1 !important; }
+}
 
 .controls-row { display: flex; align-items: center; gap: 20px; }
 .ctrl-btn {
@@ -355,7 +359,7 @@ video.media-player.show-video { opacity: 1 !important; background: #000; }
 .player-panel {
     width: 320px;
     background-color: var(--player-bg);
-    padding: 30px 20px;
+    padding: 20px 16px 30px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -363,7 +367,14 @@ video.media-player.show-video { opacity: 1 !important; background: #000; }
     position: relative;
     z-index: 20;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Scrollbar styling */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-red) transparent;
 }
+.player-panel::-webkit-scrollbar { width: 5px; }
+.player-panel::-webkit-scrollbar-track { background: transparent; }
+.player-panel::-webkit-scrollbar-thumb { background: var(--accent-red); border-radius: 3px; }
 
 .album-art {
     width: 140px;
@@ -556,8 +567,8 @@ video.media-player.show-video { opacity: 1 !important; background: #000; }
 .voice-cmd-feedback.show { display: block; animation: fadeInUp 0.3s ease; }
 @keyframes fadeInUp { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
-@media (max-width: 1200px) { .app-container { width: 100%; height: 100vh; border-radius: 0; } }
-@media (max-width: 900px) { .sidebar { width: 200px; } .player-panel { width: 240px; } }
+@media (max-width: 1200px) { .app-container { width: 100%; height: 100vh; height: 100dvh; border-radius: 0; } }
+@media (max-width: 900px) { .sidebar { width: 180px; } .player-panel { width: 260px; } }
 @media (max-width: 700px) {
     .app-container { flex-direction: column; height: 100dvh; }
     .sidebar { width: 100%; height: 200px; order: 2; border-top: 1px solid #333; }
@@ -587,23 +598,30 @@ video.media-player.show-video { opacity: 1 !important; background: #000; }
 
 .panel-toggle-btn:active { transform: scale(0.9); }
 
-@media (max-width: 1200px) and (min-width: 701px) {
-    .app-container { width: 100%; height: 100vh; }
-    .sidebar { width: 220px; }
-    .player-panel { width: 280px; padding: 20px 15px; }
-    .album-art { width: 110px; height: 110px; }
-    .equalizer-visualizer { height: 120px; }
+
+
+/* === TABLET PORTRAIT e MOBILE === */
+@media (max-width: 1024px) {
+    .app-container { width: 100% !important; height: 100vh !important; height: 100dvh !important; border-radius: 0 !important; }
+    .sidebar { width: 200px; }
     .panel-toggle-btn { display: flex; }
     .player-panel {
-        position: absolute;
+        position: fixed;
         top: 0; right: 0;
-        height: 100%;
+        width: 320px; height: 100%;
+        height: 100dvh;
         transform: translateX(100%);
         transition: transform 0.3s ease;
         box-shadow: -5px 0 20px rgba(0,0,0,0.5);
-        z-index: 30;
+        z-index: 100;
+        padding: 50px 16px 20px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
     .player-panel.open { transform: translateX(0); }
+    .album-art { width: 100px; height: 100px; }
+    .equalizer-visualizer { height: 100px; }
+    .custom-controls { opacity: 1 !important; bottom: 12px; min-width: 260px; }
 }
 
 @media (max-width: 700px) {
@@ -613,6 +631,7 @@ video.media-player.show-video { opacity: 1 !important; background: #000; }
         position: fixed;
         top: 0; left: 0;
         width: 100%; height: 100%;
+        height: 100dvh;
         transform: translateX(100%);
         transition: transform 0.3s ease;
         z-index: 100;
@@ -620,6 +639,9 @@ video.media-player.show-video { opacity: 1 !important; background: #000; }
     }
     .player-panel.open { transform: translateX(0); }
     .equalizer-visualizer { height: 100px; }
+    .custom-controls { bottom: 8px; min-width: 220px; padding: 8px 12px; }
+    .ctrl-btn { width: 28px; height: 28px; font-size: 14px; }
+    .volume-slider { width: 60px; }
 }
 </style>
 </head>
@@ -732,6 +754,18 @@ video.media-player.show-video { opacity: 1 !important; background: #000; }
                 <button id="eq-add-preset-btn" class="btn secondary" style="padding:8px 12px;"><svg class="icon" aria-hidden="true"><use xlink:href="#i-plus"/></svg></button>
             </div>
             <button id="eq-reset" class="btn secondary" style="width:100%; margin-top:10px; justify-content:center;">RESET EQ</button>
+        </div>
+
+        <!-- === SEZIONE AVANZATA (scrollabile in fondo) === -->
+        <div style="width:100%; margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
+            <div style="font-weight:700; font-size:13px; margin-bottom:10px; color:#333; text-align:center;">VOICE AI (GROQ)</div>
+            <label style="font-size:11px; font-weight:600; color:#333; display:block; margin-bottom:4px;">API KEY</label>
+            <input type="password" id="panel-api-input" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; font-size:12px; margin-bottom:8px; box-sizing:border-box;" placeholder="gsk_..." />
+            <button id="panel-save-api" class="btn" style="width:100%; justify-content:center; padding:8px; margin-bottom:10px;"><svg class="icon" aria-hidden="true"><use xlink:href="#i-save"/></svg> SALVA KEY</button>
+
+            <div style="font-weight:700; font-size:13px; margin:15px 0 10px; color:#333; text-align:center;">ARCHIVIO LOCALE</div>
+            <button id="clear-local-btn" class="btn secondary" style="width:100%; justify-content:center; padding:8px; margin-bottom:6px; background:#ffeeee; color:#cc0000;">🗑 PULISCI ARCHIVIO</button>
+            <div id="storage-info" style="font-size:10px; color:#888; text-align:center; margin-top:4px;"></div>
         </div>
     </div>
 </div>
@@ -1402,10 +1436,10 @@ function waitForMetadata(player) {
 const IDB_DB_NAME = 'tunex_files_db';
 const IDB_STORE = 'files';
 const IDB_VERSION = 2; // bump versione per trigger upgrade struttura (v1 -> v2)
-// Limite totale di storage IDB per evitare QuotaExceededError su tablet
-const IDB_MAX_TOTAL_BYTES = 250 * 1024 * 1024; // 250MB
-// Limite singolo file per evitare OOM alla creazione dell'objectURL
-const IDB_MAX_FILE_BYTES = 300 * 1024 * 1024; // 300MB
+// Limite totale storage IDB - ridotto per tablet Android (anti-OOM)
+const IDB_MAX_TOTAL_BYTES = 150 * 1024 * 1024; // 150MB
+// Limite singolo file - un file piu grande non entra in RAM tutta insieme
+const IDB_MAX_FILE_BYTES = 80 * 1024 * 1024; // 80MB
 
 function openIDB() {
     return new Promise((resolve, reject) => {
@@ -1857,10 +1891,23 @@ fileInput.addEventListener('change', async function(e) {
         var rejectedCount = 0;
         var totalSize = 0;
         var tempForIDB = [];
+
+        // === CHECK STORAGE DISPONIBILE prima di caricare ===
+        if (navigator.storage && navigator.storage.estimate) {
+            try {
+                var est = await navigator.storage.estimate();
+                var freeBytes = (est.quota || 0) - (est.usage || 0);
+                var sumSize = filesArr.reduce(function(s, f){ return s + f.size; }, 0);
+                if (sumSize > freeBytes * 0.7) {
+                    showToast('⚠️ Spazio insufficiente. Libera memoria del browser.');
+                }
+            } catch(err) { /* ignore */ }
+        }
+
         filesArr.forEach(function(file) {
             if (file.size > IDB_MAX_FILE_BYTES) {
                 rejectedCount++;
-                showToast('⚠️ ' + file.name.substring(0,30) + ' > 300MB: saltato');
+                showToast('⚠️ ' + file.name.substring(0,30) + ' > 80MB: saltato');
                 return;
             }
             localCounter++;
@@ -1871,21 +1918,24 @@ fileInput.addEventListener('change', async function(e) {
             totalSize += file.size;
             acceptedCount++;
         });
+
         // Salva in IDB (con gestione quota interna)
         await saveLocalFilesToIDB(tempForIDB);
-        // === ANTI-OOM: se il totale supera 100MB, rilascia i File dalla memoria ===
-        // Verranno caricati on-demand da IDB al click
-        if (totalSize > 100 * 1024 * 1024) {
-            localFiles.forEach(function(f) { f.file = null; });
-        }
+
+        // === ANTI-OOM CRITICO: rilascia SEMPRE i File reference dalla memoria ===
+        // Verranno caricati on-demand da IDB al click (lazy loading)
+        localFiles.forEach(function(f) { f.file = null; });
+
         renderChannels();
         if (acceptedCount > 0) {
-            showToast('✅ ' + acceptedCount + ' file aggiunti' + (rejectedCount > 0 ? ' (' + rejectedCount + ' saltati)' : ''));
+            var sizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+            showToast('✅ ' + acceptedCount + ' file aggiunti (' + sizeMB + ' MB)' + (rejectedCount > 0 ? ' ' + rejectedCount + ' saltati' : ''));
             document.getElementById('section-local').classList.remove('collapsed');
             document.getElementById('section-streaming').classList.add('collapsed');
         }
+        // Aggiorna info storage
+        if (typeof updateStorageInfo === 'function') updateStorageInfo();
     }
-    // Reset value per permettere riselezione dello stesso file
     fileInput.value = '';
 });
 
@@ -2277,20 +2327,7 @@ if (panelToggleBtn && playerPanel) {
 }
 
 (async function init() {
-    // === AVVISO file:// (banner visibile + console) ===
-    if (window.location.protocol === 'file:') {
-        console.info('%c[TuneX] Protocollo file:// rilevato.\n' +
-            'Per funzionalita complete (IndexedDB persistente, AudioContext, no warning CORS):\n' +
-            '  1) Apri un terminale nella cartella del file\n' +
-            '  2) Esegui: python -m http.server 8000\n' +
-            '  3) Apri http://localhost:8000/tunex.html',
-            'color:#ff2a2a;font-weight:bold;font-size:13px;');
-        // Banner visibile in alto
-        var banner = document.createElement('div');
-        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ff2a2a;color:#fff;padding:8px 12px;font-size:12px;font-family:sans-serif;z-index:99999;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.5);';
-        banner.innerHTML = '<strong>⚠ TuneX</strong> — Apertura diretta (file://) limitata. Per funzioni complete: <strong>python -m http.server 8000</strong> poi apri <strong>http://localhost:8000/tunex.html</strong>. <span style="text-decoration:underline;cursor:pointer" onclick="this.parentElement.style.display=\'none\'">Chiudi</span>';
-        document.body.appendChild(banner);
-    }
+    // Banner file:// rimosso - l'app e ora hostata su HTTPS (GitHub Pages)
     // === ANTI-OOM: carica SOLO metadata, nessun blob in memoria ===
     const savedMeta = await loadLocalFilesMetaFromIDB();
     if (savedMeta.length > 0) {
@@ -2338,26 +2375,87 @@ var settingsClose = document.getElementById('settings-close');
 var settingsApiInput = document.getElementById('settings-api-input');
 var settingsSaveBtn = document.getElementById('settings-save-btn');
 
+// === Riferimenti nuovi elementi in player-panel ===
+var panelApiInput = document.getElementById('panel-api-input');
+var panelSaveApi = document.getElementById('panel-save-api');
+var clearLocalBtn = document.getElementById('clear-local-btn');
+var storageInfo = document.getElementById('storage-info');
+
+// Sync iniziale valori
 if (settingsApiInput) settingsApiInput.value = GROQ_API_KEY;
+if (panelApiInput) panelApiInput.value = GROQ_API_KEY;
+
+// Funzione condivisa per salvare la chiave
+function saveApiKey(key, source) {
+    key = (key || '').trim();
+    if (key.startsWith('gsk_')) {
+        localStorage.setItem('tunex_groq_api_key', key);
+        GROQ_API_KEY = key;
+        // Sync entrambi gli input
+        if (settingsApiInput) settingsApiInput.value = key;
+        if (panelApiInput) panelApiInput.value = key;
+        showToast('✅ Chiave API salvata!');
+        if (settingsOverlay) settingsOverlay.classList.remove('active');
+    } else {
+        showToast('❌ Chiave non valida (deve iniziare con gsk_)');
+    }
+}
+
+// Modal impostazioni (legacy - lo teniamo)
 if (settingsBtn) settingsBtn.addEventListener('click', function() {
     if (settingsApiInput) settingsApiInput.value = GROQ_API_KEY;
-    settingsOverlay.classList.add('active');
+    if (settingsOverlay) settingsOverlay.classList.add('active');
 });
 if (settingsClose) settingsClose.addEventListener('click', function() { settingsOverlay.classList.remove('active'); });
 if (settingsOverlay) settingsOverlay.addEventListener('click', function(e) {
     if (e.target === settingsOverlay) settingsOverlay.classList.remove('active');
 });
 if (settingsSaveBtn) settingsSaveBtn.addEventListener('click', function() {
-    var key = settingsApiInput.value.trim();
-    if (key.startsWith('gsk_')) {
-        localStorage.setItem('tunex_groq_api_key', key);
-        GROQ_API_KEY = key;
-        showToast('✅ Chiave API salvata!');
-        settingsOverlay.classList.remove('active');
-    } else {
-        showToast('❌ Chiave non valida (deve iniziare con gsk_)');
+    saveApiKey(settingsApiInput.value, 'modal');
+});
+
+// === Handler nuovo: salva key dal player-panel ===
+if (panelSaveApi) panelSaveApi.addEventListener('click', function() {
+    saveApiKey(panelApiInput.value, 'panel');
+});
+
+// === Handler nuovo: pulisci archivio locale ===
+if (clearLocalBtn) clearLocalBtn.addEventListener('click', async function() {
+    if (!confirm('Eliminare tutti i file locali salvati? L\'azione non e reversibile.')) return;
+    try {
+        await clearLocalFilesIDB();
+        localFiles = [];
+        localCounter = 0;
+        renderChannels();
+        showToast('🗑 Archivio locale pulito');
+        updateStorageInfo();
+    } catch(e) {
+        showToast('❌ Errore pulizia: ' + (e.message || e));
     }
 });
+
+// === Mostra info storage (spazio usato / libero) ===
+async function updateStorageInfo() {
+    if (!storageInfo) return;
+    try {
+        // Conta file in IDB
+        var meta = await loadLocalFilesMetaFromIDB();
+        var totalSize = meta.reduce(function(s, f){ return s + (f.size || 0); }, 0);
+        var sizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+        var html = meta.length + ' file - ' + sizeMB + ' MB';
+        if (navigator.storage && navigator.storage.estimate) {
+            var est = await navigator.storage.estimate();
+            var quotaMB = ((est.quota || 0) / (1024 * 1024)).toFixed(0);
+            var usageMB = ((est.usage || 0) / (1024 * 1024)).toFixed(1);
+            html += ' | Quota: ' + usageMB + '/' + quotaMB + ' MB';
+        }
+        storageInfo.textContent = html;
+    } catch(e) {
+        storageInfo.textContent = '';
+    }
+}
+// Aggiorna info all'avvio e dopo operazioni
+setTimeout(updateStorageInfo, 1000);
 
 // ================= SHAZAM & VOICE AI =================
 var shazamBtn = document.getElementById('shazam-btn');
