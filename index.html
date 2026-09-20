@@ -2145,14 +2145,12 @@ var eqValues = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 var GROQ_API_KEY = localStorage.getItem('tunex_groq_api_key') || '';
 
 if (fileInput) {
-  // Trucco per eliminare eventuali listener duplicati nascosti nel browser
   var newFileInput = fileInput.cloneNode(true);
   fileInput.parentNode.replaceChild(newFileInput, fileInput);
-  fileInput = newFileInput; 
+  fileInput = newFileInput;
 
   fileInput.addEventListener('change', async function(e) {
     var files = e.target.files;
-    console.log('[DEBUG 1] Change triggerato. File selezionati:', files ? files.length : 0);
     if (!files || files.length === 0) return;
     
     var addedCount = 0;
@@ -2163,46 +2161,21 @@ if (fileInput) {
       var validExts = ['mp3','wav','ogg','mp4','webm','mkv','avi','m4v','flac','aac','wma','mov','m4a','opus'];
       var isValidExt = validExts.indexOf(ext) >= 0;
       
-      if (!isValidType && !isValidExt) {
-        console.warn('[DEBUG 1] File scartato:', f.name, '(type=' + f.type + ', ext=' + ext + ')');
-        continue; 
-      }
+      if (!isValidType && !isValidExt) continue;
       
       var id = 'lf-' + f.name + '-' + f.size + '-' + Date.now() + '-' + i;
-      localFiles.push({
-        id: id,
-        name: f.name,
-        file: f,
-        type: 'local'
-      });
+      localFiles.push({ id: id, name: f.name, file: f, type: 'local' });
       addedCount++;
     }
     
-    console.log('[DEBUG 1] File aggiunti in questo batch:', addedCount, '| Totale globale localFiles:', localFiles.length);
-    
     if (addedCount > 0) {
-      try {
-        console.log('[DEBUG 1] Chiamata a saveLocalFilesToIDB...');
-        await saveLocalFilesToIDB(localFiles);
-        console.log('[DEBUG 1] Salvataggio IndexedDB completato');
-      } catch(err) {
-        console.error('[DEBUG 1] Errore salvataggio IndexedDB:', err);
-      }
-      
-      console.log('[DEBUG 1] Chiamata a renderChannels()...');
-      try {
-        renderChannels();
-        console.log('[DEBUG 1] renderChannels() terminata con successo');
-      } catch(err) {
-        console.error('[DEBUG 1] Errore critico in renderChannels():', err);
-      }
-      
+      await saveLocalFilesToIDB(localFiles);
+      renderChannels();
       showToast('✅ ' + addedCount + ' file aggiunti');
     } else {
-      showToast('⚠️ Nessun file audio/video valido selezionato');
+      showToast('⚠️ Nessun file valido');
     }
-    
-    fileInput.value = ''; // Reset fondamentale
+    fileInput.value = '';
   });
 }
 
@@ -2457,41 +2430,49 @@ function idbReq(req) {
 
 async function saveLocalFilesToIDB(filesArray) {
   try {
-    var toSave = [];
+    // 1. Controllo quota reale del dispositivo (fondamentale per Android)
+    if (navigator.storage && navigator.storage.estimate) {
+      var est = await navigator.storage.estimate();
+      var quotaMB = (est.quota || 0) / (1024 * 1024);
+      var usageMB = (est.usage || 0) / (1024 * 1024);
+      console.log('[IDB] Quota:', quotaMB.toFixed(1) + 'MB, Usato:', usageMB.toFixed(1) + 'MB');
+    }
+
+    var db = await openIDB();
+    
+    // 2. Salvataggio sequenziale: una transazione per ogni file per non saturare la RAM
     for (var idx = 0; idx < filesArray.length; idx++) {
       var item = filesArray[idx];
       if (!item || !item.file) continue;
-      if (item.file.size > 400 * 1024 * 1024) continue; // Limite 400MB
       
-      var blob = null;
-      if (item.file instanceof Blob) {
-        blob = item.file;
-      } else if (item.fileHandle && typeof item.fileHandle.getFile === 'function') {
-        blob = await item.fileHandle.getFile();
-      } else {
-        console.warn('[IDB] file non valido saltato:', item.name);
+      // Limite drastico a 50MB per singolo file per evitare il blocco di Android
+      if (item.file.size > 50 * 1024 * 1024) {
+        console.warn('[IDB] File saltato (>50MB):', item.name);
         continue;
       }
-      toSave.push({ name: item.name, blob: blob });
+      
+      var blob = item.file;
+      if (item.fileHandle && typeof item.fileHandle.getFile === 'function') {
+        blob = await item.fileHandle.getFile();
+      } else if (!(item.file instanceof Blob)) {
+        continue;
+      }
+      
+      // Transazione separata per ogni singolo file
+      await new Promise(function(res, rej) {
+        var tx = db.transaction(IDB_STORE, 'readwrite');
+        var store = tx.objectStore(IDB_STORE);
+        store.put(blob, 'file_' + idx);
+        store.put(item.name, 'name_' + idx);
+        store.put(idx + 1, 'count');
+        tx.oncomplete = res;
+        tx.onerror = function() { rej(tx.error); };
+      });
     }
-    
-    var db = await openIDB();
-    var tx = db.transaction(IDB_STORE, 'readwrite');
-    var store = tx.objectStore(IDB_STORE);
-    store.clear();
-    toSave.forEach(function(entry, i) {
-      store.put(entry.blob, 'file_' + i);
-      store.put(entry.name, 'name_' + i);
-    });
-    store.put(toSave.length, 'count');
-    
-    await new Promise(function(res, rej) { 
-      tx.oncomplete = res; 
-      tx.onerror = function() { rej(tx.error); }; 
-    });
-    console.log('[IDB] Salvataggio completato per', toSave.length, 'file');
+    console.log('[IDB] Salvataggio sequenziale completato.');
   } catch (e) { 
-    console.error('[IDB] Errore salvataggio:', e); 
+    console.error('[IDB] Errore critico (probabile quota piena):', e); 
+    showToast('⚠️ Memoria dispositivo piena. Impossibile salvare.');
   }
 }
 
